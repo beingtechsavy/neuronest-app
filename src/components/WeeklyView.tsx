@@ -3,11 +3,8 @@
 import React from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-
-// --- INTERFACE DEFINITIONS ---
-interface CalendarTask { task_id: number; title: string; scheduled_date: string; start_time: string | null; end_time: string | null; effort_units: number | null; chapters: { subjects: { title: string; color: string; } | null; } | null; }
-interface TimeBlock { block_id: number; title: string; start_time: string; end_time: string; }
-interface UserPreferences { sleep_start: string; sleep_end: string; meal_start_times: string[]; meal_duration: number; session_length: number; buffer_length: number;}
+// ***** FIX: Import the shared interfaces from the calendar page *****
+import { CalendarTask, TimeBlock, UserPreferences } from '../app/calendar/page';
 
 interface WeeklyViewProps {
     currentDate: Date;
@@ -71,12 +68,11 @@ function DraggableTask({ task, style, onClick }: { task: CalendarTask, style: Re
 }
 
 // --- StaticBlock Component ---
-// ***** FIX: Replaced 'any' with a more specific type *****
 interface BlockData {
     title: string;
     start_time: string;
     end_time: string;
-    type?: string; // Optional type for styling
+    type?: string;
 }
 const StaticBlock = ({ block, style, onClick }: { block: BlockData, style: React.CSSProperties, onClick?: (e: React.MouseEvent) => void }) => {
     const startMinutes = timeToMinutes(new Date(block.start_time));
@@ -94,7 +90,6 @@ const StaticBlock = ({ block, style, onClick }: { block: BlockData, style: React
     );
 };
 
-// ***** FIX: Extracted DayColumn into its own component to fix the Rules of Hooks error *****
 function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick }: {
     day: Date;
     preferences: UserPreferences | null;
@@ -122,7 +117,7 @@ function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlo
             style={{...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)'}}
         >
             {preferences && (() => {
-                const blocks = [];
+                const blocks: BlockData[] = [];
                 const sleepStart = timeToMinutes(preferences.sleep_start);
                 const sleepEnd = timeToMinutes(preferences.sleep_end);
 
@@ -222,7 +217,6 @@ export default function WeeklyView({ currentDate, preferences, timeBlocks, tasks
     );
 }
 
-// ***** FIX: Replaced 'any' with React.CSSProperties *****
 const styles: { [key: string]: React.CSSProperties } = {
     sleep: { backgroundColor: 'rgba(51, 65, 85, 0.5)', zIndex: 1, pointerEvents: 'none', boxSizing: 'border-box' },
     meal: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderLeft: '2px solid #a78bfa', zIndex: 1, padding: '2px 4px', fontSize: '12px', color: '#c4b5fd', overflow: 'hidden', pointerEvents: 'none', boxSizing: 'border-box' },

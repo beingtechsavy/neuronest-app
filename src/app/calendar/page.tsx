@@ -17,7 +17,7 @@ import React from 'react'
 
 
 // --- INTERFACE DEFINITIONS ---
-interface CalendarTask {
+export interface CalendarTask {
     task_id: number;
     title: string;
     scheduled_date: string;
@@ -34,8 +34,8 @@ interface CalendarTask {
     status: string;
     is_stressful: boolean;
 }
-interface TimeBlock { block_id: number; title: string; start_time: string; end_time: string; }
-interface UserPreferences { sleep_start: string; sleep_end: string; meal_start_times: string[]; meal_duration: number; session_length: number; buffer_length: number;}
+export interface TimeBlock { block_id: number; title: string; start_time: string; end_time: string; }
+export interface UserPreferences { sleep_start: string; sleep_end: string; meal_start_times: string[]; meal_duration: number; session_length: number; buffer_length: number;}
 
 // --- HELPER FUNCTIONS ---
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
