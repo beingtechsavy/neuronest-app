@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent } from '@dnd-kit/core'
 import { supabase } from '@/lib/supabaseClient'
 import Sidebar from '@/components/SideBar'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -63,9 +63,9 @@ export default function CalendarPage() {
     
     // Modal States
     const [isTaskDetailModalOpen, setIsTaskDetailModalOpen] = useState(false)
-    const [selectedTaskDetails, setSelectedTaskDetails] = useState<any>(null)
+    const [selectedTaskDetails, setSelectedTaskDetails] = useState<CalendarTask & { startTime: Date, endTime: Date } | null>(null)
     const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
-    const [rescheduleDetails, setRescheduleDetails] = useState<any>(null);
+    const [rescheduleDetails, setRescheduleDetails] = useState<{ taskId: number; title: string; newStartTime: Date; newEndTime: Date; } | null>(null);
     const [isTimeBlockModalOpen, setIsTimeBlockModalOpen] = useState(false)
     const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null)
     const [isTimeBlockDetailModalOpen, setIsTimeBlockDetailModalOpen] = useState(false);
@@ -112,12 +112,12 @@ export default function CalendarPage() {
             supabase.from('time_blocks').select('*').eq('user_id', user.id)
         ]);
 
-        const groupedTasks = (tasksRes.data || []).reduce((acc, task) => { const date = task.scheduled_date; if (!acc[date]) acc[date] = []; acc[date].push(task); return acc; }, {} as Record<string, CalendarTask[]>);
+        const groupedTasks = (tasksRes.data || []).reduce((acc, task) => { const date = task.scheduled_date; if (!acc[date]) acc[date] = []; acc[date].push(task as CalendarTask); return acc; }, {} as Record<string, CalendarTask[]>);
         
         setTasks(groupedTasks);
-        setUnscheduledTasks(unscheduledRes.data || []);
-        setTimeBlocks(blocksRes.data || []);
-        setPreferences(prefsRes.data);
+        setUnscheduledTasks(unscheduledRes.data as CalendarTask[] || []);
+        setTimeBlocks(blocksRes.data as TimeBlock[] || []);
+        setPreferences(prefsRes.data as UserPreferences | null);
         setLoading(false);
     }, [currentDate, view]);
 
@@ -161,7 +161,7 @@ export default function CalendarPage() {
             day.setDate(today.getDate() + i);
             const dateKey = day.toISOString().split('T')[0];
 
-            let busySlots = [];
+            const busySlots = [];
             const sleepStart = timeToMinutes(preferences.sleep_start);
             const sleepEnd = timeToMinutes(preferences.sleep_end);
             if (sleepStart > sleepEnd) {
@@ -184,7 +184,7 @@ export default function CalendarPage() {
             });
 
             busySlots.sort((a, b) => a.start - b.start);
-            let mergedBusySlots = [];
+            const mergedBusySlots = [];
             if (busySlots.length > 0) {
                 let currentSlot = busySlots[0];
                 for (let j = 1; j < busySlots.length; j++) {
@@ -359,7 +359,7 @@ export default function CalendarPage() {
         if (!editingTask) return;
 
         const { title, effort_units, scheduled_date } = updates;
-        const updatePayload: { [key: string]: any } = {};
+        const updatePayload: { [key: string]: string | number | boolean | null } = {};
 
         const titleChanged = title.trim() && title !== editingTask.title;
         const effortChanged = effort_units && effort_units !== editingTask.effort_units;
@@ -418,7 +418,7 @@ export default function CalendarPage() {
     // --- DND HANDLERS ---
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
 
-    function handleDragStart(event: any) {
+    function handleDragStart(event: DragStartEvent) {
         const { active } = event;
         const task = Object.values(tasks).flat().find(t => t.task_id === active.id);
         if (task) {
@@ -426,11 +426,11 @@ export default function CalendarPage() {
         }
     }
 
-    function handleDragEnd(event: any) {
+    function handleDragEnd(event: DragEndEvent) {
         setActiveTask(null);
         const { active, over, delta } = event;
 
-        if (!over || !active.data.current) return;
+        if (!over || !active.data.current?.task) return;
         
         const task: CalendarTask = active.data.current.task;
         if (!task || !task.start_time) return;
