@@ -24,7 +24,10 @@ interface CalendarTask {
     start_time: string | null;
     end_time: string | null;
     effort_units: number | null;
-    chapters: { subjects: { title: string; color: string; } | null; } | null;
+    chapters: { 
+        title: string;
+        subjects: { title: string; color: string; } | null; 
+    } | null;
     user_id: string;
     chapter_id: number | null;
     deadline: string | null;
@@ -616,7 +619,6 @@ export default function CalendarPage() {
     )
 }
 
-// ***** FIX: Replaced 'any' with React.CSSProperties *****
 const styles: { [key: string]: React.CSSProperties } = {
     sleep: { backgroundColor: 'rgba(51, 65, 85, 0.5)', zIndex: 1, pointerEvents: 'none', boxSizing: 'border-box' },
     meal: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderLeft: '2px solid #a78bfa', zIndex: 1, padding: '2px 4px', fontSize: '12px', color: '#c4b5fd', overflow: 'hidden', pointerEvents: 'none', boxSizing: 'border-box' },
