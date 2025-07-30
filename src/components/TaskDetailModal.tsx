@@ -1,29 +1,40 @@
 'use client'
 
 import { X, Tag, Clock, Folder, Edit, Trash2 } from 'lucide-react'
+import React from 'react'
 
-// Define the shape of the detailed task object
-interface DetailedTask {
+// ***** FIX: Use the full CalendarTask interface to match the parent component *****
+interface CalendarTask {
   task_id: number;
   title: string;
-  chapters: {
+  scheduled_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  effort_units: number | null;
+  chapters: { 
     title: string;
     subjects: {
       title: string;
       color: string;
     } | null;
   } | null;
-  startTime: Date;
-  endTime: Date;
+  user_id: string;
+  chapter_id: number | null;
+  deadline: string | null;
+  status: string;
+  is_stressful: boolean;
 }
+
+// The task prop also includes startTime and endTime, which are added in the parent
+type DetailedTask = CalendarTask & { startTime: Date; endTime: Date; }
 
 interface TaskDetailModalProps {
   isOpen: boolean
   onClose: () => void
   task: DetailedTask | null
-  onDelete: (task: DetailedTask) => void; 
-  // ***** NEW: Add onEdit prop *****
-  onEdit: (task: DetailedTask) => void;
+  // ***** FIX: Update props to expect the full CalendarTask object *****
+  onDelete: (task: CalendarTask) => void; 
+  onEdit: (task: CalendarTask) => void;
 }
 
 export default function TaskDetailModal({ isOpen, onClose, task, onDelete, onEdit }: TaskDetailModalProps) {
@@ -66,17 +77,16 @@ export default function TaskDetailModal({ isOpen, onClose, task, onDelete, onEdi
             </div>
         </div>
 
-        <div style={styles.footer}>
-            <button style={{...styles.actionButton, ...styles.deleteButton}} onClick={() => onDelete(task)}>
-                <Trash2 size={16} />
-                <span>Delete</span>
-            </button>
-            {/* ***** NEW: Add onClick handler to the Edit button ***** */}
-            <button style={styles.actionButton} onClick={() => onEdit(task)}>
-                <Edit size={16} />
-                <span>Edit</span>
-            </button>
-        </div>
+        <div style={styles.footer}>
+            <button style={{...styles.actionButton, ...styles.deleteButton}} onClick={() => onDelete(task)}>
+                <Trash2 size={16} />
+                <span>Delete</span>
+            </button>
+            <button style={styles.actionButton} onClick={() => onEdit(task)}>
+                <Edit size={16} />
+                <span>Edit</span>
+            </button>
+        </div>
       </div>
     </div>
   )
@@ -143,31 +153,31 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '1rem',
     color: '#cbd5e1',
   },
-  footer: {
-    display: 'flex',
-    gap: '0.5rem',
-    padding: '0 1rem 1rem 1rem',
-    borderTop: '1px solid #334155',
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-  },
-  actionButton: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    padding: '0.75rem',
-    border: 'none',
-    borderRadius: '8px',
-    backgroundColor: '#334155',
-    color: '#cbd5e1',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  deleteButton: {
-    backgroundColor: '#9f1239',
-    color: '#fecaca',
-  }
+  footer: {
+    display: 'flex',
+    gap: '0.5rem',
+    padding: '0 1rem 1rem 1rem',
+    borderTop: '1px solid #334155',
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+  },
+  actionButton: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
+    padding: '0.75rem',
+    border: 'none',
+    borderRadius: '8px',
+    backgroundColor: '#334155',
+    color: '#cbd5e1',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  deleteButton: {
+    backgroundColor: '#9f1239',
+    color: '#fecaca',
+  }
 }
