@@ -31,6 +31,7 @@ type DetailedTask = CalendarTask & { startTime: Date; endTime: Date; }
 interface TaskDetailModalProps {
   isOpen: boolean
   onClose: () => void
+  // ***** FIX: Update the 'task' prop to use the corrected DetailedTask type *****
   task: DetailedTask | null
   // ***** FIX: Update props to expect the full CalendarTask object *****
   onDelete: (task: CalendarTask) => void; 
