@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { Check, X } from 'lucide-react'
+import React from 'react'
 
 interface RescheduleDetails {
   title: string;
@@ -12,7 +12,7 @@ interface RescheduleDetails {
 interface RescheduleConfirmModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void // The parent `handleConfirmReschedule` doesn't need arguments
+  onConfirm: () => void
   details: RescheduleDetails | null
 }
 
@@ -27,7 +27,6 @@ export default function RescheduleConfirmModal({ isOpen, onClose, onConfirm, det
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h3 style={styles.header}>Confirm Reschedule</h3>
-        {/* ***** FIX: Replaced quotes with HTML entities ***** */}
         <p style={styles.taskTitle}>&ldquo;{details.title}&rdquo;</p>
         <p style={styles.details}>Move to:</p>
         <p style={styles.newDate}>{formatDate(details.newStartTime)}</p>

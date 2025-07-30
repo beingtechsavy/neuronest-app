@@ -13,6 +13,7 @@ import TimeBlockDetailModal from '@/components/TimeBlockDetailModal'
 import UnscheduledTasks from '@/components/UnscheduledTasks'
 import DeleteTaskConfirmModal from '@/components/DeleteTaskConfirmModal'
 import EditTaskModal from '@/components/EditTaskModal'
+import React from 'react'
 
 
 // --- INTERFACE DEFINITIONS ---
@@ -148,7 +149,7 @@ export default function CalendarPage() {
         setScheduleMessage(`Found ${unscheduledTasks.length} unscheduled tasks...`);
         await new Promise(res => setTimeout(res, 500));
 
-        const tasksToUpdate = [];
+        const tasksToUpdate: Partial<CalendarTask>[] = [];
         const tasksToSchedule = [...unscheduledTasks];
 
         const today = new Date();
@@ -161,7 +162,7 @@ export default function CalendarPage() {
             day.setDate(today.getDate() + i);
             const dateKey = day.toISOString().split('T')[0];
 
-            const busySlots = [];
+            const busySlots: {start: number, end: number}[] = [];
             const sleepStart = timeToMinutes(preferences.sleep_start);
             const sleepEnd = timeToMinutes(preferences.sleep_end);
             if (sleepStart > sleepEnd) {
@@ -184,7 +185,7 @@ export default function CalendarPage() {
             });
 
             busySlots.sort((a, b) => a.start - b.start);
-            const mergedBusySlots = [];
+            const mergedBusySlots: {start: number, end: number}[] = [];
             if (busySlots.length > 0) {
                 let currentSlot = busySlots[0];
                 for (let j = 1; j < busySlots.length; j++) {
@@ -615,8 +616,8 @@ export default function CalendarPage() {
     )
 }
 
-// Styles for calendar items
-const styles: {[key: string]: any} = {
+// ***** FIX: Replaced 'any' with React.CSSProperties *****
+const styles: { [key: string]: React.CSSProperties } = {
     sleep: { backgroundColor: 'rgba(51, 65, 85, 0.5)', zIndex: 1, pointerEvents: 'none', boxSizing: 'border-box' },
     meal: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderLeft: '2px solid #a78bfa', zIndex: 1, padding: '2px 4px', fontSize: '12px', color: '#c4b5fd', overflow: 'hidden', pointerEvents: 'none', boxSizing: 'border-box' },
     appointment: { backgroundColor: 'rgba(34, 197, 94, 0.2)', borderLeft: '2px solid #4ade80', zIndex: 2, padding: '2px 4px', fontSize: '12px', color: '#86efac', overflow: 'hidden', borderRadius: '4px', cursor: 'pointer', boxSizing: 'border-box' },
