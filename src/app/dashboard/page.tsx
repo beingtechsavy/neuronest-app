@@ -17,7 +17,7 @@ interface Subject {
 }
 
 interface Profile {
-    username: string | null;
+    username: string | null;
 }
 
 export default function Dashboard() {
@@ -25,12 +25,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false)
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
-  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
-  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   const fetchSubjects = async (userId: string) => {
     const { data, error } = await supabase
@@ -43,36 +43,41 @@ export default function Dashboard() {
     setSubjects(data || [])
   }
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', userId)
-        .single();
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
-        throw new Error('Failed to load profile');
-    }
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+        throw new Error('Failed to load profile');
+    }
 
-    if (!data || !data.username) {
-        setIsUsernameModalOpen(true);
-    }
-    setProfile(data);
-  }
+    if (!data || !data.username) {
+        setIsUsernameModalOpen(true);
+    }
+    setProfile(data);
+  }
 
   useEffect(() => {
     const loadData = async () => {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            router.replace('/login');
-            return;
-        }
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            router.replace('/login');
+            return;
+        }
         try {
-            await fetchProfile(user.id);
+            await fetchProfile(user.id);
             await fetchSubjects(user.id);
-        } catch (e: any) {
-            setError(e.message);
+        // ***** FIX: Correctly typed the catch block *****
+        } catch (e) {
+            if (e instanceof Error) {
+                setError(e.message);
+            } else {
+                setError("An unknown error occurred.");
+            }
         } finally {
             setLoading(false);
         }
@@ -107,36 +112,36 @@ export default function Dashboard() {
       if (window.confirm("Are you sure? This will delete the subject and all its chapters and tasks.")) {
           await supabase.from('subjects').delete().eq('subject_id', subjectId);
           const { data: { user } } = await supabase.auth.getUser();
-        if (user) await fetchSubjects(user.id);
+        if (user) await fetchSubjects(user.id);
       }
   }
 
-  const handleSaveUsername = async (username: string) => {
-    setIsSavingUsername(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        setError("You must be logged in to set a username.");
-        setIsSavingUsername(false);
-        return;
-    }
+  const handleSaveUsername = async (username: string) => {
+    setIsSavingUsername(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        setError("You must be logged in to set a username.");
+        setIsSavingUsername(false);
+        return;
+    }
 
-    const { error } = await supabase
-        .from('profiles')
-        .upsert({ 
-            id: user.id, 
-            username, 
-            updated_at: new Date().toISOString() 
-        })
-        .select()
+    const { error } = await supabase
+        .from('profiles')
+        .upsert({ 
+            id: user.id, 
+            username, 
+            updated_at: new Date().toISOString() 
+        })
+        .select()
 
-    if (error) {
-        setError("Failed to save username. It might already be taken.");
-    } else {
-        setProfile({ username });
-        setIsUsernameModalOpen(false);
-    }
-    setIsSavingUsername(false);
-  }
+    if (error) {
+        setError("Failed to save username. It might already be taken.");
+    } else {
+        setProfile({ username });
+        setIsUsernameModalOpen(false);
+    }
+    setIsSavingUsername(false);
+  }
 
   if (loading) return (
     <div style={styles.loadingContainer}><div style={styles.loadingSpinner}></div></div>
@@ -148,11 +153,11 @@ export default function Dashboard() {
 
   return (
     <>
-      <UsernameModal 
-        isOpen={isUsernameModalOpen}
-        onSave={handleSaveUsername}
-        loading={isSavingUsername}
-      />
+      <UsernameModal 
+        isOpen={isUsernameModalOpen}
+        onSave={handleSaveUsername}
+        loading={isSavingUsername}
+      />
       <SubjectModal 
         isOpen={isSubjectModalOpen}
         onClose={() => setIsSubjectModalOpen(false)}
@@ -194,25 +199,23 @@ const styles: { [key: string]: React.CSSProperties } = {
   mainWrapper: { flex: 1, marginLeft: '240px', minHeight: '100vh', overflow: 'auto' },
   mainContent: { padding: '2rem', minHeight: '100vh', color: '#ffffff' },
   contentInner: { 
-    maxWidth: '1200px', 
-    margin: '0 auto', 
-    // ***** FIX: Center the inline-grid container below *****
-    textAlign: 'center' 
-  },
+    maxWidth: '1200px', 
+    margin: '0 auto', 
+    textAlign: 'center' 
+  },
   loadingContainer: { minHeight: '100vh', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid #1e293b', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' },
   errorContainer: { minHeight: '100vh', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   errorText: { color: '#f87171', fontSize: '1rem' },
-  headerContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '1rem',
-    marginBottom: '3rem',
-    // ***** FIX: Reset text alignment for the header *****
-    textAlign: 'left',
-  },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '1rem',
+    marginBottom: '3rem',
+    textAlign: 'left',
+  },
   greeting: { fontSize: '2.5rem', fontWeight: 600, color: '#f1f5f9' },
   addSubjectButton: {
       display: 'flex', alignItems: 'center', gap: '0.5rem',
@@ -221,9 +224,9 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: 'none', cursor: 'pointer', fontWeight: 600,
   },
   cardsContainer: {
-    display: 'inline-grid', // Change to inline-grid to shrink-wrap the content
+    display: 'inline-grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
     gap: '2rem',
-    textAlign: 'left', // Reset text alignment for the content inside the cards
+    textAlign: 'left',
   },
 }

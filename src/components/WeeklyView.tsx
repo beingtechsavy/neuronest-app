@@ -32,6 +32,13 @@ const timeToMinutes = (time: string | Date): number => {
     return time.getHours() * 60 + time.getMinutes();
 }
 
+const toYYYYMMDD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 // --- DraggableTask Component ---
 function DraggableTask({ task, style, onClick }: { task: CalendarTask, style: React.CSSProperties, onClick: () => void }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -64,7 +71,14 @@ function DraggableTask({ task, style, onClick }: { task: CalendarTask, style: Re
 }
 
 // --- StaticBlock Component ---
-const StaticBlock = ({ block, style, onClick }: { block: any, style: React.CSSProperties, onClick?: (e: React.MouseEvent) => void }) => {
+// ***** FIX: Replaced 'any' with a more specific type *****
+interface BlockData {
+    title: string;
+    start_time: string;
+    end_time: string;
+    type?: string; // Optional type for styling
+}
+const StaticBlock = ({ block, style, onClick }: { block: BlockData, style: React.CSSProperties, onClick?: (e: React.MouseEvent) => void }) => {
     const startMinutes = timeToMinutes(new Date(block.start_time));
     const endMinutes = timeToMinutes(new Date(block.end_time));
     const gridStart = Math.floor(startMinutes / 15) + 1;
@@ -80,9 +94,85 @@ const StaticBlock = ({ block, style, onClick }: { block: any, style: React.CSSPr
     );
 };
 
+// ***** FIX: Extracted DayColumn into its own component to fix the Rules of Hooks error *****
+function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick }: {
+    day: Date;
+    preferences: UserPreferences | null;
+    timeBlocks: TimeBlock[];
+    tasks: Record<string, CalendarTask[]>;
+    onTaskClick: (task: CalendarTask, startTime: Date, endTime: Date) => void;
+    onTimeBlockClick: (block: TimeBlock) => void;
+}) {
+    const { setNodeRef, isOver } = useDroppable({
+        id: day.toISOString(),
+    });
+
+    const dayColumnStyle = {
+        backgroundColor: isOver ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
+        transition: 'background-color 0.2s ease-in-out',
+    };
+
+    const dateKey = toYYYYMMDD(day);
+
+    return (
+        <div 
+            ref={setNodeRef}
+            key={day.toISOString()} 
+            className="relative border-l border-slate-700 grid" 
+            style={{...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)'}}
+        >
+            {preferences && (() => {
+                const blocks = [];
+                const sleepStart = timeToMinutes(preferences.sleep_start);
+                const sleepEnd = timeToMinutes(preferences.sleep_end);
+
+                if (sleepStart > sleepEnd) {
+                    const d1_start = new Date(day); d1_start.setHours(Math.floor(sleepStart / 60), sleepStart % 60, 0, 0);
+                    const d1_end = new Date(day); d1_end.setHours(23, 59, 59, 999);
+                    blocks.push({ title: 'Sleep', start_time: d1_start.toISOString(), end_time: d1_end.toISOString(), type: 'sleep' });
+
+                    const d2_start = new Date(day); d2_start.setHours(0, 0, 0, 0);
+                    const d2_end = new Date(day); d2_end.setHours(Math.floor(sleepEnd / 60), sleepEnd % 60, 0, 0);
+                    blocks.push({ title: 'Sleep', start_time: d2_start.toISOString(), end_time: d2_end.toISOString(), type: 'sleep' });
+                } else {
+                    const start = new Date(day); start.setHours(Math.floor(sleepStart / 60), sleepStart % 60, 0, 0);
+                    const end = new Date(day); end.setHours(Math.floor(sleepEnd / 60), sleepEnd % 60, 0, 0);
+                    blocks.push({ title: 'Sleep', start_time: start.toISOString(), end_time: end.toISOString(), type: 'sleep' });
+                }
+
+                preferences.meal_start_times.forEach(t => {
+                    const startMin = timeToMinutes(t);
+                    const endMin = startMin + preferences.meal_duration;
+                    const start = new Date(day); start.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+                    const end = new Date(day); end.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
+                    blocks.push({ title: 'Meal', start_time: start.toISOString(), end_time: end.toISOString(), type: 'meal' });
+                });
+
+                return blocks.map((b, i) => <StaticBlock key={`pref-${i}`} block={b} style={styles[b.type || 'task']} />);
+            })()}
+
+            {timeBlocks.filter(b => new Date(b.start_time).toDateString() === day.toDateString()).map(block => (
+                <StaticBlock 
+                    key={`block-${block.block_id}`} block={block} style={styles.appointment}
+                    onClick={(e) => { e.stopPropagation(); onTimeBlockClick(block); }}
+                />
+            ))}
+
+            {(tasks[dateKey] || []).filter(t => t.start_time && t.end_time).map(task => (
+                <DraggableTask 
+                    key={`task-${task.task_id}`}
+                    task={task}
+                    style={{...styles.task, backgroundColor: `${task.chapters?.subjects?.color || '#6366f1'}30`, borderLeft: `2px solid ${task.chapters?.subjects?.color || '#6366f1'}`}}
+                    onClick={() => onTaskClick(task, new Date(task.start_time!), new Date(task.end_time!))}
+                />
+            ))}
+        </div>
+    );
+}
+
+
 // --- Main WeeklyView Component ---
 export default function WeeklyView({ currentDate, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick }: WeeklyViewProps) {
-    // ***** REVERTED: Use local time methods for date calculations *****
     const startOfWeek = new Date(currentDate);
     startOfWeek.setHours(0, 0, 0, 0);
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
@@ -116,81 +206,24 @@ export default function WeeklyView({ currentDate, preferences, timeBlocks, tasks
             
             {/* Main Grid Content */}
             <div className="row-start-2 col-start-2 grid grid-cols-7">
-                {weekDays.map((day) => {
-                    const { setNodeRef, isOver } = useDroppable({
-                        id: day.toISOString(),
-                    });
-
-                    const dayColumnStyle = {
-                        backgroundColor: isOver ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                        transition: 'background-color 0.2s ease-in-out',
-                    };
-
-                    return (
-                        <div 
-                            ref={setNodeRef}
-                            key={day.toISOString()} 
-                            className="relative border-l border-slate-700 grid" 
-                            style={{...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)'}}
-                        >
-                            {/* Render static blocks (sleep, meals) */}
-                            {preferences && (() => {
-                                const blocks = [];
-                                const sleepStart = timeToMinutes(preferences.sleep_start);
-                                const sleepEnd = timeToMinutes(preferences.sleep_end);
-
-                                if (sleepStart > sleepEnd) {
-                                    const d1_start = new Date(day); d1_start.setHours(Math.floor(sleepStart / 60), sleepStart % 60, 0, 0);
-                                    const d1_end = new Date(day); d1_end.setHours(23, 59, 59, 999);
-                                    blocks.push({ title: 'Sleep', start_time: d1_start.toISOString(), end_time: d1_end.toISOString(), type: 'sleep' });
-
-                                    const d2_start = new Date(day); d2_start.setHours(0, 0, 0, 0);
-                                    const d2_end = new Date(day); d2_end.setHours(Math.floor(sleepEnd / 60), sleepEnd % 60, 0, 0);
-                                    blocks.push({ title: 'Sleep', start_time: d2_start.toISOString(), end_time: d2_end.toISOString(), type: 'sleep' });
-                                } else {
-                                    const start = new Date(day); start.setHours(Math.floor(sleepStart / 60), sleepStart % 60, 0, 0);
-                                    const end = new Date(day); end.setHours(Math.floor(sleepEnd / 60), sleepEnd % 60, 0, 0);
-                                    blocks.push({ title: 'Sleep', start_time: start.toISOString(), end_time: end.toISOString(), type: 'sleep' });
-                                }
-
-                                preferences.meal_start_times.forEach(t => {
-                                    const startMin = timeToMinutes(t);
-                                    const endMin = startMin + preferences.meal_duration;
-                                    const start = new Date(day); start.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
-                                    const end = new Date(day); end.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
-                                    blocks.push({ title: 'Meal', start_time: start.toISOString(), end_time: end.toISOString(), type: 'meal' });
-                                });
-
-                                return blocks.map((b, i) => <StaticBlock key={`pref-${i}`} block={b} style={styles[b.type]} />);
-                            })()}
-
-                            {/* Render static time blocks (appointments) */}
-                            {timeBlocks.filter(b => new Date(b.start_time).toDateString() === day.toDateString()).map(block => (
-                                <StaticBlock 
-                                    key={`block-${block.block_id}`} block={block} style={styles.appointment}
-                                    onClick={(e) => { e.stopPropagation(); onTimeBlockClick(block); }}
-                                />
-                            ))}
-
-                            {/* Render DRAGGABLE tasks */}
-                            {(tasks[day.toISOString().split('T')[0]] || []).filter(t => t.start_time && t.end_time).map(task => (
-                                <DraggableTask 
-                                    key={`task-${task.task_id}`}
-                                    task={task}
-                                    style={{...styles.task, backgroundColor: `${task.chapters?.subjects?.color || '#6366f1'}30`, borderLeft: `2px solid ${task.chapters?.subjects?.color || '#6366f1'}`}}
-                                    onClick={() => onTaskClick(task, new Date(task.start_time!), new Date(task.end_time!))}
-                                />
-                            ))}
-                        </div>
-                    );
-                })}
+                {weekDays.map((day) => (
+                    <DayColumn
+                        key={day.toISOString()}
+                        day={day}
+                        preferences={preferences}
+                        timeBlocks={timeBlocks}
+                        tasks={tasks}
+                        onTaskClick={onTaskClick}
+                        onTimeBlockClick={onTimeBlockClick}
+                    />
+                ))}
             </div>
         </div>
     );
 }
 
-// Styles for calendar items
-const styles: {[key: string]: any} = {
+// ***** FIX: Replaced 'any' with React.CSSProperties *****
+const styles: { [key: string]: React.CSSProperties } = {
     sleep: { backgroundColor: 'rgba(51, 65, 85, 0.5)', zIndex: 1, pointerEvents: 'none', boxSizing: 'border-box' },
     meal: { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderLeft: '2px solid #a78bfa', zIndex: 1, padding: '2px 4px', fontSize: '12px', color: '#c4b5fd', overflow: 'hidden', pointerEvents: 'none', boxSizing: 'border-box' },
     appointment: { backgroundColor: 'rgba(34, 197, 94, 0.2)', borderLeft: '2px solid #4ade80', zIndex: 2, padding: '2px 4px', fontSize: '12px', color: '#86efac', overflow: 'hidden', borderRadius: '4px', cursor: 'pointer', boxSizing: 'border-box' },
