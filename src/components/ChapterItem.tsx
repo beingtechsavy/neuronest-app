@@ -47,7 +47,6 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
         if (error) {
           console.error('Error fetching tasks:', error)
         } else {
-          // ***** FIX: Cast the fetched data to the correct Task[] type *****
           setTasks(data as Task[] || [])
         }
         setIsLoadingTasks(false)
@@ -59,7 +58,10 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
   const handleToggleTask = async (taskId: number) => {
     const taskToToggle = tasks.find(t => t.task_id === taskId);
     if (!taskToToggle) return;
-    const newStatus = taskToToggle.status === 'completed' ? 'pending' : 'completed';
+    
+    // ***** FIX: Explicitly define the type of newStatus to match the Task interface *****
+    const newStatus: 'pending' | 'completed' = taskToToggle.status === 'completed' ? 'pending' : 'completed';
+
     const updatedTasks = tasks.map(t => t.task_id === taskId ? { ...t, status: newStatus } : t);
     setTasks(updatedTasks);
     await supabase.from('tasks').update({ status: newStatus }).eq('task_id', taskId);
