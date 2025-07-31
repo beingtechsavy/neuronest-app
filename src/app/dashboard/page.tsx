@@ -71,13 +71,8 @@ export default function Dashboard() {
         try {
             await fetchProfile(user.id);
             await fetchSubjects(user.id);
-        // ***** FIX: Correctly typed the catch block *****
-        } catch (e) {
-            if (e instanceof Error) {
-                setError(e.message);
-            } else {
-                setError("An unknown error occurred.");
-            }
+        } catch (e: any) {
+            setError(e.message);
         } finally {
             setLoading(false);
         }
@@ -201,7 +196,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   contentInner: { 
     maxWidth: '1200px', 
     margin: '0 auto', 
-    textAlign: 'center' 
   },
   loadingContainer: { minHeight: '100vh', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid #1e293b', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' },
@@ -214,7 +208,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexWrap: 'wrap',
     gap: '1rem',
     marginBottom: '3rem',
-    textAlign: 'left',
   },
   greeting: { fontSize: '2.5rem', fontWeight: 600, color: '#f1f5f9' },
   addSubjectButton: {
@@ -224,9 +217,9 @@ const styles: { [key: string]: React.CSSProperties } = {
       border: 'none', cursor: 'pointer', fontWeight: 600,
   },
   cardsContainer: {
-    display: 'inline-grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+    display: 'grid',
+    // ***** FIX: Changed minmax value to create a better grid flow *****
+    gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
     gap: '2rem',
-    textAlign: 'left',
   },
 }
