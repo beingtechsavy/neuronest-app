@@ -59,7 +59,6 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
     const taskToToggle = tasks.find(t => t.task_id === taskId);
     if (!taskToToggle) return;
     
-    // ***** FIX: Explicitly define the type of newStatus to match the Task interface *****
     const newStatus: 'pending' | 'completed' = taskToToggle.status === 'completed' ? 'pending' : 'completed';
 
     const updatedTasks = tasks.map(t => t.task_id === taskId ? { ...t, status: newStatus } : t);
@@ -79,7 +78,8 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
           onClick={() => !chapter.completed && setIsExpanded(!isExpanded)}
         >
           <ChevronDown size={18} style={{ ...styles.chevron, ...(isExpanded ? styles.chevronExpanded : {}) }} />
-          {chapter.is_stressful && <AlertTriangle size={16} style={{color: '#f59e0b'}} title="This chapter may be stressful"/>}
+          {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
+          {chapter.is_stressful && <span title="This chapter may be stressful"><AlertTriangle size={16} style={{color: '#f59e0b'}}/></span>}
           <span style={{ ...styles.taskName, ...(chapter.completed ? styles.taskNameCompleted : {}) }}>
             {chapter.title}
           </span>
@@ -103,7 +103,8 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
               {tasks.map(task => (
                 <div key={task.task_id} style={styles.subTaskItem} onClick={() => handleToggleTask(task.task_id)}>
                     <div style={{...styles.subTaskCheckmark, ...(task.status === 'completed' ? styles.subTaskCheckmarkCompleted : {})}}></div>
-                    {task.is_stressful && <AlertTriangle size={14} style={{color: '#f59e0b', flexShrink: 0}} title="This task may be stressful"/>}
+                      {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
+                    {task.is_stressful && <span title="This task may be stressful"><AlertTriangle size={14} style={{color: '#f59e0b', flexShrink: 0}}/></span>}
                     <span style={{...styles.subTaskName, ...(task.status === 'completed' ? styles.subTaskNameCompleted : {})}}>{task.title}</span>
                 </div>
               ))}
