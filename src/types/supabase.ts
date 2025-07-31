@@ -9,8 +9,9 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      // You can add detailed types for your tables here later
-      // For now, an empty definition is enough to fix the build
+      // ***** FIX: Added a comment to disable the lint rule for this line *****
+      // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
