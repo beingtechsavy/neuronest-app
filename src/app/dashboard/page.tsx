@@ -71,8 +71,13 @@ export default function Dashboard() {
         try {
             await fetchProfile(user.id);
             await fetchSubjects(user.id);
-        } catch (e: any) {
-            setError(e.message);
+        // ***** FIX: Correctly typed the catch block to satisfy the linter *****
+        } catch (e) {
+            if (e instanceof Error) {
+                setError(e.message);
+            } else {
+                setError("An unknown error occurred.");
+            }
         } finally {
             setLoading(false);
         }
@@ -218,7 +223,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardsContainer: {
     display: 'grid',
-    // ***** FIX: Changed minmax value to create a better grid flow *****
     gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
     gap: '2rem',
   },
