@@ -6,6 +6,7 @@ import ChapterItem from './ChapterItem'
 import EditChapterModal from './EditChapterModal'
 import AddChapterModal from './AddChapterModal'
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import React from 'react'
 
 interface Subject {
   subject_id: number
@@ -40,17 +41,16 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
   const [isAddChapterModalOpen, setIsAddChapterModalOpen] = useState(false)
 
-  const updateProgress = (currentChapters: Chapter[]) => {
+  const updateProgress = useCallback((currentChapters: Chapter[]) => {
     const completedCount = currentChapters.filter(c => c.completed).length
     setProgress(currentChapters.length > 0 ? Math.round((completedCount / currentChapters.length) * 100) : 0)
-  }
+  }, [])
 
-  const updateTodayView = (currentChapters: Chapter[]) => {
+  const updateTodayView = useCallback((currentChapters: Chapter[]) => {
     const incomplete = currentChapters.filter(c => !c.completed)
     setTodayChapterIds(incomplete.slice(0, 2).map(c => c.chapter_id))
-  }
+  }, [])
 
-  // ***** FIX: Wrapped loadChapters in useCallback to satisfy dependency rules *****
   const loadChapters = useCallback(async () => {
     const { data, error } = await supabase
       .from('chapters')
@@ -70,7 +70,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
     setChapters(initializedChapters)
     updateProgress(initializedChapters)
     updateTodayView(initializedChapters)
-  }, [subject.subject_id])
+  }, [subject.subject_id, updateProgress, updateTodayView])
 
   useEffect(() => {
     loadChapters()
@@ -135,7 +135,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-              {subject.is_stressful && <AlertTriangle size={20} style={{color: '#f59e0b'}} title="This subject may be stressful"/>}
+              {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
+              {subject.is_stressful && <span title="This subject may be stressful"><AlertTriangle size={20} style={{color: '#f59e0b'}}/></span>}
               <span style={styles.cardTitle}>{subject.title}</span>
             </div>
             <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
