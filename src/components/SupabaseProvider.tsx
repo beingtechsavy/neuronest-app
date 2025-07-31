@@ -5,7 +5,6 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useState } from 'react'
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  // ***** FINAL FIX: Cast the created client to the type expected by the provider *****
   const [supabase] = useState(() =>
     createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +13,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <SessionContextProvider supabaseClient={supabase as SupabaseClient}>
+    // ***** FINAL FIX: Use a two-step cast as suggested by the error message *****
+    <SessionContextProvider supabaseClient={supabase as unknown as SupabaseClient}>
       {children}
     </SessionContextProvider>
   )
