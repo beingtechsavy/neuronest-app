@@ -275,9 +275,8 @@ export default function CalendarPage() {
         }
     }
 
-    const handleConfirmReschedule = async () => {
-        if (!rescheduleDetails) return;
-        const { taskId, newStartTime, newEndTime } = rescheduleDetails;
+    const handleConfirmReschedule = async (finalDetails: { taskId: number; newStartTime: Date; newEndTime: Date; }) => {
+        const { taskId, newStartTime, newEndTime } = finalDetails;
         await supabase.from('tasks').update({
             scheduled_date: newStartTime.toISOString().split('T')[0],
             start_time: newStartTime.toISOString(),
@@ -441,11 +440,18 @@ export default function CalendarPage() {
 
         const originalStartDate = new Date(task.start_time);
         const minutesOffset = (delta.y / HOUR_HEIGHT) * 60;
-        const newStartDate = new Date(originalStartDate.getTime() + minutesOffset * 60 * 1000);
-
-        const targetDayISO = over.id as string;
-        const [year, month, day] = targetDayISO.split('T')[0].split('-').map(Number);
-        newStartDate.setFullYear(year, month - 1, day);
+        
+        const targetDay = new Date(over.id as string);
+        
+        const newStartDate = new Date(
+            targetDay.getFullYear(),
+            targetDay.getMonth(),
+            targetDay.getDate(),
+            originalStartDate.getHours(),
+            originalStartDate.getMinutes()
+        );
+        
+        newStartDate.setMinutes(newStartDate.getMinutes() + minutesOffset);
 
         const minutes = newStartDate.getMinutes();
         const roundedMinutes = Math.round(minutes / 15) * 15;
@@ -595,7 +601,7 @@ export default function CalendarPage() {
                                 )}
                             </div>
                         </div>
-                        <div className="w-full lg:max-w-sm lg:flex-shrink-0 h-[50vh] lg:h-auto">
+                        <div className="w-full lg:max-w-sm lg:flex-shrink-0 flex flex-col">
                             <UnscheduledTasks 
                                 tasks={unscheduledTasks}
                                 onSchedule={handleAutoSchedule}

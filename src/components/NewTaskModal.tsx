@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import React from 'react'
 
 interface Subject {
   subject_id: number;
@@ -33,16 +34,13 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [loading, setLoading] = useState(false)
-  // ***** FIX: Removed unused 'loadingSubjects' state variable *****
 
   useEffect(() => {
     if (!isOpen) return;
 
     const fetchSubjects = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return;
-      }
+      if (!user) return;
 
       const { data, error } = await supabase
         .from('subjects')
@@ -81,7 +79,6 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      // A custom modal or inline message is better than alert()
       console.error("Please provide a title for the task.");
       return;
     }
@@ -103,7 +100,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
     });
 
     if (error) {
-      console.error("Task insert error:", error);
+        console.error("Task insert error:", error);
     } else {
         onTaskAdded();
         onClose();
@@ -117,56 +114,55 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h2 style={styles.header}>Add a New Task</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="taskTitle" style={styles.label}>Task Title</label>
-            <input id="taskTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={styles.input} required autoFocus />
-          </div>
-          <div style={styles.inputGroup}>
-            <label htmlFor="subject" style={styles.label}>Subject (Optional)</label>
-            <select id="subject" value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} style={styles.input}>
-              <option value="">No Subject</option>
-              {subjects.map(s => <option key={s.subject_id} value={s.subject_id}>{s.title}</option>)}
-            </select>
-          </div>
-          <div style={styles.inputGroup}>
-            <label htmlFor="chapter" style={styles.label}>Chapter (Optional)</label>
-            <select id="chapter" value={selectedChapterId} onChange={(e) => setSelectedChapterId(e.target.value)} style={styles.input} disabled={!selectedSubjectId}>
-              <option value="">No Chapter</option>
-              {chapters.map(c => <option key={c.chapter_id} value={c.chapter_id}>{c.title}</option>)}
-            </select>
-          </div>
-          <div style={styles.splitGroup}>
-            <div style={{flex: 2}}>
-                <label style={styles.label}>Effort</label>
-                <div style={styles.timeInputContainer}>
-                    <input type="number" value={hours} onChange={(e) => setHours(e.target.value)} style={styles.timeInput} placeholder="h" />
-                    <span>h</span>
-                    <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} style={styles.timeInput} placeholder="m" />
-                    <span>m</span>
-                </div>
-            </div>
-            <div style={{flex: 3}}>
-                <label htmlFor="deadline" style={styles.label}>Deadline (Optional)</label>
-                <input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={styles.input} />
-            </div>
-          </div>
-           <div style={styles.inputGroup}>
-            <label style={styles.checkboxLabel}>
-              <input 
-                type="checkbox" 
-                checked={isStressful}
-                onChange={(e) => setIsStressful(e.target.checked)}
-                style={styles.checkbox}
-              />
-              <span style={styles.checkboxText}>Mark as a potentially stressful task</span>
-            </label>
-          </div>
-          <div style={styles.buttonGroup}>
-            <button type="button" onClick={onClose} style={styles.cancelButton} disabled={loading}>Cancel</button>
-            <button type="submit" style={styles.saveButton} disabled={loading || !title.trim()}>{loading ? 'Saving...' : 'Add Task'}</button>
-          </div>
-        </form>
+        <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.inputGroup}>
+                <label htmlFor="taskTitle" style={styles.label}>Title</label>
+                <input id="taskTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={styles.input} required autoFocus />
+            </div>
+
+            <div style={styles.gridGroup}>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="subject" style={styles.label}>Subject</label>
+                    <select id="subject" value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} style={styles.input}>
+                        <option value="">No Subject</option>
+                        {subjects.map(s => <option key={s.subject_id} value={s.subject_id}>{s.title}</option>)}
+                    </select>
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="chapter" style={styles.label}>Chapter</label>
+                    <select id="chapter" value={selectedChapterId} onChange={(e) => setSelectedChapterId(e.target.value)} style={styles.input} disabled={!selectedSubjectId}>
+                        <option value="">No Chapter</option>
+                        {chapters.map(c => <option key={c.chapter_id} value={c.chapter_id}>{c.title}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div style={styles.gridGroup}>
+                <div style={styles.inputGroup}>
+                    <label style={styles.label}>Effort</label>
+                    <div style={styles.timeInputContainer}>
+                        <input type="number" value={hours} onChange={(e) => setHours(e.target.value)} style={styles.timeInput} placeholder="h" />
+                        <span style={styles.timeUnit}>h</span>
+                        <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} style={styles.timeInputMinutes} placeholder="m" />
+                        <span style={styles.timeUnit}>m</span>
+                    </div>
+                </div>
+                <div style={styles.inputGroup}>
+                    <label htmlFor="deadline" style={styles.label}>Deadline</label>
+                    <input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={styles.input} />
+                </div>
+            </div>
+
+            <label style={styles.checkboxLabel}>
+                <input type="checkbox" checked={isStressful} onChange={(e) => setIsStressful(e.target.checked)} style={styles.checkbox} />
+                Mark as stressful task
+            </label>
+
+            <div style={styles.buttonGroup}>
+                <button type="button" onClick={onClose} style={styles.cancelButton} disabled={loading}>Cancel</button>
+                <button type="submit" style={styles.saveButton} disabled={loading || !title.trim()}>{loading ? 'Saving...' : 'Add Task'}</button>
+            </div>
+        </form>
       </div>
     </div>
   );
@@ -179,50 +175,88 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center', justifyContent: 'center', zIndex: 4000,
   },
   modal: {
-    background: '#1e293b', padding: '2rem', borderRadius: '16px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)', width: '100%',
-    maxWidth: '500px', border: '1px solid #334155',
+    background: '#1e293b', 
+    padding: '1.5rem', 
+    borderRadius: '12px',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)', 
+    width: '90%',
+    maxWidth: '450px', 
+    border: '1px solid #334155',
   },
   header: {
-    color: '#f1f5f9', fontSize: '1.5rem', fontWeight: 'bold',
-    textAlign: 'center', marginBottom: '2rem',
+    color: '#f1f5f9', fontSize: '1.25rem', fontWeight: '600',
+    textAlign: 'center', marginBottom: '1.5rem',
   },
-  inputGroup: { marginBottom: '1rem' },
-  splitGroup: { display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'flex-end' },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem'
+  },
+  inputGroup: { 
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  gridGroup: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0.75rem',
+  },
   label: {
-    display: 'block', color: '#cbd5e1', marginBottom: '0.5rem',
-    fontSize: '0.875rem',
+    display: 'block', color: '#94a3b8', marginBottom: '0.25rem',
+    fontSize: '0.8rem',
   },
   input: {
-    width: '100%', padding: '0.75rem 1rem', borderRadius: '8px',
+    width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px',
     backgroundColor: '#334155', border: '1px solid #475569',
-    color: '#f1f5f9', fontSize: '1rem', outline: 'none',
+    color: '#f1f5f9', fontSize: '0.875rem', outline: 'none',
     boxSizing: 'border-box',
   },
   timeInputContainer: {
     display: 'flex', alignItems: 'center', gap: '0.5rem',
     backgroundColor: '#334155', border: '1px solid #475569',
-    borderRadius: '8px', padding: '0.75rem 1rem', color: '#f1f5f9',
+    borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#f1f5f9',
   },
   timeInput: {
-    backgroundColor: 'transparent', border: 'none', color: '#f1f5f9',
-    width: '40px', textAlign: 'center', fontSize: '1rem', outline: 'none',
-  },
-  checkboxLabel: { display: 'flex', alignItems: 'center', cursor: 'pointer' },
-  checkbox: { width: '16px', height: '16px', marginRight: '0.75rem', accentColor: '#a855f7' },
-  checkboxText: { color: '#cbd5e1', fontSize: '0.875rem' },
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#f1f5f9',
+    width: '3em', // wider for clarity
+    textAlign: 'center',
+    fontSize: '0.95rem',
+    outline: 'none',
+    padding: '0.25rem 0.5rem',
+    // Removed spinner-hiding CSS for better compatibility
+  },
+  timeInputMinutes: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#f1f5f9',
+    width: '4.5em', // wider for spinner
+    textAlign: 'center',
+    fontSize: '0.95rem',
+    outline: 'none',
+    padding: '0.25rem 0.5rem', // normal padding
+  },
+  timeUnit: {
+    fontSize: '0.75rem',
+    color: '#94a3b8',
+  },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: '#cbd5e1', marginTop: '0.25rem' },
+  checkbox: { width: '14px', height: '14px', accentColor: '#a855f7' },
   buttonGroup: {
-    display: 'flex', justifyContent: 'flex-end', gap: '1rem',
-    marginTop: '2rem',
+    display: 'flex', justifyContent: 'flex-end', gap: '0.5rem',
+    marginTop: '1.5rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid #334155',
   },
   cancelButton: {
-    padding: '0.75rem 1.5rem', borderRadius: '8px',
+    padding: '0.5rem 1rem', borderRadius: '6px',
     border: '1px solid #475569', backgroundColor: 'transparent',
-    color: '#cbd5e1', fontWeight: '600', cursor: 'pointer',
+    color: '#cbd5e1', fontWeight: '600', cursor: 'pointer', fontSize: '0.875rem',
   },
   saveButton: {
-    padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none',
-    backgroundColor: '#4f46e5', color: 'white', fontWeight: '600',
-    cursor: 'pointer',
+    padding: '0.5rem 1rem', borderRadius: '6px', border: 'none',
+    backgroundColor: '#4f46e5', color: '#fff', fontWeight: '600',
+    cursor: 'pointer', fontSize: '0.875rem',
   },
 };
