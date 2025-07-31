@@ -7,21 +7,8 @@ import EditChapterModal from './EditChapterModal'
 import AddChapterModal from './AddChapterModal'
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import React from 'react'
-
-interface Subject {
-  subject_id: number
-  title: string
-  color: string
-  is_stressful: boolean
-}
-
-interface Chapter {
-  chapter_id: number
-  title: string
-  order_idx: number
-  completed: boolean
-  is_stressful: boolean
-}
+// ***** FIX: Import the shared types from the new definitions file *****
+import { Subject, Chapter } from '@/types/definitions'
 
 interface TaskBoxProps {
   subject: Subject
@@ -113,7 +100,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   
   const handleAddChapter = async (data: { title: string, is_stressful: boolean }) => {
     const maxOrderIdx = chapters.reduce((max, chap) => Math.max(max, chap.order_idx), 0);
-    const { data: newChapter } = await supabase.from('chapters').insert({ ...data, subject_id: subject.subject_id, order_idx: maxOrderIdx + 1 }).select().single();
+    const { data: newChapterData } = await supabase.from('chapters').insert({ ...data, subject_id: subject.subject_id, order_idx: maxOrderIdx + 1 }).select().single();
+    const newChapter: Chapter | null = newChapterData as Chapter | null;
     if (newChapter) {
         const updatedChapters = [...chapters, newChapter];
         setChapters(updatedChapters);
@@ -135,7 +123,6 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-              {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
               {subject.is_stressful && <span title="This subject may be stressful"><AlertTriangle size={20} style={{color: '#f59e0b'}}/></span>}
               <span style={styles.cardTitle}>{subject.title}</span>
             </div>

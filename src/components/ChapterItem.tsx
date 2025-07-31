@@ -5,21 +5,8 @@ import { ChevronDown, AlertTriangle } from 'lucide-react'
 import EditDeleteIcons from './EditDeleteIcons'
 import { supabase } from '@/lib/supabaseClient'
 import React from 'react'
-
-// Update Task interface
-interface Task { 
-  task_id: number; 
-  title: string; 
-  status: 'pending' | 'completed';
-  is_stressful: boolean;
-}
-
-interface Chapter {
-  chapter_id: number
-  title: string
-  completed: boolean
-  is_stressful: boolean
-}
+// ***** FIX: Import the shared types from the new definitions file *****
+import { Chapter, Task } from '@/types/definitions'
 
 interface ChapterItemProps {
   chapter: Chapter
@@ -78,7 +65,6 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
           onClick={() => !chapter.completed && setIsExpanded(!isExpanded)}
         >
           <ChevronDown size={18} style={{ ...styles.chevron, ...(isExpanded ? styles.chevronExpanded : {}) }} />
-          {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
           {chapter.is_stressful && <span title="This chapter may be stressful"><AlertTriangle size={16} style={{color: '#f59e0b'}}/></span>}
           <span style={{ ...styles.taskName, ...(chapter.completed ? styles.taskNameCompleted : {}) }}>
             {chapter.title}
@@ -103,7 +89,6 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
               {tasks.map(task => (
                 <div key={task.task_id} style={styles.subTaskItem} onClick={() => handleToggleTask(task.task_id)}>
                     <div style={{...styles.subTaskCheckmark, ...(task.status === 'completed' ? styles.subTaskCheckmarkCompleted : {})}}></div>
-                      {/* ***** FIX: Wrapped the icon in a span to apply the title tooltip ***** */}
                     {task.is_stressful && <span title="This task may be stressful"><AlertTriangle size={14} style={{color: '#f59e0b', flexShrink: 0}}/></span>}
                     <span style={{...styles.subTaskName, ...(task.status === 'completed' ? styles.subTaskNameCompleted : {})}}>{task.title}</span>
                 </div>
