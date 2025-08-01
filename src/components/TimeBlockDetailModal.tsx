@@ -20,29 +20,33 @@ export default function TimeBlockDetailModal({ isOpen, onClose, onDelete, block 
   if (!isOpen || !block) return null
 
   const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
   }
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={{...styles.colorBar}}></div>
-        <button onClick={onClose} style={styles.closeButton}>
+    <div style={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="timeblock-detail-title">
+      <div style={styles.modal} onClick={e => e.stopPropagation()}>
+        <div style={{ ...styles.colorBar }}></div>
+        <button onClick={onClose} style={styles.closeButton} aria-label="Close time block detail modal">
           <X size={20} />
         </button>
         
         <div style={styles.content}>
-            <h2 style={styles.title}>{block.title}</h2>
+          <h2 id="timeblock-detail-title" style={styles.title}>{block.title}</h2>
 
-            <div style={styles.detailItem}>
-                <Clock size={16} style={styles.icon} />
-                <span style={styles.detailText}>{formatTime(block.start_time)} - {formatTime(block.end_time)}</span>
-            </div>
+          <div style={styles.detailItem}>
+            <Clock size={16} style={styles.icon} />
+            <span style={styles.detailText}>{formatTime(block.start_time)} - {formatTime(block.end_time)}</span>
+          </div>
 
-            <button onClick={() => onDelete(block.block_id)} style={styles.deleteButton}>
-                <Trash2 size={16} />
-                Delete Event
-            </button>
+          <button 
+            onClick={() => onDelete(block.block_id)} 
+            style={styles.deleteButton}
+            aria-label={`Delete time block ${block.title}`}
+          >
+            <Trash2 size={16} />
+            Delete Event
+          </button>
         </div>
       </div>
     </div>
@@ -70,7 +74,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   colorBar: {
     height: '8px',
     width: '100%',
-    backgroundColor: '#4ade80', // Green for appointments
+    backgroundColor: '#4ade80', // Green to denote time block/appointment
   },
   closeButton: {
     position: 'absolute', top: '16px', right: '16px',

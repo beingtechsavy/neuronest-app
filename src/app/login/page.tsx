@@ -61,28 +61,32 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="relative">
+            {/* CORRECTED PASSWORD INPUT SECTION */}
+            <div>
               <label htmlFor="password" className="block mb-1 text-xs font-medium text-gray-400">
                 Password
               </label>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2 bg-[#071020] border border-gray-700 rounded-lg text-white pr-10 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-              />
-              <button
-  type="button"
-  onClick={() => setShowPassword((v) => !v)}
-  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-purple-300"
->
-  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-</button>
-
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2 bg-[#071020] border border-gray-700 rounded-lg text-white pr-10 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  // These classes now correctly center the button relative to the new parent div
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-purple-300"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
+            {/* END OF CORRECTION */}
 
             {error && <p className="text-center text-sm text-red-500">{error}</p>}
 

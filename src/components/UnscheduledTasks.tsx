@@ -37,19 +37,41 @@ export default function UnscheduledTasks({ tasks, onSchedule, onTaskAdded, isSch
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-white">Task Inbox</h2>
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsModalOpen(true)} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300" title="Add New Task"><Plus size={20} /></button>
-            <button onClick={onSchedule} disabled={isScheduling} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-purple-400 disabled:opacity-50" title="Schedule My Week"><Wand2 size={20} /></button>
+            <button 
+              onClick={() => setIsModalOpen(true)} 
+              className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300" 
+              title="Add New Task"
+              aria-label="Add New Task"
+            >
+              <Plus size={20} />
+            </button>
+            <button 
+              onClick={onSchedule} 
+              disabled={isScheduling} 
+              className="p-2 rounded-md hover:bg-slate-700 transition-colors text-purple-400 disabled:opacity-50" 
+              title="Schedule My Week"
+              aria-label="Schedule My Week"
+            >
+              <Wand2 size={20} />
+            </button>
           </div>
         </div>
 
-        {scheduleMessage && <p className="text-center text-sm text-purple-300 mb-4">{scheduleMessage}</p>}
+        {scheduleMessage && <p className="text-center text-sm text-purple-300 mb-4" role="status" aria-live="polite">{scheduleMessage}</p>}
 
-        <div className="flex-grow overflow-y-auto -mr-3 pr-3 space-y-2">
+        <div className="flex-grow overflow-y-auto -mr-3 pr-3 space-y-2" role="list" aria-label="Unscheduled Tasks">
           {tasks.length === 0 ? (
             <p className="text-slate-400 text-center pt-8">Your inbox is clear!</p>
           ) : (
             tasks.map(task => (
-              <div key={task.task_id} style={{...styles.taskItem, borderLeftColor: task.chapters?.subjects?.color || '#6366f1'}}>
+              <div 
+                key={task.task_id} 
+                style={{ 
+                  ...styles.taskItem, 
+                  borderLeftColor: task.chapters?.subjects?.color || '#6366f1' 
+                }}
+                role="listitem"
+              >
                 <span className="text-slate-200 text-sm">{task.title}</span>
               </div>
             ))
@@ -61,10 +83,10 @@ export default function UnscheduledTasks({ tasks, onSchedule, onTaskAdded, isSch
 }
 
 const styles: { [key: string]: React.CSSProperties } = {
-    taskItem: {
-        backgroundColor: '#334155',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.5rem',
-        borderLeftWidth: '4px',
-    }
+  taskItem: {
+    backgroundColor: '#334155',
+    padding: '0.75rem 1rem',
+    borderRadius: '0.5rem',
+    borderLeftWidth: '4px',
+  }
 }
