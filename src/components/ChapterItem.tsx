@@ -135,7 +135,11 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
                   }}>
                     {task.status === 'completed' ? <span style={styles.subTaskTick}>✓</span> : ''}
                   </div>
-                  {task.is_stressful && <AlertTriangle size={14} style={{ color: '#fbbf24', marginRight: 3 }} title="Task is stressful" />}
+                  {task.is_stressful && (
+  <span title="Task is stressful">
+    <AlertTriangle size={14} style={{ color: '#fbbf24', marginRight: 3 }} />
+  </span>
+)}
                   <span
                     style={{
                       ...styles.subTaskName,
