@@ -15,6 +15,8 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/SideBar';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { handleEnhancedDragEnd } from '@/lib/dragDropHandlers';
+import { enhancedTimeToMinutes } from '@/lib/timeCalculations';
 import WeeklyView from '@/components/WeeklyView';
 import AddTimeBlockModal from '@/components/AddTimeBlockModal';
 import TaskDetailModal from '@/components/TaskDetailModal';
@@ -23,6 +25,10 @@ import TimeBlockDetailModal from '@/components/TimeBlockDetailModal';
 import UnscheduledTasks from '@/components/UnscheduledTasks';
 import DeleteTaskConfirmModal from '@/components/DeleteTaskConfirmModal';
 import EditTaskModal from '@/components/EditTaskModal';
+import DragFeedback from '@/components/DragFeedback';
+import { useDragFeedback } from '@/hooks/useDragFeedback';
+import CalendarErrorBoundary from '@/components/CalendarErrorBoundary';
+import { StressMarkingErrorHandler } from '@/lib/errorHandling';
 
 // --- TYPE DEFINITIONS ---
 export interface CalendarTask {
@@ -69,14 +75,8 @@ const HOUR_HEIGHT = 64;
 const SCROLL_SPEED = 10;
 const SCROLL_THRESHOLD = 50;
 
-const timeToUTCMinutes = (time: string | Date): number => {
-  if (typeof time === 'string') {
-    if (!time) return 0;
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-  }
-  return time.getUTCHours() * 60 + time.getUTCMinutes();
-};
+// Replaced timeToUTCMinutes with enhancedTimeToMinutes from timeCalculations.ts
+const timeToUTCMinutes = enhancedTimeToMinutes;
 const toUTC_YYYYMMDD = (d: Date): string => {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -134,6 +134,9 @@ export default function CalendarPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTask, setEditTask] = useState<CalendarTask | null>(null);
 
+  // Drag feedback system
+  const { messages, removeMessage, showSuccess, showError, showWarning } = useDragFeedback();
+
   // --- DATA FETCHING ---
   const fetchData = useCallback(async (isNavigation = false) => {
     if (!currentDate) return;
@@ -185,6 +188,81 @@ export default function CalendarPage() {
   }, [draggedTask]);
 
   // --- CORE LOGIC & HANDLERS ---
+  const handleStressToggle = async (taskId: number, isStressful: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const errorResult = StressMarkingErrorHandler.handleStressToggleError(
+          new Error('User not authenticated'), 
+          taskId, 
+          isStressful
+        );
+        showError(errorResult.userMessage);
+        return;
+      }
+
+      // Optimistic UI update
+      setTasks(prevTasks => {
+        const newTasks = { ...prevTasks };
+        for (const dateKey in newTasks) {
+          newTasks[dateKey] = newTasks[dateKey].map(task => 
+            task.task_id === taskId ? { ...task, is_stressful: isStressful } : task
+          );
+        }
+        return newTasks;
+      });
+
+      // Update unscheduled tasks as well
+      setUnscheduledTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.task_id === taskId ? { ...task, is_stressful: isStressful } : task
+        )
+      );
+
+      // Update database with enhanced error handling
+      const { error } = await supabase
+        .from('tasks')
+        .update({ is_stressful: isStressful })
+        .eq('task_id', taskId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Failed to update stress status:', error);
+        
+        // Use comprehensive error handler
+        const errorResult = StressMarkingErrorHandler.handleStressToggleError(
+          error, 
+          taskId, 
+          isStressful
+        );
+        
+        showError(errorResult.userMessage);
+        
+        // Rollback optimistic update
+        await fetchData();
+        return;
+      }
+
+      // Show success feedback
+      showSuccess(isStressful ? 'Task marked as stressful' : 'Task marked as not stressful');
+      
+    } catch (error) {
+      console.error('Error toggling stress status:', error);
+      
+      // Use comprehensive error handler for unexpected errors
+      const errorResult = StressMarkingErrorHandler.handleStressToggleError(
+        error as Error, 
+        taskId, 
+        isStressful
+      );
+      
+      showError(errorResult.userMessage);
+      
+      // Rollback optimistic update
+      await fetchData();
+    }
+  };
+
   const scheduleTasks = async () => {
     if (!preferences) {
         setScheduleMessage('User preferences not loaded.');
@@ -346,39 +424,51 @@ export default function CalendarPage() {
     scrollDirectionRef.current = null;
     isOverNavEdge.current = null;
 
-    const { active, over, delta } = event;
-    if (!over || !active.data.current?.task || !preferences) return;
+    // Use enhanced drag handler with comprehensive validation
+    const dragResult = handleEnhancedDragEnd(event, tasks, preferences, timeBlocks, HOUR_HEIGHT);
     
-    if (String(over.id).startsWith('navigate-')) return;
+    if (!dragResult.success) {
+      // Show user-friendly error message
+      if (dragResult.error?.includes('conflicts with')) {
+        showError(`Cannot move task: ${dragResult.error}`);
+      } else if (dragResult.error?.includes('Navigation edge')) {
+        // Don't show error for navigation edge drops - this is expected behavior
+        return;
+      } else if (dragResult.error?.includes('span multiple days')) {
+        showWarning('Tasks cannot span multiple days. Try a shorter time slot.');
+      } else if (dragResult.error?.includes('preferences not loaded')) {
+        showError('Unable to validate time slot. Please refresh the page.');
+      } else {
+        showError(dragResult.error || 'Unable to move task to this time slot');
+      }
+      return;
+    }
 
-    const task = active.data.current.task as CalendarTask;
-    if (!task.start_time) return;
-
-    const originalStartDate = new Date(task.start_time);
-    const minutesOffset = delta.y / HOUR_HEIGHT * 60;
-    const targetDay = new Date(over.id as string);
-    const newStartDate = new Date(Date.UTC(targetDay.getUTCFullYear(), targetDay.getUTCMonth(), targetDay.getUTCDate(), originalStartDate.getUTCHours(), originalStartDate.getUTCMinutes()));
-    newStartDate.setUTCMinutes(newStartDate.getUTCMinutes() + minutesOffset);
-    const roundedMinutes = Math.round(newStartDate.getUTCMinutes() / 15) * 15;
-    newStartDate.setUTCMinutes(roundedMinutes, 0, 0);
-    const duration = task.effort_units ?? preferences.session_length ?? 60;
-    const newEndDate = new Date(newStartDate.getTime() + duration * 60000);
-    const dateKey = toUTC_YYYYMMDD(newStartDate);
-    let busySlots: {start:number, end:number}[] = [];
-    const sleepStart = timeToUTCMinutes(preferences.sleep_start);
-    const sleepEnd = timeToUTCMinutes(preferences.sleep_end);
-    if(sleepStart > sleepEnd) { busySlots.push({start:sleepStart, end:1440}, {start:0,end:sleepEnd}); } 
-    else { busySlots.push({start:sleepStart, end:sleepEnd}); }
-    preferences.meal_start_times.forEach(ms => { const s = timeToUTCMinutes(ms); busySlots.push({start:s, end:s + preferences.meal_duration}); });
-    timeBlocks.filter(b => new Date(b.start_time).toISOString().startsWith(dateKey)).forEach(b => { busySlots.push({start:timeToUTCMinutes(new Date(b.start_time)), end:timeToUTCMinutes(new Date(b.end_time))}); });
-    (tasks[dateKey] ?? []).forEach(t => { if(t.task_id !== task.task_id && t.start_time && t.end_time) { busySlots.push({start:timeToUTCMinutes(new Date(t.start_time)), end:timeToUTCMinutes(new Date(t.end_time))}); } });
-    busySlots = mergeSlots(busySlots);
-    const newStartMins = newStartDate.getUTCHours()*60 + newStartDate.getUTCMinutes();
-    const newEndMins = newStartMins + duration;
-    const isBlocked = busySlots.some(slot => newStartMins < slot.end && newEndMins > slot.start);
-    if (isBlocked) { console.log("Cannot move task here, slot is blocked."); return; }
-    setRescheduleDetails({taskId: task.task_id, title: task.title, newStartTime: newStartDate, newEndTime: newEndDate});
-    setIsRescheduleOpen(true);
+    // Success - show reschedule confirmation
+    if (dragResult.newStartTime && dragResult.newEndTime && dragResult.taskId && dragResult.title) {
+      setRescheduleDetails({
+        taskId: dragResult.taskId,
+        title: dragResult.title,
+        newStartTime: dragResult.newStartTime,
+        newEndTime: dragResult.newEndTime
+      });
+      setIsRescheduleOpen(true);
+      
+      // Show success feedback
+      const startTime = dragResult.newStartTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+      const endTime = dragResult.newEndTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+      showSuccess(`Task moved to ${startTime} - ${endTime}. Confirm to save changes.`);
+    }
   };
 
   // --- RENDER LOGIC ---
@@ -404,14 +494,30 @@ export default function CalendarPage() {
       />
       <RescheduleConfirmModal
         isOpen={isRescheduleOpen}
-        onClose={() => setIsRescheduleOpen(false)}
+        onClose={() => {
+          setIsRescheduleOpen(false);
+          setRescheduleDetails(null);
+        }}
         onConfirm={async ({ taskId, newStartTime, newEndTime }) => {
-          await supabase.from('tasks').update({
-            scheduled_date: toUTC_YYYYMMDD(newStartTime),
-            start_time: newStartTime.toISOString(),
-            end_time: newEndTime.toISOString(),
-          }).eq('task_id', taskId);
-          await fetchData();
+          try {
+            const { error } = await supabase.from('tasks').update({
+              scheduled_date: toUTC_YYYYMMDD(newStartTime),
+              start_time: newStartTime.toISOString(),
+              end_time: newEndTime.toISOString(),
+            }).eq('task_id', taskId);
+
+            if (error) {
+              showError('Failed to save task changes. Please try again.');
+              console.error('Reschedule error:', error);
+            } else {
+              showSuccess('Task successfully rescheduled!');
+              await fetchData();
+            }
+          } catch (error) {
+            showError('An unexpected error occurred. Please try again.');
+            console.error('Reschedule error:', error);
+          }
+          
           setIsRescheduleOpen(false);
           setRescheduleDetails(null);
         }}
@@ -499,10 +605,16 @@ export default function CalendarPage() {
         currentDate={editTask?.scheduled_date || ''}
       />
 
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove} onDragOver={handleDragOver}>
-        <div className="min-h-screen bg-slate-950 flex text-slate-300">
-          <Sidebar />
-          <main className="flex-1 lg:ml-60 p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
+      <CalendarErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Calendar Error:', error, errorInfo);
+          // In production, you might want to report this to an error tracking service
+        }}
+      >
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove} onDragOver={handleDragOver}>
+          <div className="min-h-screen bg-slate-950 flex text-slate-300">
+            <Sidebar />
+            <main className="flex-1 lg:ml-60 p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
             <div className="flex-grow flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold text-slate-100">{currentDate && months[currentDate.getUTCMonth()]} {currentDate && currentDate.getUTCFullYear()}</h1>
@@ -553,6 +665,7 @@ export default function CalendarPage() {
                     onTaskClick={(task, start, end) => { setSelectedTaskDetails({ ...task, startTime: start, endTime: end }); setIsTaskDetailOpen(true); }}
                     onTimeBlockClick={(block) => { setSelectedBlock(block); setIsBlockDetailOpen(true); }}
                     onTimeSlotClick={(date, hour) => { const dt = new Date(date); dt.setUTCHours(hour, 0, 0, 0); setSelectedDateTime(dt); setIsAddBlockOpen(true); }}
+                    onStressToggle={handleStressToggle}
                   />
                 ))}
               </div>
@@ -564,12 +677,29 @@ export default function CalendarPage() {
         </div>
         <DragOverlay>
           {draggedTask && (
-            <div className="p-2 rounded-lg shadow-lg text-white bg-indigo-600 select-none pointer-events-none" style={{ cursor: 'grabbing', backgroundColor: `${draggedTask.chapters?.subjects?.color || '#6366f1'}`, borderLeft: `3px solid ${draggedTask.chapters?.subjects?.color || '#6366f1'}` }}>
-              {draggedTask.title}
+            <div 
+              className="p-3 rounded-lg shadow-2xl text-white select-none pointer-events-none transform rotate-3 scale-105 border-2" 
+              style={{ 
+                cursor: 'grabbing', 
+                backgroundColor: `${draggedTask.chapters?.subjects?.color || '#6366f1'}`, 
+                borderColor: `${draggedTask.chapters?.subjects?.color || '#6366f1'}`,
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(79, 70, 229, 0.3)',
+              }}
+            >
+              <div className="font-medium">{draggedTask.title}</div>
+              <div className="text-xs opacity-75 mt-1">
+                {draggedTask.effort_units ? `${draggedTask.effort_units} min` : 'Drag to reschedule'}
+              </div>
             </div>
           )}
         </DragOverlay>
-      </DndContext>
+          <DragFeedback messages={messages} onRemoveMessage={removeMessage} />
+        </DndContext>
+      </CalendarErrorBoundary>
     </>
   );
 }
+
+
+
+

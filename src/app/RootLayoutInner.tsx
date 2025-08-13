@@ -10,11 +10,15 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
 
   // Don't show TopBar on landing, login, or signup pages
   const showTopBar = !['/', '/login', '/signup'].includes(pathname)
+  
+  // Don't apply padding to authentication pages to maintain clean, immersive design
+  const authPages = ['/', '/login', '/signup']
+  const mainClassName = authPages.includes(pathname) ? '' : 'px-4 py-6'
 
   return (
     <SupabaseProvider>
       {showTopBar && <TopBar />}
-      <main className="px-4 py-6">{children}</main>
+      <main className={mainClassName}>{children}</main>
     </SupabaseProvider>
   )
 }

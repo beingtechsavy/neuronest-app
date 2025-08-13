@@ -209,9 +209,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { AlertTriangle } from 'lucide-react';
 import { CalendarTask, TimeBlock, UserPreferences } from '../app/calendar/page';
+import { enhancedTimeToMinutes, calculateGridPosition } from '../lib/timeCalculations';
+import { TimeSlotValidator } from '../lib/timeSlotValidator';
+import { supabase } from '../lib/supabaseClient';
+import DragErrorBoundary from './DragErrorBoundary';
 
 interface WeeklyViewProps {
   currentDate: Date;
@@ -220,16 +225,14 @@ interface WeeklyViewProps {
   tasks: Record<string, CalendarTask[]>;
   onTaskClick: (task: CalendarTask, startTime: Date, endTime: Date) => void;
   onTimeBlockClick: (block: TimeBlock) => void;
-  onTimeSlotClick: (date: Date, hour: number) => void;
+  onTimeSlotClick?: (date: Date, hour: number) => void;
+  onStressToggle?: (taskId: number, isStressful: boolean) => Promise<void>;
 }
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const timeSlots = Array.from({ length: 24 }, (_, i) => i);
 
-function robustTimeToMinutes(dt: Date): number {
-  const min = dt.getUTCHours() * 60 + dt.getUTCMinutes();
-  return isNaN(min) ? 0 : min;
-}
+// Removed robustTimeToMinutes - now using enhancedTimeToMinutes from timeCalculations.ts
 const toUTC_YYYYMMDD = (date: Date): string => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -237,34 +240,95 @@ const toUTC_YYYYMMDD = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-function DraggableTask({ task, style, onClick }: { task: CalendarTask; style: React.CSSProperties; onClick: () => void; }) {
+function DraggableTask({ task, style, onClick, onStressToggle }: { 
+  task: CalendarTask; 
+  style: React.CSSProperties; 
+  onClick: () => void;
+  onStressToggle?: (taskId: number, isStressful: boolean) => Promise<void>;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.task_id,
     data: { task },
   });
 
+  const [isHovered, setIsHovered] = useState(false);
+  const [isUpdatingStress, setIsUpdatingStress] = useState(false);
+
   let start = 1, end = 2;
   if (task.start_time && task.end_time) {
-    try {
-      const dtStart = new Date(task.start_time);
-      const dtEnd = new Date(task.end_time);
-      start = Math.max(1, Math.floor(robustTimeToMinutes(dtStart) / 15) + 1);
-      end = Math.max(start + 1, Math.ceil(robustTimeToMinutes(dtEnd) / 15) + 1);
-    } catch { start = 1; end = 2; }
+    const gridPosition = calculateGridPosition(task.start_time, task.end_time);
+    if (gridPosition.isValid) {
+      start = gridPosition.gridStart;
+      end = gridPosition.gridEnd;
+    } else {
+      console.warn('DraggableTask: Invalid grid position for task', task.task_id, gridPosition.error);
+      // Keep default values: start = 1, end = 2
+    }
   }
+
+  const handleStressToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onStressToggle || isUpdatingStress) return;
+    
+    setIsUpdatingStress(true);
+    try {
+      await onStressToggle(task.task_id, !task.is_stressful);
+    } catch (error) {
+      console.error('Failed to toggle stress status:', error);
+    } finally {
+      setIsUpdatingStress(false);
+    }
+  };
 
   const draggableStyle: React.CSSProperties = {
     ...style,
     gridRowStart: start,
     gridRowEnd: end,
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 0 : 10,
-    cursor: 'grab',
+    cursor: isDragging ? 'grabbing' : 'grab',
+    transform: isDragging ? 'scale(1.05)' : 'scale(1)',
+    transition: isDragging ? 'none' : 'all 0.2s ease-in-out',
+    boxShadow: isDragging ? '0 8px 25px rgba(0, 0, 0, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+    position: 'relative',
   };
 
   return (
-    <div ref={setNodeRef} style={draggableStyle} {...listeners} {...attributes} onClick={e => { e.stopPropagation(); onClick(); }}>
+    <div 
+      ref={setNodeRef} 
+      style={draggableStyle} 
+      {...listeners} 
+      {...attributes} 
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {task.title}
+      
+      {/* Stress indicator that appears on hover */}
+      {(isHovered || task.is_stressful) && onStressToggle && (
+        <button
+          onClick={handleStressToggle}
+          disabled={isUpdatingStress}
+          className={`absolute top-1 right-1 p-1 rounded-full transition-all duration-200 ${
+            task.is_stressful 
+              ? 'bg-red-500/80 text-white hover:bg-red-600/90' 
+              : 'bg-gray-600/80 text-gray-300 hover:bg-red-500/80 hover:text-white'
+          } ${isUpdatingStress ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          style={{ 
+            zIndex: 20,
+            fontSize: '10px',
+            width: '18px',
+            height: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          title={task.is_stressful ? 'Mark as not stressful' : 'Mark as stressful'}
+        >
+          <AlertTriangle size={10} />
+        </button>
+      )}
     </div>
   );
 }
@@ -273,30 +337,66 @@ interface BlockData { title: string; start_time: string; end_time: string; type?
 
 const StaticBlock = ({ block, style, onClick }: { block: BlockData; style: React.CSSProperties; onClick?: (e: React.MouseEvent) => void; }) => {
   let gridStart = 1, gridEnd = 2;
-  try {
-    const startMinutes = robustTimeToMinutes(new Date(block.start_time));
-    const endMinutes = robustTimeToMinutes(new Date(block.end_time));
-    gridStart = Math.max(1, Math.floor(startMinutes / 15) + 1);
-    gridEnd = Math.max(gridStart + 1, Math.ceil(endMinutes / 15) + 1);
-  } catch {}
+  
+  const gridPosition = calculateGridPosition(block.start_time, block.end_time);
+  if (gridPosition.isValid) {
+    gridStart = gridPosition.gridStart;
+    gridEnd = gridPosition.gridEnd;
+  } else {
+    console.warn('StaticBlock: Invalid grid position for block', block.title, gridPosition.error);
+    // Keep default values: gridStart = 1, gridEnd = 2
+  }
+  
   return ( <div style={{ ...style, gridRowStart: gridStart, gridRowEnd: gridEnd }} onClick={onClick}>{block.title}</div> );
 };
 
-function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick }: { day: Date; preferences: UserPreferences | null; timeBlocks: TimeBlock[]; tasks: Record<string, CalendarTask[]>; onTaskClick: (task: CalendarTask, startTime: Date, endTime: Date) => void; onTimeBlockClick: (block: TimeBlock) => void; }) {
+function TimeSlotGrid({ day, onTimeSlotClick }: { day: Date; onTimeSlotClick?: (date: Date, hour: number) => void; }) {
+  return (
+    <div className="absolute inset-0 grid" style={{ gridTemplateRows: 'repeat(96, 1fr)' }}>
+      {Array.from({ length: 96 }).map((_, index) => {
+        const hour = Math.floor(index / 4);
+        const minute = (index % 4) * 15;
+        
+        return (
+          <div
+            key={index}
+            className="border-t border-slate-700/20 hover:bg-purple-500/10 transition-colors cursor-pointer group"
+            onClick={() => onTimeSlotClick?.(day, hour)}
+          >
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-purple-300 p-1">
+              {hour.toString().padStart(2, '0')}:{minute.toString().padStart(2, '0')}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick, onTimeSlotClick, onStressToggle }: { day: Date; preferences: UserPreferences | null; timeBlocks: TimeBlock[]; tasks: Record<string, CalendarTask[]>; onTaskClick: (task: CalendarTask, startTime: Date, endTime: Date) => void; onTimeBlockClick: (block: TimeBlock) => void; onTimeSlotClick?: (date: Date, hour: number) => void; onStressToggle?: (taskId: number, isStressful: boolean) => Promise<void>; }) {
   const { setNodeRef, isOver } = useDroppable({ id: day.toISOString(), });
-  const dayColumnStyle = { backgroundColor: isOver ? 'rgba(79, 70, 229, 0.13)' : 'transparent', transition: 'background-color 0.2s ease-in-out', };
+  
+  // Enhanced visual feedback for drop zones
+  const dayColumnStyle = { 
+    backgroundColor: isOver ? 'rgba(79, 70, 229, 0.2)' : 'transparent', 
+    transition: 'background-color 0.2s ease-in-out',
+    border: isOver ? '2px dashed rgba(79, 70, 229, 0.5)' : '2px dashed transparent',
+    borderRadius: isOver ? '8px' : '0px',
+  };
   const dateKey = toUTC_YYYYMMDD(day);
 
   return (
     <div ref={setNodeRef} key={day.toISOString()} className="relative border-l border-slate-700 grid" style={{ ...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)' }}>
+      {/* Time slot grid for hover effects */}
+      <TimeSlotGrid day={day} onTimeSlotClick={onTimeSlotClick} />
        {preferences && (() => {
          const blocks: BlockData[] = [];
          const year = day.getUTCFullYear();
          const month = day.getUTCMonth();
          const date = day.getUTCDate();
 
-         const sleepStart = robustTimeToMinutes(new Date(`1970-01-01T${preferences.sleep_start || '00:00'}Z`));
-         const sleepEnd = robustTimeToMinutes(new Date(`1970-01-01T${preferences.sleep_end || '00:00'}Z`));
+         const sleepStart = enhancedTimeToMinutes(new Date(`1970-01-01T${preferences.sleep_start || '00:00'}Z`));
+         const sleepEnd = enhancedTimeToMinutes(new Date(`1970-01-01T${preferences.sleep_end || '00:00'}Z`));
 
          if (sleepStart > sleepEnd) {
            const d1_start = new Date(Date.UTC(year, month, date, Math.floor(sleepStart / 60), sleepStart % 60));
@@ -312,7 +412,7 @@ function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlo
          }
 
          preferences.meal_start_times.forEach(t => {
-           const startMin = robustTimeToMinutes(new Date(`1970-01-01T${t || '00:00'}Z`));
+           const startMin = enhancedTimeToMinutes(new Date(`1970-01-01T${t || '00:00'}Z`));
            const endMin = startMin + preferences.meal_duration;
            const start = new Date(Date.UTC(year, month, date, Math.floor(startMin / 60), startMin % 60));
            const end = new Date(Date.UTC(year, month, date, Math.floor(endMin / 60), endMin % 60));
@@ -348,6 +448,7 @@ function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlo
               borderLeft: `2px solid ${task.chapters?.subjects?.color || '#6366f1'}`,
             }}
             onClick={() => onTaskClick(task, new Date(task.start_time!), new Date(task.end_time!))}
+            onStressToggle={onStressToggle}
           />
         ))}
     </div>
@@ -378,6 +479,8 @@ export default function WeeklyView({
   tasks,
   onTaskClick,
   onTimeBlockClick,
+  onTimeSlotClick,
+  onStressToggle,
 }: WeeklyViewProps) {
   // --- CHANGE IS HERE ---
   // This logic now creates a 7-day array starting from the currentDate prop,
@@ -389,28 +492,52 @@ export default function WeeklyView({
   });
 
   return (
-    <div className="grid h-full" style={{ gridTemplateColumns: '3.5rem 1fr', gridTemplateRows: 'auto 1fr' }}>
-      <div className="col-start-2 grid grid-cols-7 sticky top-0 z-20 bg-slate-800/50 backdrop-blur-sm">
-        {weekDays.map((day, index) => (
-          <div key={index} className="text-center py-2 border-b border-l border-slate-700">
-            <p className="text-slate-400 text-xs">{daysOfWeek[day.getUTCDay()]}</p>
-            <p className="text-white text-lg font-semibold">{day.getUTCDate()}</p>
-          </div>
-        ))}
+    <DragErrorBoundary
+      fallbackMessage="An error occurred in the weekly calendar view. This might be due to invalid task data or a temporary issue with the drag and drop functionality."
+      onError={(error, errorInfo) => {
+        console.error('WeeklyView Error:', error, errorInfo);
+        // In production, you might want to report this to an error tracking service
+      }}
+    >
+      <div className="grid h-full" style={{ gridTemplateColumns: '3.5rem 1fr', gridTemplateRows: 'auto 1fr' }}>
+        <div className="col-start-2 grid grid-cols-7 sticky top-0 z-20 bg-slate-800/50 backdrop-blur-sm">
+          {weekDays.map((day, index) => (
+            <div key={index} className="text-center py-2 border-b border-l border-slate-700">
+              <p className="text-slate-400 text-xs">{daysOfWeek[day.getUTCDay()]}</p>
+              <p className="text-white text-lg font-semibold">{day.getUTCDate()}</p>
+            </div>
+          ))}
+        </div>
+        <div className="row-start-2 text-right pr-2">
+          {timeSlots.map(hour => (
+            <div key={hour} className="h-16 relative border-t border-slate-700/30">
+              <span className="text-xs text-slate-400 absolute -top-2 right-2">{`${hour}:00`}</span>
+            </div>
+          ))}
+        </div>
+        <div className="row-start-2 col-start-2 grid grid-cols-7 relative">
+          {weekDays.map(day => ( 
+            <DragErrorBoundary
+              key={day.toISOString()}
+              fallbackMessage={`Error loading day ${day.getUTCDate()}. Please refresh to try again.`}
+            >
+              <DayColumn 
+                day={day} 
+                preferences={preferences} 
+                timeBlocks={timeBlocks} 
+                tasks={tasks} 
+                onTaskClick={onTaskClick} 
+                onTimeBlockClick={onTimeBlockClick} 
+                onTimeSlotClick={onTimeSlotClick} 
+                onStressToggle={onStressToggle} 
+              />
+            </DragErrorBoundary>
+          ))}
+          <NavEdge id="navigate-prev" position="left" />
+          <NavEdge id="navigate-next" position="right" />
+        </div>
       </div>
-      <div className="row-start-2 text-right pr-2">
-        {timeSlots.map(hour => (
-          <div key={hour} className="h-16 relative border-t border-transparent">
-            <span className="text-xs text-slate-400 absolute -top-2 right-2">{`${hour}:00`}</span>
-          </div>
-        ))}
-      </div>
-      <div className="row-start-2 col-start-2 grid grid-cols-7 relative">
-        {weekDays.map(day => ( <DayColumn key={day.toISOString()} day={day} preferences={preferences} timeBlocks={timeBlocks} tasks={tasks} onTaskClick={onTaskClick} onTimeBlockClick={onTimeBlockClick} /> ))}
-        <NavEdge id="navigate-prev" position="left" />
-        <NavEdge id="navigate-next" position="right" />
-      </div>
-    </div>
+    </DragErrorBoundary>
   );
 }
 

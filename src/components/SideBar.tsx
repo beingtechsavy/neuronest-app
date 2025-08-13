@@ -6,8 +6,6 @@ import Link from 'next/link'
 import {
   Home,
   CalendarDays,
-  ListTodo,
-  LineChart,
   ChevronLeft,
   ChevronRight,
   Settings,
@@ -16,8 +14,6 @@ import {
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: <Home size={18} /> },
   { label: 'Calendar', href: '/calendar', icon: <CalendarDays size={18} /> },
-  { label: 'Tasks', href: '/tasks', icon: <ListTodo size={18} /> },
-  { label: 'Progress', href: '/progress', icon: <LineChart size={18} /> },
   { label: 'Settings', href: '/settings', icon: <Settings size={18} /> },
 ]
 
@@ -46,6 +42,7 @@ export default function Sidebar() {
         <button
           onClick={() => setIsOpen(!isOpen)}
           style={styles.toggleButton}
+          aria-label="Toggle Sidebar"
         >
           {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
@@ -58,7 +55,6 @@ export default function Sidebar() {
             <div
               style={{
                 ...styles.navItem,
-                // FIX: This now correctly highlights the active link
                 ...(pathname === item.href
                   ? styles.navItemActive
                   : styles.navItemInactive),
