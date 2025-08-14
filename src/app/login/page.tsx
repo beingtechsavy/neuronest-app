@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
+import { trackAuthAction } from "@/lib/analytics"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,6 +27,8 @@ export default function LoginPage() {
     } else if (!data.user?.email_confirmed_at) {
       setError('Please confirm your email before logging in.')
     } else {
+      // Track successful login
+      trackAuthAction('login')
       router.push('/calendar')
     }
 

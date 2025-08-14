@@ -104,3 +104,46 @@
   - Validate drag-and-drop accuracy across different time scenarios
   - Test stress marking functionality with database persistence
   - _Requirements: All requirements validation_
+
+- [x] 9. Integrate Vercel Analytics for usage tracking
+
+
+
+  - Install @vercel/analytics package and configure in root layout
+  - Initialize analytics with proper environment configuration
+  - Implement automatic page view tracking with Next.js App Router
+  - Add custom event tracking for key user interactions (task creation, drag-and-drop, stress marking)
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+
+
+- [x] 10. Clean up top bar navigation for authenticated users
+
+
+
+
+  - Remove signup and login links from top bar when user is authenticated
+  - Conditionally render navigation elements based on authentication state
+  - Maintain proper spacing and alignment after removing redundant elements
+  - Test responsive behavior and ensure clean interface
+  - _Requirements: 6.1, 6.2, 6.3, 6.5_
+
+- [x] 11. Display username instead of email in top bar
+
+
+
+  - Fetch username from user profile data in Supabase
+  - Update top bar component to display username instead of email
+  - Implement fallback to email if username is not available
+  - Add proper text truncation for long usernames with ellipsis
+  - Handle loading states and error scenarios gracefully
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
+
+- [x] 12. Test and validate new enhancements
+
+
+
+  - Verify Vercel Analytics is tracking page views and custom events correctly
+  - Test top bar navigation cleanup across different authentication states
+  - Validate username display with various user profiles and edge cases
+  - Ensure all new features work seamlessly with existing functionality
+  - _Requirements: 5.6, 6.4, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_

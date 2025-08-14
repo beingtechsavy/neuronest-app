@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { trackTaskCreated } from '@/lib/analytics';
 
 interface Subject {
   subject_id: number;
@@ -115,6 +116,11 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
       console.error('Error creating task:', error);
       alert('Failed to create task. Please try again.');
     } else {
+      // Track task creation
+      trackTaskCreated({
+        hasStressMarking: isStressful,
+        hasTimeSlot: false // New tasks don't have time slots initially
+      });
       onTaskAdded();
       onClose();
     }

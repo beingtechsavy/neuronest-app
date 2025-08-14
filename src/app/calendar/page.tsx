@@ -29,6 +29,7 @@ import DragFeedback from '@/components/DragFeedback';
 import { useDragFeedback } from '@/hooks/useDragFeedback';
 import CalendarErrorBoundary from '@/components/CalendarErrorBoundary';
 import { StressMarkingErrorHandler } from '@/lib/errorHandling';
+import { trackTaskDragDrop, trackStressMarking, trackWeeklyViewUsage } from '@/lib/analytics';
 
 // --- TYPE DEFINITIONS ---
 export interface CalendarTask {
@@ -161,6 +162,16 @@ export default function CalendarPage() {
         setUnscheduledTasks(unscheduledRes.data ?? []);
         setTimeBlocks(blocksRes.data ?? []);
         setPreferences(prefsRes.data ?? null);
+
+        // Track weekly view usage analytics
+        if (view === 'week') {
+          const allTasks = Object.values(groupedTasks).flat();
+          const stressfulTasks = allTasks.filter(task => task.is_stressful).length;
+          trackWeeklyViewUsage({
+            tasksVisible: allTasks.length,
+            stressfulTasks: stressfulTasks
+          });
+        }
     } catch (error) { console.error("Error fetching calendar data:", error); } 
     finally { setLoading(false); setIsNavigating(false); }
   }, [currentDate, view]);
@@ -242,6 +253,12 @@ export default function CalendarPage() {
         await fetchData();
         return;
       }
+
+      // Track stress marking event
+      trackStressMarking({
+        isStressful: isStressful,
+        location: 'weekly_view'
+      });
 
       // Show success feedback
       showSuccess(isStressful ? 'Task marked as stressful' : 'Task marked as not stressful');
@@ -446,6 +463,14 @@ export default function CalendarPage() {
 
     // Success - show reschedule confirmation
     if (dragResult.newStartTime && dragResult.newEndTime && dragResult.taskId && dragResult.title) {
+      // Track successful drag-and-drop operation
+      const duration = (dragResult.newEndTime.getTime() - dragResult.newStartTime.getTime()) / (1000 * 60); // duration in minutes
+      trackTaskDragDrop({
+        fromTimeSlot: !!event.active.data.current?.task?.start_time,
+        toTimeSlot: true,
+        duration: duration
+      });
+
       setRescheduleDetails({
         taskId: dragResult.taskId,
         title: dragResult.title,

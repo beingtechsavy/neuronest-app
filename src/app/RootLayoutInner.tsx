@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { ReactNode } from 'react'
 import { SupabaseProvider } from '@/components/SupabaseProvider'
+import { UserProvider } from '@/components/UserProvider'
 import TopBar from '@/components/TopBar'
 
 export default function RootLayoutInner({ children }: { children: ReactNode }) {
@@ -17,8 +18,10 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
 
   return (
     <SupabaseProvider>
-      {showTopBar && <TopBar />}
-      <main className={mainClassName}>{children}</main>
+      <UserProvider>
+        {showTopBar && <TopBar />}
+        <main className={mainClassName}>{children}</main>
+      </UserProvider>
     </SupabaseProvider>
   )
 }

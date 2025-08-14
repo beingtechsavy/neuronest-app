@@ -13,6 +13,7 @@ import {
   ValidationError 
 } from '@/lib/errorHandling'
 import ValidationErrorDisplay, { useValidationErrors } from '@/components/ValidationErrorDisplay'
+import { trackAuthAction } from '@/lib/analytics'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -108,7 +109,8 @@ export default function SignupPage() {
           setError(errorResult.userMessage)
         }
       } else {
-        // Success
+        // Success - track signup event
+        trackAuthAction('signup')
         setMessage('🎉 Signup successful! Check your email to confirm your account.')
         
         // Clear form data on success
