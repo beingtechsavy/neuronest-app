@@ -13,7 +13,7 @@ import {
   DragOverEvent,
 } from '@dnd-kit/core';
 import { supabase } from '@/lib/supabaseClient';
-import Sidebar from '@/components/SideBar';
+// import Sidebar from '@/components/SideBar'; // No longer needed here
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WeeklyView from '@/components/WeeklyView';
 import AddTimeBlockModal from '@/components/AddTimeBlockModal';
@@ -500,68 +500,67 @@ export default function CalendarPage() {
       />
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove} onDragOver={handleDragOver}>
-        <div className="min-h-screen bg-slate-950 flex text-slate-300">
-          <Sidebar />
-          <main className="flex-1 lg:ml-60 p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
-            <div className="flex-grow flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-slate-100">{currentDate && months[currentDate.getUTCMonth()]} {currentDate && currentDate.getUTCFullYear()}</h1>
-                <div className="flex items-center gap-2 sm:gap-4">
-                  <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
-                    <button onClick={() => setView('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'month' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Month</button>
-                    <button onClick={() => setView('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'week' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Week</button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() - 1); else newDate.setUTCDate(newDate.getUTCDate() - 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronLeft size={20} /></button>
-                    <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() + 1); else newDate.setUTCDate(newDate.getUTCDate() + 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronRight size={20} /></button>
-                  </div>
+        {/* --- CHANGE IS HERE --- */}
+        {/* The outer div and Sidebar component have been removed */}
+        <main className="flex-1 p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
+          <div className="flex-grow flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-slate-100">{currentDate && months[currentDate.getUTCMonth()]} {currentDate && currentDate.getUTCFullYear()}</h1>
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+                  <button onClick={() => setView('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'month' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Month</button>
+                  <button onClick={() => setView('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'week' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Week</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() - 1); else newDate.setUTCDate(newDate.getUTCDate() - 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronLeft size={20} /></button>
+                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() + 1); else newDate.setUTCDate(newDate.getUTCDate() + 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronRight size={20} /></button>
                 </div>
               </div>
-              <div ref={scrollContainerRef} className="relative flex-grow bg-slate-800/50 border border-slate-700 rounded-2xl p-4 overflow-auto">
-                {isNavigating && ( <div className="absolute inset-0 bg-slate-900/50 z-30 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div> )}
-                {currentDate && (view === 'month' ? (
-                  <div className="grid grid-cols-7 gap-1 text-center">
-                    {daysOfWeek.map(day => <div key={day} className="text-xs font-bold text-slate-400 uppercase pb-2">{day}</div>)}
-                    {Array.from({ length: new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1)).getUTCDay() }).map((_, i) => <div key={`empty-${i}`} className="border-t border-slate-700/50"></div>)}
-                    {Array.from({ length: getDaysInMonth(currentDate.getUTCFullYear(), currentDate.getUTCMonth()) }).map((_, day) => {
-                      const dayNumber = day + 1;
-                      const date = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), dayNumber));
-                      const dateStr = toUTC_YYYYMMDD(date);
-                      const tasksForDay = tasks[dateStr] || [];
-                      const isToday = toUTC_YYYYMMDD(new Date()) === dateStr;
-                      return (
-                        <div key={dayNumber} className="border-t border-slate-700/50 pt-2 h-24 sm:h-32 overflow-hidden cursor-pointer hover:bg-slate-700/50 transition-colors">
-                          <span className={`text-sm ${isToday ? 'bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto' : 'text-slate-200'}`}>{dayNumber}</span>
-                          <div className="mt-1 space-y-1 text-left px-1">
-                            {tasksForDay.slice(0, 2).map(task => (
-                              <div key={task.task_id} className="text-xs p-1 rounded truncate" style={{ backgroundColor: `${task.chapters?.subjects?.color || '#4f46e5'}40`, color: task.chapters?.subjects?.color || '#c4b5fd' }}>
-                                {task.title}
-                              </div>
-                            ))}
-                            {tasksForDay.length > 2 && <div className="text-xs text-slate-400">+ {tasksForDay.length - 2} more</div>}
-                          </div>
+            </div>
+            <div ref={scrollContainerRef} className="relative flex-grow bg-slate-800/50 border border-slate-700 rounded-2xl p-4 overflow-auto">
+              {isNavigating && ( <div className="absolute inset-0 bg-slate-900/50 z-30 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div> )}
+              {currentDate && (view === 'month' ? (
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {daysOfWeek.map(day => <div key={day} className="text-xs font-bold text-slate-400 uppercase pb-2">{day}</div>)}
+                  {Array.from({ length: new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1)).getUTCDay() }).map((_, i) => <div key={`empty-${i}`} className="border-t border-slate-700/50"></div>)}
+                  {Array.from({ length: getDaysInMonth(currentDate.getUTCFullYear(), currentDate.getUTCMonth()) }).map((_, day) => {
+                    const dayNumber = day + 1;
+                    const date = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), dayNumber));
+                    const dateStr = toUTC_YYYYMMDD(date);
+                    const tasksForDay = tasks[dateStr] || [];
+                    const isToday = toUTC_YYYYMMDD(new Date()) === dateStr;
+                    return (
+                      <div key={dayNumber} className="border-t border-slate-700/50 pt-2 h-24 sm:h-32 overflow-hidden cursor-pointer hover:bg-slate-700/50 transition-colors">
+                        <span className={`text-sm ${isToday ? 'bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto' : 'text-slate-200'}`}>{dayNumber}</span>
+                        <div className="mt-1 space-y-1 text-left px-1">
+                          {tasksForDay.slice(0, 2).map(task => (
+                            <div key={task.task_id} className="text-xs p-1 rounded truncate" style={{ backgroundColor: `${task.chapters?.subjects?.color || '#4f46e5'}40`, color: task.chapters?.subjects?.color || '#c4b5fd' }}>
+                              {task.title}
+                            </div>
+                          ))}
+                          {tasksForDay.length > 2 && <div className="text-xs text-slate-400">+ {tasksForDay.length - 2} more</div>}
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <WeeklyView
-                    currentDate={currentDate}
-                    preferences={preferences}
-                    timeBlocks={timeBlocks}
-                    tasks={tasks}
-                    onTaskClick={(task, start, end) => { setSelectedTaskDetails({ ...task, startTime: start, endTime: end }); setIsTaskDetailOpen(true); }}
-                    onTimeBlockClick={(block) => { setSelectedBlock(block); setIsBlockDetailOpen(true); }}
-                    onTimeSlotClick={(date, hour) => { const dt = new Date(date); dt.setUTCHours(hour, 0, 0, 0); setSelectedDateTime(dt); setIsAddBlockOpen(true); }}
-                  />
-                ))}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <WeeklyView
+                  currentDate={currentDate}
+                  preferences={preferences}
+                  timeBlocks={timeBlocks}
+                  tasks={tasks}
+                  onTaskClick={(task, start, end) => { setSelectedTaskDetails({ ...task, startTime: start, endTime: end }); setIsTaskDetailOpen(true); }}
+                  onTimeBlockClick={(block) => { setSelectedBlock(block); setIsBlockDetailOpen(true); }}
+                  onTimeSlotClick={(date, hour) => { const dt = new Date(date); dt.setUTCHours(hour, 0, 0, 0); setSelectedDateTime(dt); setIsAddBlockOpen(true); }}
+                />
+              ))}
             </div>
-            <div className="w-full lg:max-w-sm lg:flex-shrink-0 flex flex-col">
-              <UnscheduledTasks tasks={unscheduledTasks} onSchedule={scheduleTasks} onTaskAdded={() => fetchData()} isScheduling={isScheduling} scheduleMessage={scheduleMessage} />
-            </div>
-          </main>
-        </div>
+          </div>
+          <div className="w-full lg:max-w-sm lg:flex-shrink-0 flex flex-col">
+            <UnscheduledTasks tasks={unscheduledTasks} onSchedule={scheduleTasks} onTaskAdded={() => fetchData()} isScheduling={isScheduling} scheduleMessage={scheduleMessage} />
+          </div>
+        </main>
         <DragOverlay>
           {draggedTask && (
             <div className="p-2 rounded-lg shadow-lg text-white bg-indigo-600 select-none pointer-events-none" style={{ cursor: 'grabbing', backgroundColor: `${draggedTask.chapters?.subjects?.color || '#6366f1'}`, borderLeft: `3px solid ${draggedTask.chapters?.subjects?.color || '#6366f1'}` }}>

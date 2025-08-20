@@ -1,156 +1,148 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, FormEvent } from 'react';
+import { Loader2, X } from 'lucide-react';
 
-interface EditTaskModalProps {
-  isOpen: boolean
-  onClose: () => void
-  // ***** FIX: onSave now sends an object with all possible updates *****
-  onSave: (updates: { title: string; effort_units: number; scheduled_date: string }) => Promise<void>
-  currentTitle: string
-  currentEffort: number
-  // ***** NEW: Pass the current scheduled date *****
-  currentDate: string 
+// --- TYPE DEFINITIONS ---
+interface EditTaskPayload {
+  title: string;
+  effort_units: number;
+  scheduled_date: string;
 }
 
-export default function EditTaskModal({ isOpen, onClose, onSave, currentTitle, currentEffort, currentDate }: EditTaskModalProps) {
-  const [title, setTitle] = useState(currentTitle)
-  const [hours, setHours] = useState('0')
-  const [minutes, setMinutes] = useState('0')
-  // ***** NEW: State for the date input *****
-  const [date, setDate] = useState(currentDate);
-  const [loading, setLoading] = useState(false)
+interface EditTaskModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updates: EditTaskPayload) => Promise<void>;
+  currentTitle: string;
+  currentEffort: number;
+  currentDate: string;
+}
 
-  useEffect(() => {
-    if (isOpen) {
-      setTitle(currentTitle)
-      setDate(currentDate); // Set the date when the modal opens
+// --- MAIN COMPONENT ---
+export default function EditTaskModal({ isOpen, onClose, onSave, currentTitle, currentEffort, currentDate }: EditTaskModalProps) {
+  // --- STATE MANAGEMENT ---
+  const [title, setTitle] = useState(currentTitle);
+  const [hours, setHours] = useState('0');
+  const [minutes, setMinutes] = useState('0');
+  const [date, setDate] = useState(currentDate);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // --- SIDE EFFECTS ---
+  // Reset form state when modal opens or the task being edited changes
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(currentTitle);
+      setDate(currentDate);
       const h = Math.floor(currentEffort / 60);
       const m = currentEffort % 60;
       setHours(String(h));
       setMinutes(String(m));
-    }
-  }, [currentTitle, currentEffort, currentDate, isOpen])
+      setError(null); // Clear any previous errors
+    }
+  }, [currentTitle, currentEffort, currentDate, isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // --- EVENT HANDLERS ---
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!title.trim()) {
+      setError("Task title cannot be empty.");
+      return;
+    }
+
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+    if (totalMinutes <= 0) {
+      setError("Task effort must be greater than 0 minutes.");
+      return;
+    }
 
-    if (!title.trim()) {
-      onClose()
-      return
-    }
-    setLoading(true)
-    // ***** FIX: Pass an object with title, effort, and the new date *****
-    await onSave({ 
-        title, 
-        effort_units: totalMinutes > 0 ? totalMinutes : 50,
-        scheduled_date: date
-    })
-    setLoading(false)
-  }
+    setIsLoading(true);
+    try {
+      await onSave({
+        title: title.trim(),
+        effort_units: totalMinutes,
+        scheduled_date: date,
+      });
+      // The parent component will handle closing the modal on success
+    } catch (err: any) {
+      console.error("Failed to save task:", err);
+      setError(`Failed to save changes: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  if (!isOpen) return null
+  // --- RENDER ---
+  if (!isOpen) return null;
 
-  return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.header}>Edit Task</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="taskTitle" style={styles.label}>Task Title</label>
-            <input
-              id="taskTitle"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={styles.input}
-              autoFocus
-            />
-          </div>
+  return (
+    <div
+      className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-modal-title"
+    >
+      <div
+        className="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-700"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 id="edit-modal-title" className="text-xl font-bold text-white">Edit Task</h2>
+          <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-          {/* ***** NEW: Date and Effort inputs side-by-side ***** */}
-          <div style={styles.splitGroup}>
-            <div style={{flex: 3}}>
-                <label htmlFor="date" style={styles.label}>Date</label>
-                <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={styles.input} />
-            </div>
-            <div style={{flex: 2}}>
-                <label style={styles.label}>Effort</label>
-                <div style={styles.timeInputContainer}>
-                    <input type="number" value={hours} onChange={(e) => setHours(e.target.value)} style={styles.timeInput} placeholder="h" min="0" />
-                    <span>h</span>
-                    <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} style={styles.timeInput} placeholder="m" min="0" max="59" />
-                    <span>m</span>
-                </div>
-            </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Title Input */}
+          <div>
+            <label htmlFor="task-title-edit" className="text-sm font-medium text-slate-400 mb-1 block">Title</label>
+            <input
+              id="task-title-edit"
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+              required
+              autoFocus
+            />
           </div>
 
-          <div style={styles.buttonGroup}>
-            <button type="button" onClick={onClose} style={styles.cancelButton} disabled={loading}>
-              Cancel
-            </button>
-            <button type="submit" style={styles.saveButton} disabled={loading || !title.trim()}>
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
+          {/* Date & Effort */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="date-edit" className="text-sm font-medium text-slate-400 mb-1 block">Date</label>
+              <input id="date-edit" type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-400 mb-1 block">Effort</label>
+              <div className="flex items-center gap-2">
+                <input type="number" min="0" max="23" step="1" value={hours} onChange={e => setHours(e.target.value)} aria-label="Effort hours" className="w-full bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm" />
+                <span className="text-slate-400">h</span>
+                <input type="number" min="0" max="59" step="5" value={minutes} onChange={e => setMinutes(e.target.value)} aria-label="Effort minutes" className="w-full bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm" />
+                <span className="text-slate-400">m</span>
+              </div>
+            </div>
+          </div>
+          
+          {error && <p className="text-sm text-red-400 bg-red-500/10 p-2 rounded-md text-center">{error}</p>}
 
-const styles: { [key: string]: React.CSSProperties } = {
-  overlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 6000,
-    backdropFilter: 'blur(4px)',
-  },
-  modal: {
-    background: '#1e293b', padding: '2rem', borderRadius: '16px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-    width: '100%', maxWidth: '450px', border: '1px solid #334155',
-  },
-  header: {
-    color: '#f1f5f9', fontSize: '1.5rem', fontWeight: 'bold',
-    textAlign: 'center', marginBottom: '2rem',
-  },
-  inputGroup: { marginBottom: '1.5rem' },
-  splitGroup: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' },
-  label: {
-    display: 'block', color: '#cbd5e1',
-    marginBottom: '0.5rem', fontSize: '0.875rem',
-  },
-  input: {
-    width: '100%', padding: '0.75rem 1rem', borderRadius: '8px',
-    backgroundColor: '#334155', border: '1px solid #475569',
-    color: '#f1f5f9', fontSize: '1rem', outline: 'none',
-    boxSizing: 'border-box', transition: 'border-color 0.2s',
-  },
-  timeInputContainer: {
-    display: 'flex', alignItems: 'center', gap: '0.5rem',
-    backgroundColor: '#334155', border: '1px solid #475569',
-    borderRadius: '8px', padding: '0.75rem 1rem', color: '#f1f5f9',
-  },
-  timeInput: {
-    backgroundColor: 'transparent', border: 'none', color: '#f1f5f9',
-    width: '40px', textAlign: 'center', fontSize: '1rem', outline: 'none',
-  },
-  buttonGroup: {
-    display: 'flex', justifyContent: 'flex-end',
-    gap: '1rem', marginTop: '2rem',
-  },
-  cancelButton: {
-    padding: '0.75rem 1.5rem', borderRadius: '8px',
-    border: '1px solid #475569', backgroundColor: 'transparent',
-    color: '#cbd5e1', fontWeight: '600', cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  saveButton: {
-    padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none',
-    backgroundColor: '#4f46e5', color: 'white', fontWeight: '600',
-    cursor: 'pointer', transition: 'background-color 0.2s',
-  },
-};
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-700">
+            <button type="button" onClick={onClose} disabled={isLoading} className="px-4 py-2 rounded-md bg-slate-600 text-white font-semibold text-sm hover:bg-slate-500 transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading || !title.trim()} className="px-4 py-2 rounded-md bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              {isLoading && <Loader2 size={16} className="animate-spin" />}
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
