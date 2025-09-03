@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useToastContext } from '@/components/ToastProvider';
 
 interface Subject {
   subject_id: number;
@@ -21,6 +22,7 @@ interface NewTaskModalProps {
 }
 
 export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskModalProps) {
+  const { success, error } = useToastContext();
   const [title, setTitle] = useState('');
   const [deadline, setDeadline] = useState('');
   const [hours, setHours] = useState('0');
@@ -31,25 +33,32 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   // Fetch subjects and chapters when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
     async function fetchSubjects() {
+      setLoadingSubjects(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoadingSubjects(false);
+        return;
+      }
 
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('subjects')
         .select('subject_id, title, chapters (chapter_id, title)')
         .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error fetching subjects:', error);
+      if (fetchError) {
+        console.error('Error fetching subjects:', fetchError);
+        error('Failed to load subjects');
       } else {
         setSubjects(data ?? []);
       }
+      setLoadingSubjects(false);
     }
 
     fetchSubjects();
@@ -81,7 +90,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a valid task title.');
+      error('Please enter a valid task title.');
       return;
     }
 
@@ -89,7 +98,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      alert('User is not authenticated.');
+      error('User is not authenticated.');
       setLoading(false);
       return;
     }
@@ -109,12 +118,13 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
       status: 'pending',
     };
 
-    const { error } = await supabase.from('tasks').insert(insertPayload);
+    const { error: insertError } = await supabase.from('tasks').insert(insertPayload);
 
-    if (error) {
-      console.error('Error creating task:', error);
-      alert('Failed to create task. Please try again.');
+    if (insertError) {
+      console.error('Error creating task:', insertError);
+      error('Failed to create task. Please try again.');
     } else {
+      success('Task created successfully!');
       onTaskAdded();
       onClose();
     }
@@ -155,8 +165,9 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
                 value={selectedSubjectId}
                 onChange={e => setSelectedSubjectId(e.target.value)}
                 style={styles.input}
+                disabled={loadingSubjects}
               >
-                <option value="">No Subject</option>
+                <option value="">{loadingSubjects ? 'Loading subjects...' : 'No Subject'}</option>
                 {subjects.map(subject => (
                   <option key={subject.subject_id} value={subject.subject_id}>{subject.title}</option>
                 ))}

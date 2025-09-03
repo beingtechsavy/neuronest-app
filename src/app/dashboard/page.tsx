@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import TaskBox from '@/components/TaskBox';
 import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
+import PomodoroWidget from '@/components/PomodoroWidget';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
@@ -56,8 +57,10 @@ export default function Dashboard() {
       setProfile(profileRes.data);
       setSubjects(subjectsRes.data || []);
 
-    } catch (e: any) {
-      setError(e.message || "An unknown error occurred.");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+      console.error('Dashboard error:', e);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -144,8 +147,34 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* --- CHANGE IS HERE --- */}
-          {/* This now correctly uses a fixed 2-column grid as per your original design */}
+          {/* Dashboard Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Pomodoro Widget */}
+            <div className="lg:col-span-1">
+              <PomodoroWidget />
+            </div>
+            
+            {/* Quick Stats or other widgets can go here */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">Quick Overview</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{subjects.length}</div>
+                    <div className="text-sm opacity-80">Subjects</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">
+                      {subjects.filter(s => s.is_stressful).length}
+                    </div>
+                    <div className="text-sm opacity-80">High Priority</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Subjects Grid */}
           <div className="grid grid-cols-2 gap-6">
             {subjects.map(subject => (
               <TaskBox

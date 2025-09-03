@@ -50,9 +50,10 @@ export default function SetUsernameModal({ isOpen, onClose, onSaveSuccess }: Set
       onSaveSuccess(trimmedUsername);
       onClose();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving username:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +72,7 @@ export default function SetUsernameModal({ isOpen, onClose, onSaveSuccess }: Set
         onClick={e => e.stopPropagation()}
       >
         <h2 id="username-modal-title" className="text-2xl font-bold text-white mb-2">Welcome to NeuroNest!</h2>
-        <p className="text-slate-400 mb-6">Let's get started by setting up your username.</p>
+        <p className="text-slate-400 mb-6">Let&apos;s get started by setting up your username.</p>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4 text-left">

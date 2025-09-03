@@ -6,6 +6,7 @@ import EditDeleteIcons from './EditDeleteIcons'
 import { supabase } from '@/lib/supabaseClient'
 import React from 'react'
 import { Chapter, Task } from '@/types/definitions'
+import { useToastContext } from './ToastProvider'
 
 interface ChapterItemProps {
   chapter: Chapter
@@ -15,6 +16,7 @@ interface ChapterItemProps {
 }
 
 export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelete }: ChapterItemProps) {
+  const { error: showError } = useToastContext();
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -32,8 +34,11 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
 
         if (error) {
           console.error('Error fetching tasks:', error)
+          showError(`Failed to load tasks for ${chapter.title}`)
         } else {
-          setTasks(data as Task[] || [])
+          // Ensure data is an array and has valid structure
+          const validTasks = Array.isArray(data) ? data.filter(task => task && typeof task.task_id === 'number') : [];
+          setTasks(validTasks as Task[]);
         }
         setIsLoadingTasks(false)
       }
@@ -43,16 +48,31 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
 
   const handleToggleTask = async (taskId: number) => {
     const taskToToggle = tasks.find(t => t.task_id === taskId);
-    if (!taskToToggle) return;
+    if (!taskToToggle) {
+      console.error('Task not found:', taskId);
+      return;
+    }
     const newStatus: 'pending' | 'completed' = taskToToggle.status === 'completed' ? 'pending' : 'completed';
 
     const updatedTasks = tasks.map(t => t.task_id === taskId ? { ...t, status: newStatus } : t);
     setTasks(updatedTasks);
-    await supabase.from('tasks').update({ status: newStatus }).eq('task_id', taskId);
+    
+    try {
+      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('task_id', taskId);
+      if (error) {
+        console.error('Error updating task status:', error);
+        // Revert the optimistic update on error
+        setTasks(tasks);
+      }
+    } catch (err) {
+      console.error('Failed to update task:', err);
+      // Revert the optimistic update on error
+      setTasks(tasks);
+    }
   };
 
-  // Calculate all tasks completion
-  const allTasksCompleted = tasks.length > 0 && tasks.every(t => t.status === 'completed')
+  // Calculate all tasks completion - safe array operation
+  const allTasksCompleted = Array.isArray(tasks) && tasks.length > 0 && tasks.every(t => t?.status === 'completed')
 
   return (
     <div

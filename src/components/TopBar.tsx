@@ -1,16 +1,17 @@
 'use client';
 
-import Link from 'next/link';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
 import { User, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import SetUsernameModal from './SetUsernameModal';
+import { useToastContext } from './ToastProvider';
 
 export default function Topbar() {
   const session = useSession();
   const supabase = useSupabaseClient();
   const router = useRouter();
+  const { error: showError } = useToastContext();
 
   const [username, setUsername] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -24,12 +25,13 @@ export default function Topbar() {
           const { data, error } = await supabase
             .from('profiles')
             .select('username')
-            .eq('id', session.user.id)
+            .eq('id', session.user?.id)
             .single();
           if (error && error.code !== 'PGRST116') throw error;
           setUsername(data?.username || null);
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          showError('Failed to load user profile');
         } finally {
           setLoadingProfile(false);
         }
@@ -42,8 +44,14 @@ export default function Topbar() {
   }, [session, supabase]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
+    try {
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Still redirect even if logout fails
+      router.push('/');
+    }
   };
 
   // --- CHANGE IS HERE ---
@@ -54,13 +62,13 @@ export default function Topbar() {
 
   return (
     <>
-      <SetUsernameModal 
-          isOpen={isUsernameModalOpen} 
-          onClose={() => setIsUsernameModalOpen(false)} 
-          onSaveSuccess={(newUsername) => {
-            setUsername(newUsername);
-            setIsUsernameModalOpen(false);
-          }}
+      <SetUsernameModal
+        isOpen={isUsernameModalOpen}
+        onClose={() => setIsUsernameModalOpen(false)}
+        onSaveSuccess={(newUsername) => {
+          setUsername(newUsername);
+          setIsUsernameModalOpen(false);
+        }}
       />
 
       <nav className="sticky top-0 z-40 p-4 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 text-white flex justify-end items-center">
@@ -73,7 +81,7 @@ export default function Topbar() {
             ) : username ? (
               <span className="font-semibold">{username}</span>
             ) : (
-              <button 
+              <button
                 onClick={() => setIsUsernameModalOpen(true)}
                 className="text-sm bg-green-600 px-3 py-1 rounded-md hover:bg-green-700 transition-colors font-semibold"
               >

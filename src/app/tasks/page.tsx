@@ -42,7 +42,8 @@ export default function TasksPage() {
         .eq('user_id', user.id);
       if (fetchError) throw fetchError;
       setAllTasks(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Error loading tasks:', err);
       setError("Could not load your tasks. Please try refreshing the page.");
     } finally {
       setIsLoading(false);

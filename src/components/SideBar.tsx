@@ -3,14 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks } from 'lucide-react'; // 1. Import a new icon
+import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks, TrendingUp, Timer } from 'lucide-react';
 
 // --- CONSTANTS ---
-// 2. Add the new "Tasks" page to the navigation items
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: <Home size={18} /> },
   { label: 'Calendar', href: '/calendar', icon: <CalendarDays size={18} /> },
-  { label: 'Tasks', href: '/tasks', icon: <ListChecks size={18} /> }, // New item
+  { label: 'Tasks', href: '/tasks', icon: <ListChecks size={18} /> },
+  { label: 'Pomodoro', href: '/pomodoro', icon: <Timer size={18} /> },
+  { label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} /> },
   { label: 'Settings', href: '/settings', icon: <Settings size={18} /> },
 ];
 

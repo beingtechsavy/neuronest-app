@@ -158,7 +158,9 @@ export default function CalendarPage() {
         setUnscheduledTasks(unscheduledRes.data ?? []);
         setTimeBlocks(blocksRes.data ?? []);
         setPreferences(prefsRes.data ?? null);
-    } catch (error) { console.error("Error fetching calendar data:", error); } 
+    } catch (error) { 
+      // Error handling could be improved with toast notifications
+    } 
     finally { setLoading(false); setIsNavigating(false); }
   }, [currentDate, view]);
 
@@ -376,7 +378,10 @@ export default function CalendarPage() {
     const newStartMins = newStartDate.getUTCHours()*60 + newStartDate.getUTCMinutes();
     const newEndMins = newStartMins + duration;
     const isBlocked = busySlots.some(slot => newStartMins < slot.end && newEndMins > slot.start);
-    if (isBlocked) { console.log("Cannot move task here, slot is blocked."); return; }
+    if (isBlocked) { 
+      // Could show a toast notification here instead
+      return; 
+    }
     setRescheduleDetails({taskId: task.task_id, title: task.title, newStartTime: newStartDate, newEndTime: newEndDate});
     setIsRescheduleOpen(true);
   };

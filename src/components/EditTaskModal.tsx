@@ -67,9 +67,10 @@ export default function EditTaskModal({ isOpen, onClose, onSave, currentTitle, c
         scheduled_date: date,
       });
       // The parent component will handle closing the modal on success
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to save task:", err);
-      setError(`Failed to save changes: ${err.message || 'Please try again.'}`);
+      const errorMessage = err instanceof Error ? err.message : 'Please try again.';
+      setError(`Failed to save changes: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

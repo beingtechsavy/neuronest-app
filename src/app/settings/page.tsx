@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
+import { useToastContext } from '@/components/ToastProvider';
+import { useTimeouts } from '@/hooks/useTimeout';
 
 // --- TYPE DEFINITIONS ---
 interface UserPreferences {
@@ -18,6 +20,8 @@ interface UserPreferences {
 
 // --- MAIN COMPONENT ---
 export default function SettingsPage() {
+  const { success, error: showError } = useToastContext();
+  const { addTimeout } = useTimeouts();
   const [user, setUser] = useState<User | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,11 +66,13 @@ export default function SettingsPage() {
       .upsert({ user_id: user.id, ...preferences });
 
     if (error) {
+      console.error('Settings save error:', error);
+      showError('Failed to save preferences');
       setMessage('Error saving preferences.');
-      console.error(error);
     } else {
+      success('Preferences saved successfully!');
       setMessage('Preferences saved successfully!');
-      setTimeout(() => setMessage(''), 3000);
+      addTimeout(() => setMessage(''), 3000);
     }
     setIsSaving(false);
   };

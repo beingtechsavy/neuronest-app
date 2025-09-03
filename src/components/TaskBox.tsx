@@ -5,9 +5,13 @@ import { supabase } from '@/lib/supabaseClient'
 import ChapterItem from './ChapterItem'
 import EditChapterModal from './EditChapterModal'
 import AddChapterModal from './AddChapterModal'
+import ConfirmModal from './ConfirmModal'
 import { Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react'
 import React from 'react'
 import { Subject, Chapter } from '@/types/definitions'
+import { useToastContext } from './ToastProvider'
+import { useTimeouts } from '@/hooks/useTimeout'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface TaskBoxProps {
   subject: Subject
@@ -17,6 +21,9 @@ interface TaskBoxProps {
 }
 
 export default function TaskBox({ subject, className = '', onEdit, onDelete }: TaskBoxProps) {
+  const { error: showError, success } = useToastContext();
+  const { addTimeout } = useTimeouts();
+  const { confirm, confirmState, closeConfirm } = useConfirm();
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [todayChapterIds, setTodayChapterIds] = useState<number[]>([])
   const [expanded, setExpanded] = useState(false)
@@ -26,6 +33,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
   const [isAddChapterModalOpen, setIsAddChapterModalOpen] = useState(false)
+  const [loadingChapters, setLoadingChapters] = useState(false)
 
   const updateProgress = useCallback((currentChapters: Chapter[]) => {
     const completedCount = currentChapters.filter(c => c.completed).length
@@ -38,6 +46,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   }, [])
 
   const loadChapters = useCallback(async () => {
+    setLoadingChapters(true);
     const { data, error } = await supabase
       .from('chapters')
       .select('chapter_id, title, order_idx, completed, is_stressful')
@@ -46,6 +55,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
 
     if (error) {
       console.error('Error loading chapters:', error)
+      showError(`Failed to load chapters for ${subject.title}`)
+      setLoadingChapters(false);
       return
     }
     const initializedChapters = (data || []).map(chapter => ({
@@ -56,7 +67,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
     setChapters(initializedChapters)
     updateProgress(initializedChapters)
     updateTodayView(initializedChapters)
-  }, [subject.subject_id, updateProgress, updateTodayView])
+    setLoadingChapters(false);
+  }, [subject.subject_id, updateProgress, updateTodayView, showError])
 
   useEffect(() => {
     loadChapters()
@@ -64,14 +76,20 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
 
   async function toggleChapterCompletion(chapterId: number, allTasksCompleted: boolean) {
     const chapterToToggle = chapters.find(c => c.chapter_id === chapterId)
-    if (!chapterToToggle) return
+    if (!chapterToToggle) {
+      console.error('Chapter not found:', chapterId);
+      return;
+    }
     const newCompletedStatus = allTasksCompleted ? true : !chapterToToggle.completed
     const updatedChapters = chapters.map(c =>
       c.chapter_id === chapterId ? { ...c, completed: newCompletedStatus } : c
     )
     setChapters(updatedChapters)
     updateProgress(updatedChapters)
-    setTimeout(() => updateTodayView(updatedChapters), 500)
+    
+    // Use managed timeout with automatic cleanup
+    addTimeout(() => updateTodayView(updatedChapters), 500)
+    
     await supabase.from('chapters').update({ completed: newCompletedStatus }).eq('chapter_id', chapterId)
   }
 
@@ -81,36 +99,74 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   }
 
   const handleSaveChapter = async (data: { title: string; is_stressful: boolean }) => {
-    if (!editingChapter) return
-    await supabase.from('chapters').update(data).eq('chapter_id', editingChapter.chapter_id)
-    setChapters(chapters.map(c => (c.chapter_id === editingChapter.chapter_id ? { ...c, ...data } : c)))
-    setIsEditModalOpen(false)
-    setEditingChapter(null)
+    if (!editingChapter) {
+      console.error('No chapter selected for editing');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.from('chapters').update(data).eq('chapter_id', editingChapter.chapter_id)
+      if (error) throw error;
+      
+      setChapters(chapters.map(c => (c.chapter_id === editingChapter.chapter_id ? { ...c, ...data } : c)))
+      success('Chapter updated successfully!')
+      setIsEditModalOpen(false)
+      setEditingChapter(null)
+    } catch (error) {
+      console.error('Error updating chapter:', error);
+      showError('Failed to update chapter')
+    }
   }
 
   const handleDeleteChapter = async (chapterId: number) => {
-    if (window.confirm('Are you sure?')) {
-      await supabase.from('chapters').delete().eq('chapter_id', chapterId)
-      const updatedChapters = chapters.filter(c => c.chapter_id !== chapterId)
-      setChapters(updatedChapters)
-      updateProgress(updatedChapters)
-      updateTodayView(updatedChapters)
+    const chapter = chapters.find(c => c.chapter_id === chapterId);
+    const confirmed = await confirm({
+      title: 'Delete Chapter',
+      message: `Are you sure you want to delete "${chapter?.title}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        const { error } = await supabase.from('chapters').delete().eq('chapter_id', chapterId);
+        if (error) throw error;
+        
+        const updatedChapters = chapters.filter(c => c.chapter_id !== chapterId);
+        setChapters(updatedChapters);
+        updateProgress(updatedChapters);
+        updateTodayView(updatedChapters);
+        success('Chapter deleted successfully');
+      } catch (error) {
+        showError('Failed to delete chapter');
+      }
     }
   }
 
   const handleAddChapter = async (data: { title: string; is_stressful: boolean }) => {
-    const maxOrderIdx = chapters.reduce((max, chap) => Math.max(max, chap.order_idx), 0)
-    const { data: newChapterData } = await supabase
-      .from('chapters')
-      .insert({ ...data, subject_id: subject.subject_id, order_idx: maxOrderIdx + 1 })
-      .select()
-      .single()
-    const newChapter: Chapter | null = newChapterData as Chapter | null
-    if (newChapter) {
-      const updatedChapters = [...chapters, newChapter]
-      setChapters(updatedChapters)
-      updateProgress(updatedChapters)
-      updateTodayView(updatedChapters)
+    try {
+      const maxOrderIdx = chapters.reduce((max, chap) => Math.max(max, chap.order_idx), 0)
+      const { data: newChapterData, error } = await supabase
+        .from('chapters')
+        .insert({ ...data, subject_id: subject.subject_id, order_idx: maxOrderIdx + 1 })
+        .select()
+        .single()
+        
+      if (error) throw error;
+      
+      const newChapter: Chapter | null = newChapterData as Chapter | null
+      if (newChapter) {
+        const updatedChapters = [...chapters, newChapter]
+        setChapters(updatedChapters)
+        updateProgress(updatedChapters)
+        updateTodayView(updatedChapters)
+        success('Chapter added successfully!')
+      } else {
+        throw new Error('No chapter data returned');
+      }
+    } catch (error) {
+      console.error('Error creating chapter:', error);
+      showError('Failed to create chapter')
     }
     setIsAddChapterModalOpen(false)
   }
@@ -128,6 +184,16 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
         />
       )}
       <AddChapterModal isOpen={isAddChapterModalOpen} onClose={() => setIsAddChapterModalOpen(false)} onAdd={handleAddChapter} />
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+      />
       <div
         className={className}
         style={{
@@ -205,15 +271,25 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                 </button>
               </div>
               <div style={styles.taskList}>
-                {chaptersToDisplay.map(chapter => (
-                  <ChapterItem
-                    key={chapter.chapter_id}
-                    chapter={chapter}
-                    onToggleComplete={toggleChapterCompletion}
-                    onEdit={handleEditChapterClick}
-                    onDelete={handleDeleteChapter}
-                  />
-                ))}
+                {loadingChapters ? (
+                  <div style={styles.loadingState}>
+                    <span style={styles.loadingText}>Loading chapters...</span>
+                  </div>
+                ) : chaptersToDisplay.length > 0 ? (
+                  chaptersToDisplay.map(chapter => (
+                    <ChapterItem
+                      key={chapter.chapter_id}
+                      chapter={chapter}
+                      onToggleComplete={toggleChapterCompletion}
+                      onEdit={handleEditChapterClick}
+                      onDelete={handleDeleteChapter}
+                    />
+                  ))
+                ) : (
+                  <div style={styles.emptyState}>
+                    <span style={styles.emptyText}>No chapters yet. Add one to get started!</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -371,5 +447,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     overflowY: 'auto',
     flex: 1,
     paddingRight: '0.25rem',
+  },
+  loadingState: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '1rem',
+    minHeight: '60px',
+  },
+  loadingText: {
+    color: '#94a3b8',
+    fontSize: '0.875rem',
+    fontStyle: 'italic',
+  },
+  emptyState: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '1rem',
+    minHeight: '60px',
+  },
+  emptyText: {
+    color: '#64748b',
+    fontSize: '0.875rem',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 }

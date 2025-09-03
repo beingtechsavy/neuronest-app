@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { Eye, EyeOff } from 'lucide-react'
+import { useTimeouts } from '@/hooks/useTimeout'
 
 export default function SignupPage() {
   const router = useRouter()
+  const { addTimeout } = useTimeouts()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -36,7 +38,7 @@ export default function SignupPage() {
       setError(signUpError.message)
     } else {
       setMessage('🎉 Signup successful! Check your email to confirm.')
-      setTimeout(() => router.push('/login'), 3000)
+      addTimeout(() => router.push('/login'), 3000)
     }
 
     setLoading(false)
