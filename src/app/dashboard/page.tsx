@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import TaskBox from '@/components/TaskBox';
 import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
-import PomodoroWidget from '@/components/PomodoroWidget';
+import FocusSessionWidget from '@/components/FocusSessionWidget';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
@@ -149,16 +149,16 @@ export default function Dashboard() {
 
           {/* Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Pomodoro Widget */}
+            {/* Focus Session Widget */}
             <div className="lg:col-span-1">
-              <PomodoroWidget />
+              <FocusSessionWidget />
             </div>
             
-            {/* Quick Stats or other widgets can go here */}
+            {/* Quick Stats */}
             <div className="lg:col-span-2">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
                 <h3 className="text-lg font-semibold mb-4">Quick Overview</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold">{subjects.length}</div>
                     <div className="text-sm opacity-80">Subjects</div>
@@ -168,6 +168,10 @@ export default function Dashboard() {
                       {subjects.filter(s => s.is_stressful).length}
                     </div>
                     <div className="text-sm opacity-80">High Priority</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">5</div>
+                    <div className="text-sm opacity-80">Focus Sessions</div>
                   </div>
                 </div>
               </div>

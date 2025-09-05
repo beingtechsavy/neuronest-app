@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks, TrendingUp, Timer } from 'lucide-react';
+import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks, TrendingUp, Timer, Brain } from 'lucide-react';
 
 // --- CONSTANTS ---
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: <Home size={18} /> },
   { label: 'Calendar', href: '/calendar', icon: <CalendarDays size={18} /> },
   { label: 'Tasks', href: '/tasks', icon: <ListChecks size={18} /> },
-  { label: 'Pomodoro', href: '/pomodoro', icon: <Timer size={18} /> },
+  { label: 'Focus Sessions', href: '/focus-session', icon: <Brain size={18} /> },
   { label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} /> },
   { label: 'Settings', href: '/settings', icon: <Settings size={18} /> },
 ];
