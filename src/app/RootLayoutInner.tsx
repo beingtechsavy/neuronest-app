@@ -5,6 +5,9 @@ import { ReactNode } from 'react';
 import { SupabaseProvider } from '@/components/SupabaseProvider';
 import { ToastProvider } from '@/components/ToastProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { FocusSessionProvider } from '@/contexts/FocusSessionContext';
+import { AmbientSoundProvider } from '@/contexts/AmbientSoundContext';
+import { FloatingFocusWidget } from '@/components/FloatingFocusWidget';
 import Sidebar from '@/components/SideBar'; 
 import Topbar from '@/components/TopBar'; // Corrected the casing from 'Topbar' to 'TopBar'
 
@@ -16,23 +19,28 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
     <ErrorBoundary>
       <SupabaseProvider>
         <ToastProvider>
-          {isAppPage ? (
-            // --- App Layout (with Sidebar AND Topbar) ---
-            <>
-              <Sidebar />
-              <div className="lg:ml-60">
-                <Topbar />
-                <main>
-                  {children}
-                </main>
-              </div>
-            </>
-          ) : (
-            // --- Public Layout (No Topbar) ---
-            <main>
-              {children}
-            </main>
-          )}
+          <FocusSessionProvider>
+            <AmbientSoundProvider>
+            {isAppPage ? (
+              // --- App Layout (with Sidebar AND Topbar) ---
+              <>
+                <Sidebar />
+                <div className="lg:ml-60">
+                  <Topbar />
+                  <main>
+                    {children}
+                  </main>
+                </div>
+                <FloatingFocusWidget />
+              </>
+            ) : (
+              // --- Public Layout (No Topbar) ---
+              <main>
+                {children}
+              </main>
+            )}
+            </AmbientSoundProvider>
+          </FocusSessionProvider>
         </ToastProvider>
       </SupabaseProvider>
     </ErrorBoundary>

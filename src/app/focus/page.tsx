@@ -5,7 +5,7 @@ import AmbientSoundPlayer from '@/components/FocusEnhancement/AmbientSoundPlayer
 import BreathingExercise from '@/components/FocusEnhancement/BreathingExercise';
 import EyeStrainReminder from '@/components/FocusEnhancement/EyeStrainReminder';
 import SmartBreakSuggestions from '@/components/FocusEnhancement/SmartBreakSuggestions';
-import { Brain, Headphones, Wind, Eye, Coffee, Settings } from 'lucide-react';
+import { Brain, Headphones, Eye, Coffee, Settings } from 'lucide-react';
 
 interface FocusSession {
   soundsEnabled: boolean;
