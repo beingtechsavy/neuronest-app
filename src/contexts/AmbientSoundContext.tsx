@@ -173,7 +173,7 @@ export function AmbientSoundProvider({ children }: AmbientSoundProviderProps) {
   useEffect(() => {
     loadPresets();
     preloadAllSounds();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preload all sounds
   const preloadAllSounds = useCallback(async () => {
@@ -411,7 +411,7 @@ export function AmbientSoundProvider({ children }: AmbientSoundProviderProps) {
       // Exiting mix mode - clear all mixed sounds
       clearMix();
     }
-  }, [state.isMixingMode]);
+  }, [state.isMixingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addSoundToMix = useCallback(async (sound: SoundOption) => {
     if (state.mixedSounds.length >= 4) {

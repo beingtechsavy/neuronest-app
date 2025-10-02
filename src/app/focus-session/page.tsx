@@ -219,7 +219,7 @@ export default function FocusSessionPage() {
             <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8 shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
-                <h3 className="text-xl font-light text-white">Today's Progress</h3>
+                <h3 className="text-xl font-light text-white">Today&apos;s Progress</h3>
               </div>
               <div className="space-y-6">
                 <div className="flex justify-between items-center">

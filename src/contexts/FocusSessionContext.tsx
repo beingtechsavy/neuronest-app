@@ -364,7 +364,7 @@ export function FocusSessionProvider({ children }: FocusSessionProviderProps) {
     } else {
       localStorage.removeItem('focusSessionState');
     }
-  }, [state.isActive, state.currentState, state.isRunning, state.completedSessions]);
+  }, [state.isActive, state.currentState, state.isRunning, state.completedSessions, state.sessionStartTime, state.settings, state.timeLeft]);
 
   // Audio management is now handled by AmbientSoundContext - no auto-start here
 

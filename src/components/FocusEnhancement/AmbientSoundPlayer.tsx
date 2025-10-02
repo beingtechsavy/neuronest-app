@@ -471,7 +471,7 @@ const AmbientSoundPlayer: React.FC<AmbientSoundPlayerProps> = ({
       {/* Info */}
       <div className="p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-700/50 rounded-xl">
         <p className="text-blue-300 text-sm leading-relaxed">
-          🎵 <strong>Manual Control:</strong> Sounds only play when you click "Start Sounds" - no automatic playback during focus sessions. {state.isMixingMode 
+          🎵 <strong>Manual Control:</strong> Sounds only play when you click &quot;Start Sounds&quot; - no automatic playback during focus sessions. {state.isMixingMode 
             ? 'Mix Mode: Click sounds to add/remove (max 4). Use individual controls for volumes.'
             : 'Single Mode: Click any sound to play immediately. Enable Mix Mode for combinations.'
           } Binaural beats work best with headphones.
