@@ -141,8 +141,18 @@ export default function CalendarPage() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const firstDay = view === 'week' ? (() => { const d = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate())); d.setUTCDate(d.getUTCDate() - d.getUTCDay()); d.setUTCHours(0,0,0,0); return d })() : new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1, 0, 0, 0, 0));
-        const lastDay = view === 'week' ? (() => { const d = new Date(firstDay); d.setUTCDate(d.getUTCDate() + 6); d.setUTCHours(23,59,59,999); return d })() : new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+        // Align data fetching with WeeklyView display logic: 7 consecutive days starting from currentDate
+        const firstDay = view === 'week' ? 
+          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), 0, 0, 0, 0)) :
+          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1, 0, 0, 0, 0));
+        const lastDay = view === 'week' ? 
+          (() => { 
+            const d = new Date(firstDay); 
+            d.setUTCDate(d.getUTCDate() + 6); 
+            d.setUTCHours(23, 59, 59, 999); 
+            return d; 
+          })() : 
+          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
         const [tasksRes, unscheduledRes, prefsRes, blocksRes] = await Promise.all([
           supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).not('scheduled_date', 'is', null).gte('scheduled_date', toUTC_YYYYMMDD(firstDay)).lte('scheduled_date', toUTC_YYYYMMDD(lastDay)),
           supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).is('scheduled_date', null),
