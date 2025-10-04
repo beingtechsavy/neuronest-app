@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFocusSession } from '@/contexts/FocusSessionContext';
+import { useFocusSessionTasks, TaskOption } from '@/hooks/useFocusSessionTasks';
+import TaskSelectionModal from '@/components/TaskSelectionModal';
 import { 
   Play, 
   Pause, 
@@ -103,20 +105,41 @@ export function FloatingFocusWidget() {
     resumeSession,
     skipSession,
     resetSession,
+    toggleFloatingWidget,
     formatTime,
     getProgress,
     getStateConfig
   } = useFocusSession();
+
+  const { startFocusSession, completeFocusSession } = useFocusSessionTasks();
 
   // Widget state management
   const [widgetState, setWidgetState] = useState<WidgetState>('compact');
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
+  const [showTaskSelection, setShowTaskSelection] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskOption | null>(null);
   
   // Refs
   const widgetRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef<Position>({ x: 0, y: 0 });
+
+  // Handle task selection and start session
+  const handleStartWithTask = useCallback(async (task: TaskOption | null) => {
+    // Start database session
+    const dbSessionId = await startFocusSession(task?.task_id);
+    
+    // Start UI session with task info
+    startSession({
+      taskId: task?.task_id,
+      taskTitle: task?.title,
+      subjectColor: task?.subject_color,
+      dbSessionId: dbSessionId || undefined
+    });
+    
+    setSelectedTask(task);
+  }, [startSession, startFocusSession]);
 
   // Load saved position and state on mount
   useEffect(() => {
@@ -267,8 +290,8 @@ export function FloatingFocusWidget() {
     }
   }, [widgetState, checkCollisions, position]);
 
-  // Don't render if session is not active
-  if (!state.isActive) {
+  // Don't render widget if session is not active or if widget is hidden
+  if (!state.isActive || !state.floatingWidgetVisible) {
     return null;
   }
 
@@ -291,6 +314,16 @@ export function FloatingFocusWidget() {
 
   const toggleExpanded = () => {
     setWidgetState(prev => prev === 'expanded' ? 'compact' : 'expanded');
+  };
+
+  // Close widget completely - hide the widget but keep session running
+  const closeWidget = () => {
+    toggleFloatingWidget();
+  };
+
+  // End session completely
+  const endSession = () => {
+    resetSession();
   };
 
   // Reset to default position
@@ -320,45 +353,62 @@ export function FloatingFocusWidget() {
     return (
       <div
         ref={widgetRef}
-        className={`fixed z-50 cursor-move select-none transition-all duration-300 ${
+        className={`fixed z-50 select-none transition-all duration-300 ${
           isDragging ? 'scale-105 shadow-2xl' : 'hover:scale-105'
         }`}
         style={{ left: position.x, top: position.y }}
-        onMouseDown={handleMouseDown}
-        onClick={toggleMinimized}
       >
-        <div className={`
-          w-16 h-16 rounded-full flex items-center justify-center
-          bg-gradient-to-br ${stateConfig.bgGradient}
-          border-2 ${stateConfig.borderColor}
-          shadow-lg backdrop-blur-sm
-          hover:shadow-xl transition-all duration-200
-        `}>
-          <div className="relative">
-            <StateIcon className="w-6 h-6 text-white" />
-            {/* Progress ring */}
-            <svg className="absolute -inset-2 w-10 h-10 transform -rotate-90">
-              <circle
-                cx="20"
-                cy="20"
-                r="18"
-                stroke="rgba(255,255,255,0.2)"
-                strokeWidth="2"
-                fill="none"
-              />
-              <circle
-                cx="20"
-                cy="20"
-                r="18"
-                stroke="white"
-                strokeWidth="2"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 18}`}
-                strokeDashoffset={`${2 * Math.PI * 18 * (1 - progress / 100)}`}
-                className="transition-all duration-1000"
-              />
-            </svg>
+        <div className="relative group">
+          {/* Main circle */}
+          <div 
+            className={`
+              w-16 h-16 rounded-full flex items-center justify-center cursor-move
+              bg-gradient-to-br ${stateConfig.bgGradient}
+              border-2 ${stateConfig.borderColor}
+              shadow-lg backdrop-blur-sm
+              hover:shadow-xl transition-all duration-200
+            `}
+            onMouseDown={handleMouseDown}
+            onClick={toggleMinimized}
+          >
+            <div className="relative">
+              <StateIcon className="w-6 h-6 text-white" />
+              {/* Progress ring */}
+              <svg className="absolute -inset-2 w-10 h-10 transform -rotate-90">
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  stroke="white"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 18}`}
+                  strokeDashoffset={`${2 * Math.PI * 18 * (1 - progress / 100)}`}
+                  className="transition-all duration-1000"
+                />
+              </svg>
+            </div>
           </div>
+          
+          {/* Close button - appears on hover */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              closeWidget();
+            }}
+            className="absolute -top-2 -right-2 w-6 h-6 bg-gray-600 hover:bg-gray-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+            title="Hide Widget"
+          >
+            <X className="w-3 h-3 text-white" />
+          </button>
         </div>
       </div>
     );
@@ -414,6 +464,15 @@ export function FloatingFocusWidget() {
             <div className="text-xs text-gray-400 mb-1 uppercase tracking-wide">
               {stateConfig.label}
             </div>
+            {state.currentTaskTitle && (
+              <div className="text-xs text-gray-400 mb-2 flex items-center justify-center gap-2">
+                <div 
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: state.currentSubjectColor || '#6366f1' }}
+                />
+                <span className="truncate max-w-[180px]">{state.currentTaskTitle}</span>
+              </div>
+            )}
             <div className={`text-2xl font-mono font-bold ${stateConfig.textColor}`}>
               {formatTime(state.timeLeft)}
             </div>
@@ -434,73 +493,46 @@ export function FloatingFocusWidget() {
             </div>
           </div>
 
-          {/* Controls - Simplified */}
+          {/* Controls - Essential Only */}
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={handleToggleSession}
               className={`
-                p-2 rounded-lg bg-gradient-to-r ${stateConfig.bgGradient}
+                px-4 py-2 rounded-lg bg-gradient-to-r ${stateConfig.bgGradient}
                 hover:opacity-90 transition-opacity
-                text-white shadow-md
+                text-white shadow-md font-medium flex items-center gap-2
               `}
-              title={state.isRunning ? 'Pause' : 'Resume'}
             >
               {state.isRunning ? (
-                <Pause className="w-4 h-4" />
+                <>
+                  <Pause className="w-4 h-4" />
+                  Pause
+                </>
               ) : (
-                <Play className="w-4 h-4" />
+                <>
+                  <Play className="w-4 h-4" />
+                  Resume
+                </>
               )}
             </button>
             
-            {/* Skip button for compact mode */}
-            {state.currentState !== 'idle' && (
-              <button
-                onClick={skipSession}
-                className="p-2 rounded-lg bg-orange-600 hover:bg-orange-700 transition-colors text-white"
-                title={state.currentState === 'work' ? 'Skip to break' : 'Skip break'}
-              >
-                ⏭️
-              </button>
-            )}
-            
             <button
-              onClick={resetSession}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-gray-300"
-              title="Reset"
+              onClick={closeWidget}
+              className="p-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white"
+              title="Hide Widget"
             >
-              <RotateCcw className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Session stats and progress */}
-          <div className="mt-3 space-y-2">
-            <div className="flex justify-between items-center text-xs text-gray-400">
-              <span>Sessions: {state.completedSessions}</span>
-              <span>
-                {state.completedSessions % state.settings.sessionsUntilLongBreak === 0 && state.completedSessions > 0
-                  ? 'Long break next'
-                  : `${state.settings.sessionsUntilLongBreak - (state.completedSessions % state.settings.sessionsUntilLongBreak)} until long break`
-                }
-              </span>
-            </div>
-            
-            {/* Mini session progress indicator */}
-            <div className="flex items-center gap-1">
-              {Array.from({ length: state.settings.sessionsUntilLongBreak }).map((_, index) => (
-                <div
-                  key={index}
-                  className={`
-                    flex-1 h-1 rounded-full transition-colors
-                    ${index < (state.completedSessions % state.settings.sessionsUntilLongBreak)
-                      ? `bg-gradient-to-r ${stateConfig.bgGradient}`
-                      : 'bg-gray-600'
-                    }
-                  `}
-                />
-              ))}
+          {/* Simple session indicator */}
+          <div className="mt-3 text-center">
+            <div className="text-xs text-gray-400">
+              Session {state.completedSessions + 1}
             </div>
           </div>
         </div>
+        
       </div>
     );
   }
@@ -547,9 +579,9 @@ export function FloatingFocusWidget() {
               <Minimize2 className="w-4 h-4 text-gray-400" />
             </button>
             <button
-              onClick={toggleMinimized}
+              onClick={closeWidget}
               className="p-1 hover:bg-gray-700 rounded transition-colors"
-              title="Minimize"
+              title="Hide Widget"
             >
               <X className="w-4 h-4 text-gray-400" />
             </button>
@@ -577,7 +609,7 @@ export function FloatingFocusWidget() {
           <button
             onClick={handleToggleSession}
             className={`
-              px-4 py-2 rounded-lg bg-gradient-to-r ${stateConfig.bgGradient}
+              px-6 py-3 rounded-lg bg-gradient-to-r ${stateConfig.bgGradient}
               hover:opacity-90 transition-opacity
               text-white shadow-md font-medium
               flex items-center gap-2
@@ -585,37 +617,25 @@ export function FloatingFocusWidget() {
           >
             {state.isRunning ? (
               <>
-                <Pause className="w-4 h-4" />
+                <Pause className="w-5 h-5" />
                 Pause
               </>
             ) : (
               <>
-                <Play className="w-4 h-4" />
+                <Play className="w-5 h-5" />
                 Resume
               </>
             )}
           </button>
           
-          {/* Skip button for expanded mode */}
-          {state.currentState !== 'idle' && (
-            <button
-              onClick={skipSession}
-              className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 transition-colors text-white font-medium flex items-center gap-2"
-            >
-              ⏭️ Skip {state.currentState === 'work' ? 'to Break' : 'Break'}
-            </button>
-          )}
-          
           <button
-            onClick={resetSession}
-            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-gray-300 font-medium flex items-center gap-2"
+            onClick={endSession}
+            className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 transition-colors text-white font-medium flex items-center gap-2"
           >
-            <RotateCcw className="w-4 h-4" />
-            Reset
+            <X className="w-5 h-5" />
+            End Session
           </button>
         </div>
-
-
 
         {/* Session statistics and quick actions */}
         <div className="space-y-4">
@@ -634,23 +654,13 @@ export function FloatingFocusWidget() {
             </div>
           </div>
 
-          {/* Quick session actions */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                resetSession();
-                startSession();
-              }}
-              className="flex-1 px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-gray-300"
-              disabled={state.isRunning}
-            >
-              Quick Start
-            </button>
+          {/* Quick action */}
+          <div className="text-center">
             <button
               onClick={() => window.location.href = '/focus-session'}
-              className="flex-1 px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-gray-300"
+              className="text-sm text-gray-400 hover:text-white transition-colors"
             >
-              Full View
+              Open Focus Suite →
             </button>
           </div>
 
@@ -671,6 +681,15 @@ export function FloatingFocusWidget() {
           </div>
         </div>
       </div>
+
+      {/* Task Selection Modal */}
+      {showTaskSelection && (
+        <TaskSelectionModal
+          isOpen={showTaskSelection}
+          onClose={() => setShowTaskSelection(false)}
+          onSelectTask={handleStartWithTask}
+        />
+      )}
     </div>
   );
 }

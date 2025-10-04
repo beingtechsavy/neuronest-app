@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { supabase } from '@/lib/supabaseClient';
 
 // Types and Interfaces
 export interface FocusSessionSettings {
@@ -40,6 +41,12 @@ export interface FocusSessionState {
   completedSessions: number;
   sessionStartTime: number | null;
   
+  // Task Attribution (NEW)
+  currentTaskId: number | null;
+  currentTaskTitle: string | null;
+  currentSubjectColor: string | null;
+  dbSessionId: number | null;
+  
   // Settings
   settings: FocusSessionSettings;
   
@@ -53,7 +60,7 @@ export interface FocusSessionState {
 
 // Action Types
 type FocusSessionAction =
-  | { type: 'START_SESSION' }
+  | { type: 'START_SESSION'; payload?: { taskId?: number; taskTitle?: string; subjectColor?: string; dbSessionId?: number } }
   | { type: 'PAUSE_SESSION' }
   | { type: 'RESUME_SESSION' }
   | { type: 'COMPLETE_SESSION' }
@@ -92,6 +99,13 @@ const initialState: FocusSessionState = {
   isRunning: false,
   completedSessions: 0,
   sessionStartTime: null,
+  
+  // Task Attribution
+  currentTaskId: null,
+  currentTaskTitle: null,
+  currentSubjectColor: null,
+  dbSessionId: null,
+  
   settings: initialSettings,
   audioState: initialAudioState,
   floatingWidgetVisible: false,
@@ -109,7 +123,13 @@ function focusSessionReducer(state: FocusSessionState, action: FocusSessionActio
         currentState: 'work',
         timeLeft: state.settings.workDuration * 60, // Ensure we have the correct time
         sessionStartTime: Date.now(),
-        floatingWidgetVisible: true
+        floatingWidgetVisible: true,
+        
+        // Task Attribution
+        currentTaskId: action.payload?.taskId || null,
+        currentTaskTitle: action.payload?.taskTitle || null,
+        currentSubjectColor: action.payload?.subjectColor || null,
+        dbSessionId: action.payload?.dbSessionId || null
       };
 
     case 'PAUSE_SESSION':
@@ -149,21 +169,21 @@ function focusSessionReducer(state: FocusSessionState, action: FocusSessionActio
         isRunning: false,
         currentState: nextState,
         timeLeft: nextTimeLeft,
-        completedSessions: newCompletedSessions
+        completedSessions: newCompletedSessions,
+        
+        // Reset task attribution when session completes
+        currentTaskId: null,
+        currentTaskTitle: null,
+        currentSubjectColor: null,
+        dbSessionId: null
       };
 
     case 'RESET_SESSION':
-      const resetTimeLeft = state.currentState === 'work' 
-        ? state.settings.workDuration * 60
-        : state.currentState === 'shortBreak' 
-          ? state.settings.shortBreakDuration * 60
-          : state.settings.longBreakDuration * 60;
-
+      // Fully reset to initial idle state
       return {
-        ...state,
-        isRunning: false,
-        timeLeft: resetTimeLeft,
-        sessionStartTime: null
+        ...initialState,
+        settings: state.settings, // Keep user settings
+        completedSessions: state.completedSessions // Keep session count for the day
       };
 
     case 'TICK':
@@ -222,7 +242,7 @@ function focusSessionReducer(state: FocusSessionState, action: FocusSessionActio
 // Context
 interface FocusSessionContextType {
   state: FocusSessionState;
-  startSession: () => void;
+  startSession: (payload?: { taskId?: number; taskTitle?: string; subjectColor?: string; dbSessionId?: number }) => void;
   pauseSession: () => void;
   resumeSession: () => void;
   skipSession: () => void;
@@ -278,24 +298,103 @@ export function FocusSessionProvider({ children }: FocusSessionProviderProps) {
         ? `🎉 Time for a long break! You've completed ${newCompletedSessions} sessions.`
         : '☕ Time for a short break!'
       );
+
+      // Save completed work session to analytics
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const sessionDuration = state.settings.workDuration; // Duration in minutes
+        
+        // Update localStorage stats for analytics
+        const existingData = localStorage.getItem('focusSessionStats');
+        const stats = existingData ? JSON.parse(existingData) : {};
+        stats[today] = (stats[today] || 0) + sessionDuration;
+        localStorage.setItem('focusSessionStats', JSON.stringify(stats));
+        
+        console.log('Session completed and saved to analytics:', {
+          today,
+          sessionDuration,
+          totalToday: stats[today]
+        });
+
+        // If we have a database session ID, complete it in the database
+        if (state.dbSessionId) {
+          supabase
+            .from('focus_sessions')
+            .update({
+              end_time: new Date().toISOString(),
+              duration: sessionDuration,
+              completed: true
+            })
+            .eq('session_id', state.dbSessionId)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error completing database session:', error);
+              } else {
+                console.log('Database session completed:', state.dbSessionId);
+              }
+            });
+        }
+      } catch (error) {
+        console.error('Error saving session to analytics:', error);
+      }
     } else {
       warning('💪 Break time is over! Ready for another work session?');
     }
     
     dispatch({ type: 'COMPLETE_SESSION' });
-  }, [state.currentState, state.completedSessions, state.settings.sessionsUntilLongBreak, success, warning]);
+  }, [state.currentState, state.completedSessions, state.settings.sessionsUntilLongBreak, state.settings.workDuration, state.dbSessionId, success, warning]);
 
   const handleSessionSkip = useCallback(() => {
     const isWorkSession = state.currentState === 'work';
     
     if (isWorkSession) {
       warning('⏭️ Work session skipped. Moving to break.');
+
+      // Save skipped work session to analytics (count as full session)
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const sessionDuration = state.settings.workDuration; // Full duration even if skipped
+        
+        // Update localStorage stats for analytics
+        const existingData = localStorage.getItem('focusSessionStats');
+        const stats = existingData ? JSON.parse(existingData) : {};
+        stats[today] = (stats[today] || 0) + sessionDuration;
+        localStorage.setItem('focusSessionStats', JSON.stringify(stats));
+        
+        console.log('Skipped session counted as full session:', {
+          today,
+          sessionDuration,
+          totalToday: stats[today]
+        });
+
+        // If we have a database session ID, complete it in the database
+        if (state.dbSessionId) {
+          supabase
+            .from('focus_sessions')
+            .update({
+              end_time: new Date().toISOString(),
+              duration: sessionDuration,
+              completed: true,
+              was_skipped: true // Optional: track that it was skipped
+            })
+            .eq('session_id', state.dbSessionId)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error completing skipped session:', error);
+              } else {
+                console.log('Skipped session saved to database:', state.dbSessionId);
+              }
+            });
+        }
+      } catch (error) {
+        console.error('Error saving skipped session to analytics:', error);
+      }
     } else {
       success('⏭️ Break skipped! Ready for the next work session.');
     }
     
     dispatch({ type: 'SKIP_SESSION' });
-  }, [state.currentState, success, warning]);
+  }, [state.currentState, state.settings.workDuration, state.dbSessionId, success, warning]);
 
   // Timer effect - simplified and more reliable
   useEffect(() => {
@@ -327,23 +426,22 @@ export function FocusSessionProvider({ children }: FocusSessionProviderProps) {
   }, [state.isRunning, state.timeLeft, state.isActive, handleSessionComplete]);
 
   // Simple persistence - no complex time calculations
+  // DISABLED AUTO-RESTORE to prevent confusing UI flicker
+  // Users must explicitly start a new session each time
   useEffect(() => {
+    // Clear any old session state on mount
     const savedState = localStorage.getItem('focusSessionState');
     if (savedState) {
       try {
         const parsedState = JSON.parse(savedState);
-        if (parsedState.isActive) {
-          // Restore state but always pause to let user resume manually
-          dispatch({ 
-            type: 'RESTORE_STATE', 
-            payload: {
-              ...parsedState,
-              isRunning: false // Always pause on page load
-            }
-          });
+        // Only clear if session is old (>5 minutes)
+        const sessionAge = Date.now() - (parsedState.sessionStartTime || 0);
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (sessionAge > fiveMinutes) {
+          localStorage.removeItem('focusSessionState');
         }
       } catch (error) {
-        console.error('Failed to restore focus session state:', error);
         localStorage.removeItem('focusSessionState');
       }
     }
@@ -371,8 +469,8 @@ export function FocusSessionProvider({ children }: FocusSessionProviderProps) {
   // No auto-start sounds - user must explicitly control sounds
 
   // Action handlers
-  const startSession = () => {
-    dispatch({ type: 'START_SESSION' });
+  const startSession = (payload?: { taskId?: number; taskTitle?: string; subjectColor?: string; dbSessionId?: number }) => {
+    dispatch({ type: 'START_SESSION', payload });
   };
 
   const pauseSession = () => {

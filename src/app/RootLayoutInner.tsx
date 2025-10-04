@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FocusSessionProvider } from '@/contexts/FocusSessionContext';
 import { AmbientSoundProvider } from '@/contexts/AmbientSoundContext';
 import { FloatingFocusWidget } from '@/components/FloatingFocusWidget';
+import CelebrationOverlay from '@/components/CelebrationOverlay';
 import Sidebar from '@/components/SideBar'; 
 import Topbar from '@/components/TopBar'; // Corrected the casing from 'Topbar' to 'TopBar'
 
@@ -32,12 +33,16 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
                   </main>
                 </div>
                 <FloatingFocusWidget />
+                <CelebrationOverlay />
               </>
             ) : (
               // --- Public Layout (No Topbar) ---
-              <main>
-                {children}
-              </main>
+              <>
+                <main>
+                  {children}
+                </main>
+                <CelebrationOverlay />
+              </>
             )}
             </AmbientSoundProvider>
           </FocusSessionProvider>

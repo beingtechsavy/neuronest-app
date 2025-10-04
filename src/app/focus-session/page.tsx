@@ -1,14 +1,81 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Settings, Coffee, BookOpen, Brain, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Pause, RotateCcw, Settings, Coffee, BookOpen, Brain, Volume2, VolumeX, Target } from 'lucide-react';
 import { useFocusSession } from '@/contexts/FocusSessionContext';
+import { useFocusSessionTasks } from '@/hooks/useFocusSessionTasks';
+import TaskSelectionModal from '@/components/TaskSelectionModal';
 import AmbientSoundPlayer from '@/components/FocusEnhancement/AmbientSoundPlayer';
 import BreathingExercise from '@/components/FocusEnhancement/BreathingExercise';
 import EyeStrainReminder from '@/components/FocusEnhancement/EyeStrainReminder';
 import SmartBreakSuggestions from '@/components/FocusEnhancement/SmartBreakSuggestions';
 
 type FocusMode = 'minimal' | 'enhanced' | 'full';
+
+// Today's Progress Card Component
+function TodayProgressCard({ completedSessions, workDuration }: { completedSessions: number; workDuration: number }) {
+  const [todayFocusTime, setTodayFocusTime] = useState(0);
+  const [todaySessionCount, setTodaySessionCount] = useState(0);
+
+  useEffect(() => {
+    // Get today's data from localStorage
+    const updateTodayData = () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Get focus time
+        const sessionData = localStorage.getItem('focusSessionStats');
+        if (sessionData) {
+          const stats = JSON.parse(sessionData);
+          const todayTime = stats[today] || 0;
+          setTodayFocusTime(todayTime);
+          
+          // Calculate session count from focus time (assuming standard work duration)
+          const sessionCount = Math.floor(todayTime / workDuration);
+          setTodaySessionCount(sessionCount);
+        }
+      } catch (error) {
+        console.error('Error reading today\'s data:', error);
+      }
+    };
+
+    updateTodayData();
+    // Update every 10 seconds
+    const interval = setInterval(updateTodayData, 10000);
+    return () => clearInterval(interval);
+  }, [workDuration]);
+
+  // Use localStorage data if available, otherwise use context
+  const displayFocusTime = todayFocusTime > 0 ? todayFocusTime : (completedSessions * workDuration);
+  const displaySessions = todaySessionCount > 0 ? todaySessionCount : completedSessions;
+  const hours = Math.floor(displayFocusTime / 60);
+  const minutes = displayFocusTime % 60;
+
+  return (
+    <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8 shadow-xl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+        <h3 className="text-xl font-light text-white">Today&apos;s Progress</h3>
+      </div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 font-light">Sessions</span>
+          <span className="text-3xl font-light text-white">{displaySessions}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 font-light">Focus Time</span>
+          <span className="text-xl font-light text-white">
+            {hours}h {minutes}m
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 font-light">Streak</span>
+          <span className="text-xl font-light text-white">{displaySessions}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FocusSessionPage() {
   // Use the focus session context
@@ -20,22 +87,53 @@ export default function FocusSessionPage() {
     skipSession,
     resetSession,
     updateSettings,
+    toggleFloatingWidget,
     formatTime,
     getProgress,
     getStateConfig
   } = useFocusSession();
+
+  const { startFocusSession, completeFocusSession, smartSuggestions, lastTask } = useFocusSessionTasks();
 
   // Local UI state
   const [showSettings, setShowSettings] = useState(false);
   const [focusMode, setFocusMode] = useState<FocusMode>('enhanced');
   const [showBreathingModal, setShowBreathingModal] = useState(false);
   const [showBreakSuggestions, setShowBreakSuggestions] = useState(false);
+  const [showTaskSelection, setShowTaskSelection] = useState(false);
+
+  // Loading state for session start
+  const [isStartingSession, setIsStartingSession] = useState(false);
+
+  // Handle task selection and start session
+  const handleStartWithTask = async (task: any) => {
+    setIsStartingSession(true);
+    
+    try {
+      // Start database session
+      const dbSessionId = await startFocusSession(task?.task_id);
+      
+      // Small delay for better UX (shows loading state)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Start UI session with task info
+      startSession({
+        taskId: task?.task_id,
+        taskTitle: task?.title,
+        subjectColor: task?.subject_color,
+        dbSessionId: dbSessionId || undefined
+      });
+    } finally {
+      setIsStartingSession(false);
+    }
+  };
 
   // Handle timer controls
   const toggleTimer = () => {
     if (!state.isRunning) {
       if (state.currentState === 'idle') {
-        startSession();
+        // Show task selection instead of starting immediately
+        setShowTaskSelection(true);
       } else {
         resumeSession();
       }
@@ -151,25 +249,143 @@ export default function FocusSessionPage() {
                     <div className="text-8xl font-light text-white mb-3 tracking-tight">
                       {formatTime(state.timeLeft)}
                     </div>
-                    <div className="text-slate-400 text-lg font-light">
+                    
+                    {/* Show current task if selected */}
+                    {state.currentTaskTitle ? (
+                      <div className="text-center mb-2">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: state.currentSubjectColor || '#6366f1' }}
+                          />
+                          <div className="text-slate-300 text-lg font-medium">
+                            {state.currentTaskTitle}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-slate-400 text-lg font-light mb-2">
+                        General Study
+                      </div>
+                    )}
+                    
+                    <div className="text-slate-400 text-sm">
                       Session {state.completedSessions + 1}
                     </div>
-                    <div className="text-slate-500 text-sm mt-2">
+                    <div className="text-slate-500 text-sm mt-1">
                       {Math.round(getProgress())}% complete
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Elegant Controls - Minimal and Powerful */}
+              {/* Reset Session Button - Show if session is active but user wants to start fresh */}
+              {state.isActive && !state.isRunning && (
+                <div className="mb-8 text-center">
+                  <div className="space-y-4">
+                    <p className="text-slate-400 text-sm">Session paused</p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                      <button
+                        onClick={() => {
+                          resetSession();
+                          localStorage.removeItem('focusSessionState');
+                        }}
+                        className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl text-white font-medium transition-all duration-200 shadow-lg"
+                      >
+                        <RotateCcw size={16} />
+                        Start New Session
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State - Show while starting session */}
+              {isStartingSession && (
+                <div className="mb-8 text-center">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl border border-blue-500/30">
+                      <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-blue-300 font-medium">Starting your focus session...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Continue - Last Task (Compact) */}
+              {!state.isActive && !isStartingSession && lastTask && (
+                <div className="mb-6 text-center">
+                  <p className="text-slate-400 text-xs mb-3">Quick Continue</p>
+                  <button
+                    onClick={() => handleStartWithTask(lastTask)}
+                    disabled={isStartingSession}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 hover:border-yellow-500/50 rounded-lg text-yellow-300 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div 
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: lastTask.subject_color }}
+                    />
+                    {lastTask.title}
+                  </button>
+                </div>
+              )}
+
+              {/* Current Task Display - Show during active session */}
+              {state.isActive && state.currentTaskTitle && (
+                <div className="mb-8 text-center">
+                  <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-xl border border-slate-600/50 backdrop-blur-sm">
+                    <div 
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: state.currentSubjectColor || '#6366f1' }}
+                    />
+                    <span className="text-slate-300 font-medium">Focusing on:</span>
+                    <span className="text-white font-semibold">{state.currentTaskTitle}</span>
+                    <button
+                      onClick={() => setShowTaskSelection(true)}
+                      className="ml-2 text-slate-400 hover:text-white text-sm underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Main Action Button - Single, Clear Call-to-Action */}
               <div className="flex items-center justify-center gap-6">
-                <button
-                  onClick={toggleTimer}
-                  className={`group flex items-center gap-4 px-12 py-5 rounded-full font-medium text-xl transition-all duration-300 transform hover:scale-105 shadow-2xl bg-gradient-to-r ${stateConfig.bgGradient} text-white hover:shadow-3xl`}
-                >
-                  {state.isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7" />}
-                  {state.isRunning ? 'Pause' : (state.currentState === 'idle' ? 'Start Focus' : 'Resume')}
-                </button>
+                {state.isActive ? (
+                  <>
+                    <button
+                      onClick={toggleTimer}
+                      className={`group flex items-center gap-4 px-12 py-5 rounded-full font-medium text-xl transition-all duration-300 transform hover:scale-105 shadow-2xl bg-gradient-to-r ${stateConfig.bgGradient} text-white hover:shadow-3xl`}
+                    >
+                      {state.isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7" />}
+                      {state.isRunning ? 'Pause' : 'Resume'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Primary Action: Choose Task */}
+                    <button
+                      onClick={() => setShowTaskSelection(true)}
+                      disabled={isStartingSession}
+                      className="group flex items-center gap-4 px-12 py-5 rounded-full font-medium text-xl transition-all duration-300 transform hover:scale-105 shadow-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Target className="w-7 h-7" />
+                      Choose Task & Start
+                    </button>
+                    
+                    {/* Secondary Action: General Session */}
+                    <button
+                      onClick={() => handleStartWithTask(null)}
+                      disabled={isStartingSession}
+                      className="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition-all duration-300 font-medium backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Start without a specific task"
+                    >
+                      <Brain className="w-5 h-5" />
+                      General
+                    </button>
+                  </>
+                )}
                 
                 {/* Skip button - elegant and contextual */}
                 {state.isActive && state.currentState !== 'idle' && (
@@ -216,28 +432,10 @@ export default function FocusSessionPage() {
           {/* Elegant Sidebar */}
           <div className="space-y-8">
             {/* Beautiful Progress Card */}
-            <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8 shadow-xl">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
-                <h3 className="text-xl font-light text-white">Today&apos;s Progress</h3>
-              </div>
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-light">Sessions</span>
-                  <span className="text-3xl font-light text-white">{state.completedSessions}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-light">Focus Time</span>
-                  <span className="text-xl font-light text-white">
-                    {Math.floor(state.completedSessions * state.settings.workDuration / 60)}h {(state.completedSessions * state.settings.workDuration) % 60}m
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-light">Streak</span>
-                  <span className="text-xl font-light text-white">{state.completedSessions}</span>
-                </div>
-              </div>
-            </div>
+            <TodayProgressCard 
+              completedSessions={state.completedSessions}
+              workDuration={state.settings.workDuration}
+            />
 
             {/* Eye Care */}
             {focusMode !== 'minimal' && state.settings.eyeCareEnabled && (
@@ -251,6 +449,14 @@ export default function FocusSessionPage() {
                 <h3 className="text-xl font-light text-white">Quick Actions</h3>
               </div>
               <div className="space-y-4">
+                {state.isActive && !state.floatingWidgetVisible && (
+                  <button
+                    onClick={toggleFloatingWidget}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 hover:from-indigo-500/30 hover:to-indigo-600/30 text-indigo-300 rounded-xl transition-all duration-300 text-left border border-indigo-500/20 hover:border-indigo-400/30 backdrop-blur-sm"
+                  >
+                    📱 Show Floating Widget
+                  </button>
+                )}
                 <button
                   onClick={() => setShowBreathingModal(true)}
                   className="w-full px-6 py-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 text-blue-300 rounded-xl transition-all duration-300 text-left border border-blue-500/20 hover:border-blue-400/30 backdrop-blur-sm"
@@ -400,6 +606,16 @@ export default function FocusSessionPage() {
             </div>
           </div>
         )}
+
+        {/* Task Selection Modal */}
+        <TaskSelectionModal
+          isOpen={showTaskSelection}
+          onClose={() => setShowTaskSelection(false)}
+          onSelectTask={(task) => {
+            handleStartWithTask(task);
+            setShowTaskSelection(false);
+          }}
+        />
       </div>
     </div>
   );
