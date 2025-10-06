@@ -180,7 +180,7 @@ export function useAnalytics() {
         // Get tasks with effort units (focus time) for the last 60 days
         const sixtyDaysAgo = new Date();
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-        
+
         const { data: tasks, error } = await supabase
             .from('tasks')
             .select('scheduled_date, status, effort_units, end_time')
@@ -194,7 +194,7 @@ export function useAnalytics() {
 
         // Group tasks by date and calculate daily focus time
         const dailyFocusTime: { [date: string]: number } = {};
-        
+
         tasks?.forEach(task => {
             const date = task.scheduled_date!;
             if (!dailyFocusTime[date]) {
@@ -382,12 +382,12 @@ export function useAnalytics() {
                     if (!existingData) {
                         const today = new Date();
                         const stats: { [date: string]: number } = {};
-                        
+
                         for (let i = 0; i < 7; i++) {
                             const date = new Date(today);
                             date.setDate(date.getDate() - i);
                             const dateStr = date.toISOString().split('T')[0];
-                            
+
                             if (i === 0) stats[dateStr] = 125; // Today: 2h 5m
                             else if (i === 1) stats[dateStr] = 45; // Yesterday: 45m
                             else if (i === 2) stats[dateStr] = 90; // 2 days ago: 1h 30m
@@ -396,7 +396,7 @@ export function useAnalytics() {
                             else if (i === 5) stats[dateStr] = 35; // 5 days ago: 35m
                             else if (i === 6) stats[dateStr] = 50; // 6 days ago: 50m
                         }
-                        
+
                         localStorage.setItem('focusSessionStats', JSON.stringify(stats));
                         console.log('Auto-initialized focus session data for analytics');
                     }
@@ -409,7 +409,7 @@ export function useAnalytics() {
 
             // Phase 1: Load critical stats first for immediate display
             const taskStats = await calculateTaskStats();
-            
+
             // Show basic analytics immediately
             setAnalytics(prev => ({
                 taskStats,
@@ -419,7 +419,7 @@ export function useAnalytics() {
                 productivityHeatmap: prev?.productivityHeatmap || [],
                 peakHours: prev?.peakHours || []
             }));
-            
+
             // Phase 2: Load remaining data in parallel
             const [
                 subjectStats,

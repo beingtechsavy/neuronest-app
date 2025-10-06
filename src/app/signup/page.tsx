@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { Eye, EyeOff } from 'lucide-react'
 import { useTimeouts } from '@/hooks/useTimeout'
+import GoogleSignInButton from '@/components/GoogleSignInButton'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -56,6 +57,21 @@ export default function SignupPage() {
           <h1 className="mb-5 text-3xl font-extrabold text-purple-300">
             Create your NeuroNest account
           </h1>
+
+          {/* Google Sign Up */}
+          <div className="mb-6">
+            <GoogleSignInButton mode="signup" />
+          </div>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-[#0A111E] text-gray-400">Or sign up with email</span>
+            </div>
+          </div>
 
           <div className="space-y-4">
             <label className="block text-left">

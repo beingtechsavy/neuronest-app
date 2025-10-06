@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { Plus, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import { useUser } from '@supabase/auth-helpers-react';
 
 import TaskFilters from '@/components/TaskFilters';
 import TaskList from '@/components/TaskList';
@@ -13,7 +14,6 @@ import { Task } from '@/types/tasks'; // 1. Import Task from the new central fil
 
 // --- MAIN PAGE COMPONENT ---
 export default function TasksPage() {
-  const supabase = useSupabaseClient();
   const user = useUser();
 
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -48,7 +48,7 @@ export default function TasksPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, supabase]);
+  }, [user]);
 
   useEffect(() => {
     fetchTasks();

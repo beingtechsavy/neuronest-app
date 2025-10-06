@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
+import GoogleSignInButton from "@/components/GoogleSignInButton"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -44,6 +45,21 @@ export default function LoginPage() {
           <h2 className="mb-5 text-2xl font-bold text-purple-300">
             Log in to your NeuroNest account
           </h2>
+
+          {/* Google Sign In */}
+          <div className="mb-6">
+            <GoogleSignInButton mode="signin" />
+          </div>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-[#0A111E] text-gray-400">Or continue with email</span>
+            </div>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>

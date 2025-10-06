@@ -68,7 +68,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
     updateProgress(initializedChapters)
     updateTodayView(initializedChapters)
     setLoadingChapters(false);
-  }, [subject.subject_id, updateProgress, updateTodayView, showError])
+  }, [subject.subject_id, subject.title, updateProgress, updateTodayView, showError])
 
   useEffect(() => {
     loadChapters()

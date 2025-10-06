@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import GoogleSignInButton from '@/components/GoogleSignInButton'
+
 
 export default function LandingPage() {
   return (
@@ -19,19 +21,33 @@ export default function LandingPage() {
         An ADHD-friendly task manager designed for simplicity, focus, and building better routines.
       </p>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        {/* Primary CTA - See Features */}
         <Link
-          href="/signup"
-          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded transition"
+          href="/features"
+          className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition text-center"
         >
-          Get Started
+          See How It Works
         </Link>
-        <Link
-          href="/login"
-          className="border border-purple-600 hover:border-purple-700 text-purple-300 hover:text-white font-medium py-2 px-6 rounded transition"
-        >
-          Log In
-        </Link>
+        
+        {/* Secondary CTA - Sign Up */}
+        <GoogleSignInButton mode="signup" className="!bg-white !hover:bg-gray-50 !text-gray-900 !border-gray-300" />
+        
+        {/* Tertiary CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3 text-sm">
+          <Link
+            href="/signup"
+            className="text-purple-300 hover:text-white font-medium py-2 px-6 rounded transition text-center underline"
+          >
+            Sign up with email
+          </Link>
+          <Link
+            href="/login"
+            className="text-purple-300 hover:text-white font-medium py-2 px-6 rounded transition text-center underline"
+          >
+            Already have an account?
+          </Link>
+        </div>
       </div>
 
       <div className="mt-12 text-sm text-slate-500 text-center">

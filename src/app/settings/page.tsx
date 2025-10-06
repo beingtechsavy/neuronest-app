@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 // import Sidebar from '@/components/SideBar'; // No longer needed here
 import { supabase } from '@/lib/supabaseClient';
-import { User } from '@supabase/supabase-js';
+import { useUser } from '@supabase/auth-helpers-react';
 import { Loader2 } from 'lucide-react';
 import { useToastContext } from '@/components/ToastProvider';
 import { useTimeouts } from '@/hooks/useTimeout';
@@ -22,7 +22,7 @@ interface UserPreferences {
 export default function SettingsPage() {
   const { success, error: showError } = useToastContext();
   const { addTimeout } = useTimeouts();
-  const [user, setUser] = useState<User | null>(null);
+  const user = useUser();
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,8 +31,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (user) {
         const { data } = await supabase
@@ -54,7 +53,7 @@ export default function SettingsPage() {
       setLoading(false);
     };
     fetchUserData();
-  }, []);
+  }, [user]);
 
   const handleSave = async () => {
     if (!user || !preferences) return;

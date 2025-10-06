@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useUser } from '@supabase/auth-helpers-react';
 import TaskBox from '@/components/TaskBox';
 import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
@@ -24,6 +25,7 @@ interface Profile {
 // --- MAIN COMPONENT ---
 export default function Dashboard() {
   const router = useRouter();
+  const user = useUser();
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [router, supabase]);
+  }, [router, user]);
 
   useEffect(() => {
     fetchDashboardData();

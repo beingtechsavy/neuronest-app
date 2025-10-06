@@ -14,7 +14,7 @@ import Topbar from '@/components/TopBar'; // Corrected the casing from 'Topbar' 
 
 export default function RootLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isAppPage = !['/', '/login', '/signup'].includes(pathname);
+  const isAppPage = !['/', '/login', '/signup', '/features'].includes(pathname);
 
   return (
     <ErrorBoundary>
@@ -44,9 +44,9 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
                 <CelebrationOverlay />
               </>
             )}
-            </AmbientSoundProvider>
-          </FocusSessionProvider>
-        </ToastProvider>
+              </AmbientSoundProvider>
+            </FocusSessionProvider>
+          </ToastProvider>
       </SupabaseProvider>
     </ErrorBoundary>
   );

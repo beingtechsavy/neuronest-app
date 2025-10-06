@@ -13,6 +13,7 @@ import {
   DragOverEvent,
 } from '@dnd-kit/core';
 import { supabase } from '@/lib/supabaseClient';
+import { useUser } from '@supabase/auth-helpers-react';
 // import Sidebar from '@/components/SideBar'; // No longer needed here
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WeeklyView from '@/components/WeeklyView';
@@ -102,6 +103,7 @@ const mergeSlots = (slots: { start: number; end: number }[]): { start: number; e
 
 export default function CalendarPage() {
   // --- STATE AND REFS ---
+  const user = useUser();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>({});
@@ -172,11 +174,11 @@ export default function CalendarPage() {
       // Error handling could be improved with toast notifications
     } 
     finally { setLoading(false); setIsNavigating(false); }
-  }, [currentDate, view]);
+  }, [currentDate, view, user]);
 
   // --- EFFECTS ---
   useEffect(() => { const now = new Date(); now.setUTCHours(0,0,0,0); setCurrentDate(now); }, []);
-  useEffect(() => { if(currentDate) { const isNav = !loading; fetchData(isNav); } }, [currentDate, view]);
+  useEffect(() => { if(currentDate) { const isNav = !loading; fetchData(isNav); } }, [currentDate, view, fetchData, loading]);
 
   useEffect(() => {
     const handleRightClick = (event: MouseEvent) => {

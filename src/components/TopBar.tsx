@@ -41,7 +41,7 @@ export default function Topbar() {
       }
     };
     fetchProfile();
-  }, [session, supabase]);
+  }, [session, supabase, showError]);
 
   const handleLogout = async () => {
     try {
