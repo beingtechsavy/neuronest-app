@@ -2,13 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization of Supabase client
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration is missing. Please check your environment variables.');
+    }
+    
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabase;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if required services are configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json(
+        { error: 'Database service is not configured' },
+        { status: 503 }
+      );
+    }
+
     const body = await req.text();
     const signature = req.headers.get('paddle-signature');
 
@@ -88,7 +108,8 @@ async function handleSubscriptionCreated(event: any) {
   }
 
   // Save subscription to database
-  const { error } = await supabase.from('subscriptions').upsert({
+  const client = getSupabaseClient();
+  const { error } = await client.from('subscriptions').upsert({
     user_id: userId,
     paddle_subscription_id: event.subscription_id,
     paddle_customer_id: event.user_id,
@@ -110,7 +131,8 @@ async function handleSubscriptionCreated(event: any) {
 async function handleSubscriptionUpdated(event: any) {
   console.log('Processing subscription updated:', event.subscription_id);
   
-  const { error } = await supabase
+  const client = getSupabaseClient();
+  const { error } = await client
     .from('subscriptions')
     .update({
       status: event.status,
@@ -127,7 +149,8 @@ async function handleSubscriptionUpdated(event: any) {
 async function handleSubscriptionCancelled(event: any) {
   console.log('Processing subscription cancelled:', event.subscription_id);
   
-  const { error } = await supabase
+  const client = getSupabaseClient();
+  const { error } = await client
     .from('subscriptions')
     .update({
       status: 'cancelled',
@@ -144,7 +167,8 @@ async function handleSubscriptionCancelled(event: any) {
 async function handlePaymentSucceeded(event: any) {
   console.log('Processing payment succeeded:', event.subscription_id);
   
-  const { error } = await supabase
+  const client = getSupabaseClient();
+  const { error } = await client
     .from('subscriptions')
     .update({
       status: 'active',
@@ -161,7 +185,8 @@ async function handlePaymentSucceeded(event: any) {
 async function handlePaymentFailed(event: any) {
   console.log('Processing payment failed:', event.subscription_id);
   
-  const { error } = await supabase
+  const client = getSupabaseClient();
+  const { error } = await client
     .from('subscriptions')
     .update({
       status: 'past_due',

@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization of Supabase client
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration is missing. Please check your environment variables.');
+    }
+    
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabase;
+}
 
 interface TaskBreakdownStep {
   step: string;
@@ -17,6 +29,14 @@ interface TaskBreakdownStep {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json(
+        { error: 'Database service is not configured' },
+        { status: 503 }
+      );
+    }
+
     const { 
       userId, 
       breakdown, 
@@ -34,13 +54,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const client = getSupabaseClient();
+
     let subjectId = selectedSubjectId;
     let chapterId = null;
 
     // Step 1: Handle subject creation/selection
     if (createNewSubject && newSubjectName) {
       // Create new subject
-      const { data: newSubject, error: subjectError } = await supabase
+      const { data: newSubject, error: subjectError } = await client
         .from('subjects')
         .insert({
           title: newSubjectName,
@@ -63,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Create AI breakdown record
-    const { data: breakdownRecord, error: breakdownError } = await supabase
+    const { data: breakdownRecord, error: breakdownError } = await client
       .from('ai_breakdowns')
       .insert({
         user_id: userId,
@@ -85,11 +107,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const breakdownId = breakdownRecord.id;
+    const breakdownId = breakdownRecord.id as string;
 
     // Step 3: Create chapter for this breakdown
     if (subjectId) {
-      const { data: newChapter, error: chapterError } = await supabase
+      const { data: newChapter, error: chapterError } = await client
         .from('chapters')
         .insert({
           title: taskTitle,
@@ -111,10 +133,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      chapterId = newChapter.chapter_id;
+      chapterId = newChapter.chapter_id as string;
 
       // Update breakdown record with chapter_id
-      await supabase
+      await client
         .from('ai_breakdowns')
         .update({ chapter_id: chapterId })
         .eq('id', breakdownId);
@@ -136,7 +158,7 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString()
       }));
 
-      const { error: tasksError } = await supabase
+      const { error: tasksError } = await client
         .from('tasks')
         .insert(tasksToInsert);
 
@@ -149,7 +171,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Initialize progress tracking only if tasks were created
-      await supabase
+      await client
         .from('breakdown_progress')
         .insert({
           breakdown_id: breakdownId,

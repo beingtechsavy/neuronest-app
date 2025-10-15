@@ -2,17 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateTaskBreakdown, TaskBreakdownRequest } from '@/lib/azureOpenAI';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization of Supabase client
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration is missing. Please check your environment variables.');
+    }
+    
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabase;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if Azure OpenAI is configured
+    // Check if required services are configured
     if (!process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_ENDPOINT || !process.env.AZURE_OPENAI_DEPLOYMENT_NAME) {
       return NextResponse.json(
         { error: 'AI service is not configured' },
+        { status: 503 }
+      );
+    }
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json(
+        { error: 'Database service is not configured' },
         { status: 503 }
       );
     }
@@ -80,8 +99,10 @@ export async function POST(req: NextRequest) {
 // Check if user can use AI breakdown feature
 async function checkUsageLimits(userId: string) {
   try {
+    const client = getSupabaseClient();
+    
     // Get user's subscription info
-    const { data: subscription } = await supabase
+    const { data: subscription } = await client
       .from('subscriptions')
       .select('plan_type')
       .eq('user_id', userId)
@@ -91,7 +112,7 @@ async function checkUsageLimits(userId: string) {
 
     // Get current usage
     const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await supabase
+    const { data: usage } = await client
       .from('ai_usage')
       .select('*')
       .eq('user_id', userId)
@@ -132,7 +153,8 @@ async function checkUsageLimits(userId: string) {
 // Track AI usage for billing and analytics
 async function trackUsage(userId: string, featureType: string, tokensUsed: number) {
   try {
-    await supabase.from('ai_usage').insert({
+    const client = getSupabaseClient();
+    await client.from('ai_usage').insert({
       user_id: userId,
       feature_type: featureType,
       tokens_used: tokensUsed,
