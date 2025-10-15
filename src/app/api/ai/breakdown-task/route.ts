@@ -9,6 +9,14 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Azure OpenAI is configured
+    if (!process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_ENDPOINT || !process.env.AZURE_OPENAI_DEPLOYMENT_NAME) {
+      return NextResponse.json(
+        { error: 'AI service is not configured' },
+        { status: 503 }
+      );
+    }
+
     const { taskData, userId } = await req.json();
 
     // Validate required fields

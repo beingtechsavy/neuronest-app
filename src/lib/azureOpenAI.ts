@@ -1,15 +1,27 @@
 // Azure OpenAI client configuration
 import { OpenAI } from 'openai';
 
-// Initialize Azure OpenAI client
-const azureOpenAI = new OpenAI({
-  apiKey: process.env.AZURE_OPENAI_API_KEY,
-  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`,
-  defaultQuery: { 'api-version': '2024-02-15-preview' },
-  defaultHeaders: {
-    'api-key': process.env.AZURE_OPENAI_API_KEY,
-  },
-});
+// Lazy initialization of Azure OpenAI client
+let azureOpenAI: OpenAI | null = null;
+
+function getAzureOpenAIClient(): OpenAI {
+  if (!azureOpenAI) {
+    // Check if required environment variables are available
+    if (!process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_ENDPOINT || !process.env.AZURE_OPENAI_DEPLOYMENT_NAME) {
+      throw new Error('Azure OpenAI configuration is missing. Please check your environment variables.');
+    }
+
+    azureOpenAI = new OpenAI({
+      apiKey: process.env.AZURE_OPENAI_API_KEY,
+      baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`,
+      defaultQuery: { 'api-version': '2024-02-15-preview' },
+      defaultHeaders: {
+        'api-key': process.env.AZURE_OPENAI_API_KEY,
+      },
+    });
+  }
+  return azureOpenAI;
+}
 
 export interface TaskBreakdownStep {
   step: string;
@@ -78,7 +90,8 @@ ${request.userContext ? `Additional context: ${request.userContext}` : ''}
 Create 6-10 micro-steps that will help overcome task paralysis and build momentum. Remember: start easy, build up gradually, be specific.`;
 
   try {
-    const response = await azureOpenAI.chat.completions.create({
+    const client = getAzureOpenAIClient();
+    const response = await client.chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME!,
       messages: [
         { role: 'system', content: systemPrompt },
