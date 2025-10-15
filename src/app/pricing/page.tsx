@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useUser } from '@supabase/auth-helpers-react';
 import { Check, Sparkles, Zap, Crown } from 'lucide-react';
+import RazorpayCheckout from '@/components/RazorpayCheckout';
+import PricingCard from '@/components/PricingCard';
 
 const plans = [
   {
@@ -34,7 +36,7 @@ const plans = [
     ],
     cta: 'Upgrade to Master',
     popular: true,
-    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_MASTER_PRODUCT_ID,
+    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_MASTER_PRODUCT_ID || null,
   },
   {
     name: 'Warrior',
@@ -51,7 +53,7 @@ const plans = [
     ],
     cta: 'Upgrade to Warrior',
     popular: false,
-    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_WARRIOR_PRODUCT_ID,
+    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_WARRIOR_PRODUCT_ID || null,
   },
 ];
 
@@ -66,17 +68,26 @@ export default function PricingPage() {
       return;
     }
 
-    if (!productId) {
-      alert('This plan is not available yet. Please try again later.');
+    // For free plan, just redirect to dashboard
+    if (planName === 'Free') {
+      window.location.href = '/dashboard';
       return;
     }
 
     setLoading(planName);
 
     try {
-      // Paddle checkout will be implemented here
-      // For now, show a message that Paddle is being set up
-      alert('Paddle checkout is being set up. Please check back soon!');
+      // Get plan details
+      const plan = plans.find(p => p.name === planName);
+      if (!plan) {
+        throw new Error('Plan not found');
+      }
+
+      const amount = billingInterval === 'annual' ? plan.annualPrice : plan.price;
+      
+      // Razorpay checkout will be handled by the RazorpayCheckout component
+      // This is just a fallback
+      console.log('Initiating payment for:', planName, amount);
       
       // TODO: Implement Paddle checkout
       // const response = await fetch('/api/paddle/create-checkout', {
@@ -176,84 +187,3 @@ export default function PricingPage() {
   );
 }
 
-function PricingCard({ plan, billingInterval, loading, onSubscribe, user }: any) {
-  const price = billingInterval === 'monthly' ? plan.price : plan.annualPrice;
-  const isPopular = plan.popular;
-  const isLoading = loading === plan.name;
-
-  return (
-    <div
-      className={`bg-slate-800 rounded-2xl p-8 relative ${
-        isPopular ? 'ring-2 ring-purple-500 scale-105' : ''
-      }`}
-    >
-      {isPopular && (
-        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-            <Crown size={16} />
-            Most Popular
-          </span>
-        </div>
-      )}
-
-      <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-          {plan.name === 'Master' && <Sparkles className="text-purple-400" size={24} />}
-          {plan.name === 'Warrior' && <Zap className="text-yellow-400" size={24} />}
-          {plan.name}
-        </h3>
-        <p className="text-slate-400 text-sm">{plan.description}</p>
-      </div>
-
-      <div className="text-center mb-8">
-        {plan.price === 0 ? (
-          <div className="text-4xl font-bold text-white">Free</div>
-        ) : (
-          <>
-            <div className="text-4xl font-bold text-white">
-              ${price}
-            </div>
-            <div className="text-slate-400">
-              {billingInterval === 'monthly' ? '/month' : '/year'}
-            </div>
-            {billingInterval === 'annual' && (
-              <div className="text-green-400 text-sm mt-1">
-                Save ${(plan.price * 12 - plan.annualPrice).toFixed(0)}/year
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <ul className="space-y-3 mb-8">
-        {plan.features.map((feature: string) => (
-          <li key={feature} className="flex items-start gap-3 text-slate-300">
-            <Check size={20} className="text-green-400 mt-0.5 flex-shrink-0" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-
-      {plan.paddleProductId ? (
-        <button
-          onClick={() => onSubscribe(plan.paddleProductId, plan.name)}
-          disabled={isLoading}
-          className={`w-full py-4 rounded-xl font-semibold transition-all transform hover:scale-105 active:scale-95 ${
-            isPopular
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-              : 'bg-slate-700 hover:bg-slate-600 text-white'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {isLoading ? 'Processing...' : plan.cta}
-        </button>
-      ) : (
-        <button
-          disabled
-          className="w-full py-4 bg-slate-600 text-slate-400 rounded-xl font-semibold cursor-not-allowed"
-        >
-          {plan.cta}
-        </button>
-      )}
-    </div>
-  );
-}
