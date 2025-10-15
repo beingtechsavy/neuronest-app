@@ -6,12 +6,14 @@ import ChapterItem from './ChapterItem'
 import EditChapterModal from './EditChapterModal'
 import AddChapterModal from './AddChapterModal'
 import ConfirmModal from './ConfirmModal'
-import { Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react'
+import { Pencil, Trash2, AlertTriangle, ChevronDown, Sparkles } from 'lucide-react'
 import React from 'react'
 import { Subject, Chapter } from '@/types/definitions'
 import { useToastContext } from './ToastProvider'
 import { useTimeouts } from '@/hooks/useTimeout'
 import { useConfirm } from '@/hooks/useConfirm'
+import AIBreakdownModal from './AIBreakdownModal'
+import { useUser } from '@supabase/auth-helpers-react'
 
 interface TaskBoxProps {
   subject: Subject
@@ -24,6 +26,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   const { error: showError, success } = useToastContext();
   const { addTimeout } = useTimeouts();
   const { confirm, confirmState, closeConfirm } = useConfirm();
+  const user = useUser();
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [todayChapterIds, setTodayChapterIds] = useState<number[]>([])
   const [expanded, setExpanded] = useState(false)
@@ -34,6 +37,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
   const [isAddChapterModalOpen, setIsAddChapterModalOpen] = useState(false)
   const [loadingChapters, setLoadingChapters] = useState(false)
+  const [isAIBreakdownOpen, setIsAIBreakdownOpen] = useState(false)
 
   const updateProgress = useCallback((currentChapters: Chapter[]) => {
     const completedCount = currentChapters.filter(c => c.completed).length
@@ -171,6 +175,11 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
     setIsAddChapterModalOpen(false)
   }
 
+  const handleAIBreakdownComplete = async (breakdown: any[]) => {
+    // Just show success message, don't create tasks/chapters
+    success(`🎉 AI breakdown generated! Use it as a reference guide.`);
+  }
+
   const chaptersToDisplay = activeTab === 'today' ? chapters.filter(c => todayChapterIds.includes(c.chapter_id)) : chapters
 
   return (
@@ -184,6 +193,15 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
         />
       )}
       <AddChapterModal isOpen={isAddChapterModalOpen} onClose={() => setIsAddChapterModalOpen(false)} onAdd={handleAddChapter} />
+      <AIBreakdownModal
+        isOpen={isAIBreakdownOpen}
+        onClose={() => setIsAIBreakdownOpen(false)}
+        taskTitle={`Study ${subject.title}`}
+        taskDescription={`Break down studying for ${subject.title} into manageable steps`}
+        taskSubject={subject.title}
+        userId={user?.id || ''}
+        onBreakdownComplete={handleAIBreakdownComplete}
+      />
       <ConfirmModal
         isOpen={confirmState.isOpen}
         onClose={closeConfirm}
@@ -266,6 +284,24 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                   }}
                   onClick={() => setActiveTab('all')}
                 >All</button>
+                <button 
+                  style={styles.aiBreakdownButton} 
+                  onClick={() => setIsAIBreakdownOpen(true)}
+                  title="Break down this subject with AI magic! ✨"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(124, 58, 237, 0.5)';
+                    e.currentTarget.style.borderColor = '#ec4899';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.3)';
+                    e.currentTarget.style.borderColor = '#7c3aed';
+                  }}
+                >
+                  <Sparkles size={14} style={{ animation: 'pulse 2s infinite' }} />
+                  ✨ AI Magic
+                </button>
                 <button style={styles.addChapterButton} onClick={() => setIsAddChapterModalOpen(true)}>
                   + Add Chapter
                 </button>
@@ -425,6 +461,28 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: '#4f46e5',
+  },
+  aiBreakdownButton: {
+    padding: '0.4rem 0.8rem',
+    borderRadius: 8,
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#7c3aed',
+    background: 'linear-gradient(135deg, #7c3aed20, #ec4899 20)',
+    color: '#a855f7',
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    position: 'relative',
+    overflow: 'hidden',
+    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
+    transform: 'scale(1)',
   },
   addChapterButton: {
     padding: '0.3rem 0.6rem',
