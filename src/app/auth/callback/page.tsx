@@ -26,35 +26,46 @@ export default function AuthCallback() {
         console.log('📊 Session check:', { sessionData, sessionError })
         
         if (sessionData.session) {
-          console.log('✅ Session exists, redirecting to calendar')
-          router.push('/calendar')
+          console.log('✅ Session exists, redirecting to dashboard')
+          router.push('/dashboard')
           return
         }
         
         // If no session, check for auth state change
         console.log('⏳ Waiting for auth state change...')
         
-        // Listen for auth changes
+        // Check for error in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        if (error === 'server_error' && errorDescription?.includes('Database error saving new user')) {
+          console.log('🚨 Database error detected - user creation failed')
+          router.push('/login?error=database_error&message=Account creation failed. Please try again or contact support.')
+          return
+        }
+        
+        // Listen for auth changes with shorter timeout
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log('🔄 Auth state change:', event, session?.user?.email)
           
           if (event === 'SIGNED_IN' && session) {
             console.log('✅ User signed in successfully')
             subscription.unsubscribe()
-            router.push('/calendar')
-          } else if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+            router.push('/dashboard')
+          } else if (event === 'SIGNED_OUT') {
             console.log('❌ Sign in failed')
             subscription.unsubscribe()
             router.push('/login?error=signin_failed')
           }
         })
         
-        // Cleanup subscription after 10 seconds if nothing happens
+        // Shorter timeout since we're handling errors better
         setTimeout(() => {
           console.log('⏰ Timeout reached, cleaning up')
           subscription.unsubscribe()
           router.push('/login?error=timeout')
-        }, 10000)
+        }, 5000)
         
       } catch (error) {
         console.error('💥 Callback exception:', error)

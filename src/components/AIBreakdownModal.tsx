@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Sparkles, Clock, CheckCircle, AlertCircle, Zap, Loader2, Heart, Star } from 'lucide-react';
 
 interface TaskBreakdownStep {
@@ -40,6 +41,7 @@ export default function AIBreakdownModal({
   userId,
   onBreakdownComplete
 }: AIBreakdownModalProps) {
+  const router = useRouter();
 
   // Load user's subjects when modal opens
   useEffect(() => {
@@ -259,7 +261,7 @@ export default function AIBreakdownModal({
           selectedSubjectId: selectedSubject?.subject_id,
           newSubjectName,
           createNewSubject,
-          saveTasksToInbox: false // Don't create tasks in inbox
+          saveTasksToInbox: true // Create tasks from breakdown steps
         })
       });
 
@@ -279,7 +281,6 @@ export default function AIBreakdownModal({
       }
       
       setTimeout(() => {
-        onClose();
         // Reset form
         setBreakdown([]);
         setInputTaskTitle('');
@@ -289,6 +290,10 @@ export default function AIBreakdownModal({
         setNewSubjectName('');
         setCreateNewSubject(false);
         setCelebrationMessage('');
+        
+        // Close modal and redirect to dashboard
+        onClose();
+        router.push('/dashboard');
       }, 1500);
       
     } catch (err) {
@@ -395,59 +400,6 @@ export default function AIBreakdownModal({
                     placeholder="e.g., Write research paper, Study for exam, Plan birthday party"
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none transition-colors"
                   />
-                </div>
-
-                {/* Subject Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Subject
-                  </label>
-                  <div className="space-y-3">
-                    {/* Existing Subject Dropdown */}
-                    {!createNewSubject && (
-                      <select
-                        value={selectedSubject?.subject_id || ''}
-                        onChange={(e) => {
-                          const subjectId = parseInt(e.target.value);
-                          const subject = subjects.find(s => s.subject_id === subjectId);
-                          setSelectedSubject(subject || null);
-                        }}
-                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:border-purple-500 focus:outline-none transition-colors"
-                        disabled={loadingSubjects}
-                      >
-                        <option value="">Select existing subject...</option>
-                        {subjects.map(subject => (
-                          <option key={subject.subject_id} value={subject.subject_id}>
-                            {subject.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {/* New Subject Input */}
-                    {createNewSubject && (
-                      <input
-                        type="text"
-                        value={newSubjectName}
-                        onChange={(e) => setNewSubjectName(e.target.value)}
-                        placeholder="Enter new subject name..."
-                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none transition-colors"
-                      />
-                    )}
-
-                    {/* Toggle Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCreateNewSubject(!createNewSubject);
-                        setSelectedSubject(null);
-                        setNewSubjectName('');
-                      }}
-                      className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-                    >
-                      {createNewSubject ? '← Use existing subject' : '+ Create new subject'}
-                    </button>
-                  </div>
                 </div>
 
                 {/* Subject Selection */}

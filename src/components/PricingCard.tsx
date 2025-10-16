@@ -2,7 +2,6 @@
 
 import { Check, Sparkles, Zap, Crown } from 'lucide-react';
 import { useUser } from '@supabase/auth-helpers-react';
-import RazorpayCheckout from './RazorpayCheckout';
 
 interface Plan {
   name: string;
@@ -75,6 +74,79 @@ export default function PricingCard({
     // For paid plans, the RazorpayCheckout component will handle the click
   };
 
+  const handlePaidPlanClick = async () => {
+    if (!user) {
+      window.location.href = '/login?redirect=/pricing';
+      return;
+    }
+
+    // Load Razorpay script
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = async () => {
+      try {
+        // Create order
+        const orderResponse = await fetch('/api/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: getPrice(),
+            currency: 'USD',
+            planName: plan.name,
+            userId: user.id,
+          }),
+        });
+
+        const orderData = await orderResponse.json();
+        if (!orderData.success) throw new Error(orderData.error);
+
+        // Configure Razorpay options
+        const options = {
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'NeuroNest',
+          description: `${plan.name} Plan Subscription`,
+          order_id: orderData.orderId,
+          handler: async function (response: any) {
+            // Verify payment
+            const verifyResponse = await fetch('/api/razorpay/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planName: plan.name,
+                userId: user.id,
+                amount: getPrice(),
+              }),
+            });
+
+            const verifyData = await verifyResponse.json();
+            if (verifyData.success) {
+              window.location.href = '/dashboard?payment=success';
+            } else {
+              alert('Payment verification failed. Please contact support.');
+            }
+          },
+          prefill: {
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+            email: user.email || '',
+          },
+          theme: { color: '#8b5cf6' },
+        };
+
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.open();
+      } catch (error) {
+        console.error('Payment error:', error);
+        alert('Failed to initiate payment. Please try again.');
+      }
+    };
+    document.body.appendChild(script);
+  };
+
   const renderButton = () => {
     const baseClasses = `w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 ${
       loading === plan.name ? 'opacity-50 cursor-not-allowed' : ''
@@ -92,30 +164,19 @@ export default function PricingCard({
       );
     }
 
-    // For paid plans, wrap with RazorpayCheckout
+    // For paid plans, handle click directly
     return (
-      <RazorpayCheckout
-        planName={plan.name}
-        amount={getPrice() || 0}
-        currency="USD"
-        onSuccess={(data) => {
-          console.log('Payment successful:', data);
-        }}
-        onError={(error) => {
-          console.error('Payment error:', error);
-        }}
+      <button
+        onClick={handlePaidPlanClick}
+        disabled={loading === plan.name}
+        className={`${baseClasses} ${
+          plan.popular
+            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
+            : 'bg-slate-700 text-white hover:bg-slate-600'
+        }`}
       >
-        <button
-          disabled={loading === plan.name}
-          className={`${baseClasses} ${
-            plan.popular
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
-              : 'bg-slate-700 text-white hover:bg-slate-600'
-          }`}
-        >
-          {loading === plan.name ? 'Processing...' : plan.cta}
-        </button>
-      </RazorpayCheckout>
+        {loading === plan.name ? 'Processing...' : plan.cta}
+      </button>
     );
   };
 

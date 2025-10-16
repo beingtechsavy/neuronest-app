@@ -1,19 +1,36 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import GoogleSignInButton from "@/components/GoogleSignInButton"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Check for error parameters in URL
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    const message = searchParams.get('message')
+    
+    if (urlError === 'database_error') {
+      setError('❌ Account creation failed due to a database error. Please try signing up again or contact support.')
+    } else if (urlError === 'timeout') {
+      setError('⏰ Sign up process timed out. Please try again.')
+    } else if (urlError === 'signin_failed') {
+      setError('❌ Sign in failed. Please check your credentials.')
+    } else if (message) {
+      setError(decodeURIComponent(message))
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -124,5 +141,34 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function LoginLoading() {
+  return (
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#071020] to-[#0d1125] p-4">
+      <div className="relative z-10 text-center space-y-6 max-w-sm w-full">
+        <div className="text-8xl select-none">🧠</div>
+        <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-700 rounded mb-4"></div>
+            <div className="h-12 bg-gray-700 rounded mb-4"></div>
+            <div className="h-4 bg-gray-700 rounded mb-2"></div>
+            <div className="h-12 bg-gray-700 rounded mb-4"></div>
+            <div className="h-12 bg-gray-700 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Main component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   )
 }

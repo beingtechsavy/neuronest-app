@@ -71,7 +71,16 @@ export default function Topbar() {
         }}
       />
 
-      <nav className="sticky top-0 z-40 p-4 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 text-white flex justify-end items-center">
+      <nav className="sticky top-0 z-40 p-4 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 text-white flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          {/* Upgrade Button */}
+          <a
+            href="/pricing"
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 text-sm"
+          >
+            ⚡ Upgrade
+          </a>
+        </div>
         <div className="flex items-center gap-4">
           {/* This content is now only shown for logged-in users */}
           <div className="flex items-center gap-2 text-sm text-slate-300">

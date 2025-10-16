@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
       .from('ai_breakdowns')
       .insert({
         user_id: userId,
-        original_task_title: taskTitle,
+        original_task_title: taskTitle || 'AI Generated Task',
+        original_task_description: null,
+        subject: selectedSubjectId ? null : newSubjectName,
+        deadline: null,
         breakdown_steps: breakdown,
         steps_count: breakdown.length,
         subject_id: subjectId,
@@ -100,9 +103,18 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (breakdownError) {
-      console.error('Error creating breakdown record:', breakdownError);
+      console.error('Error creating breakdown record:', {
+        error: breakdownError,
+        data: {
+          user_id: userId,
+          original_task_title: taskTitle || 'AI Generated Task',
+          breakdown_steps: breakdown,
+          steps_count: breakdown.length,
+          subject_id: subjectId
+        }
+      });
       return NextResponse.json(
-        { error: 'Failed to save breakdown' },
+        { error: `Failed to save breakdown: ${breakdownError.message}` },
         { status: 500 }
       );
     }

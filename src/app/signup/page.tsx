@@ -29,17 +29,41 @@ export default function SignupPage() {
       return
     }
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${location.origin}/login` },
-    })
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: email.split('@')[0] // Use email prefix as default name
+          }
+        },
+      })
 
-    if (signUpError) {
-      setError(signUpError.message)
-    } else {
-      setMessage('🎉 Signup successful! Check your email to confirm.')
-      addTimeout(() => router.push('/login'), 3000)
+      if (signUpError) {
+        console.error('Signup error:', signUpError)
+
+        // Handle specific error cases
+        if (signUpError.message.includes('Database error')) {
+          setError('Account creation temporarily unavailable. Please try again in a moment.')
+        } else if (signUpError.message.includes('already registered')) {
+          setError('This email is already registered. Try logging in instead.')
+        } else {
+          setError(signUpError.message)
+        }
+      } else if (data.session && data.user) {
+        // User signed up successfully - database trigger should handle profile creation
+        console.log('✅ User created:', data.user.email)
+        setMessage('🎉 Account created! Redirecting...')
+        addTimeout(() => router.push('/dashboard'), 1000)
+      } else if (data.user && !data.session) {
+        // This shouldn't happen with email confirmation disabled, but handle it
+        setMessage('🎉 Account created! Please check your email to confirm.')
+        addTimeout(() => router.push('/login'), 3000)
+      }
+    } catch (err) {
+      console.error('Signup exception:', err)
+      setError('An unexpected error occurred. Please try again.')
     }
 
     setLoading(false)

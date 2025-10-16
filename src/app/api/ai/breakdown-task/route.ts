@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateTaskBreakdown, TaskBreakdownRequest } from '@/lib/azureOpenAI';
 
+interface UsageCheckResult {
+  allowed: boolean;
+  used: number;
+  limit: number;
+  resetTime: Date;
+}
+
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
 
@@ -75,14 +82,17 @@ export async function POST(req: NextRequest) {
     // Track the usage
     await trackUsage(userId, 'task_breakdown', breakdown.length);
 
-    // Return the breakdown
+    // Return the breakdown with safe number conversion
+    const safeUsed = typeof usageCheck.used === 'number' ? usageCheck.used : 0;
+    const safeLimit = typeof usageCheck.limit === 'number' ? usageCheck.limit : 3;
+    
     return NextResponse.json({
       success: true,
       breakdown,
       usage: {
-        used: usageCheck.used + 1,
-        limit: usageCheck.limit,
-        remaining: usageCheck.limit - usageCheck.used - 1
+        used: safeUsed + 1,
+        limit: safeLimit,
+        remaining: Math.max(0, safeLimit - safeUsed - 1)
       }
     });
 
@@ -97,39 +107,37 @@ export async function POST(req: NextRequest) {
 }
 
 // Check if user can use AI breakdown feature
-async function checkUsageLimits(userId: string) {
+async function checkUsageLimits(userId: string): Promise<UsageCheckResult> {
   try {
     const client = getSupabaseClient();
     
-    // Get user's subscription info
-    const { data: subscription } = await client
-      .from('subscriptions')
-      .select('plan_type')
+    // Get user's usage limits (includes plan info)
+    const { data: limits } = await client
+      .from('usage_limits')
+      .select('*')
       .eq('user_id', userId)
       .single();
 
-    const planType = subscription?.plan_type || 'free';
+    if (!limits) {
+      // Create default limits if they don't exist
+      await client.from('usage_limits').insert({
+        user_id: userId,
+        plan_type: 'free',
+        breakdowns_used: 0,
+        breakdowns_limit: 3,
+        subjects_limit: 3
+      });
+      
+      return {
+        allowed: true,
+        used: 0,
+        limit: 3,
+        resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      };
+    }
 
-    // Get current usage
-    const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await client
-      .from('ai_usage')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('feature_type', 'task_breakdown')
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`);
-
-    const usedToday = usage?.length || 0;
-
-    // Define limits based on plan
-    const limits = {
-      free: 3,
-      master: 10,
-      warrior: 25
-    };
-
-    const limit = limits[planType as keyof typeof limits] || 3;
+    const usedToday = typeof limits.breakdowns_used === 'number' ? limits.breakdowns_used : 0;
+    const limit = typeof limits.breakdowns_limit === 'number' ? limits.breakdowns_limit : 3;
 
     return {
       allowed: usedToday < limit,
@@ -140,12 +148,12 @@ async function checkUsageLimits(userId: string) {
 
   } catch (error) {
     console.error('Usage check error:', error);
-    // Default to free tier limits on error
+    // Default to safe values on error
     return {
-      allowed: false,
-      used: 999,
+      allowed: true, // Allow on error to not block users
+      used: 0,
       limit: 3,
-      resetTime: new Date()
+      resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
     };
   }
 }
@@ -154,6 +162,8 @@ async function checkUsageLimits(userId: string) {
 async function trackUsage(userId: string, featureType: string, tokensUsed: number) {
   try {
     const client = getSupabaseClient();
+    
+    // Insert into ai_usage for detailed tracking
     await client.from('ai_usage').insert({
       user_id: userId,
       feature_type: featureType,
@@ -161,6 +171,26 @@ async function trackUsage(userId: string, featureType: string, tokensUsed: numbe
       cost: tokensUsed * 0.0001, // Rough estimate
       created_at: new Date().toISOString()
     });
+
+    // Update usage_limits table for UI display
+    const { data: currentLimits } = await client
+      .from('usage_limits')
+      .select('breakdowns_used')
+      .eq('user_id', userId)
+      .single();
+
+    if (currentLimits) {
+      // Safely convert to number before arithmetic
+      const currentUsage = typeof currentLimits.breakdowns_used === 'number' ? currentLimits.breakdowns_used : 0;
+      
+      await client
+        .from('usage_limits')
+        .update({ 
+          breakdowns_used: currentUsage + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+    }
   } catch (error) {
     console.error('Usage tracking error:', error);
     // Don't fail the request if tracking fails

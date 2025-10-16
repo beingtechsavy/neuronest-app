@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Tasks', href: '/tasks', icon: <ListChecks size={18} /> },
   { label: 'Focus Sessions', href: '/focus-session', icon: <Brain size={18} /> },
   { label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} /> },
+  { label: 'Pricing', href: '/pricing', icon: <Timer size={18} /> },
   { label: 'Settings', href: '/settings', icon: <Settings size={18} /> },
 ];
 

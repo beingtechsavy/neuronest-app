@@ -147,7 +147,11 @@ export default function RazorpayCheckout({
   };
 
   return (
-    <div onClick={handlePayment} style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+    <div 
+      onClick={handlePayment} 
+      style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
+      className="w-full"
+    >
       {children}
     </div>
   );
