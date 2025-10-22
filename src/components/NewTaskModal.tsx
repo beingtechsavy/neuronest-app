@@ -116,6 +116,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
       chapter_id: selectedChapterId ? parseInt(selectedChapterId) : null,
       user_id: user.id,
       status: 'pending',
+      task_status: 'inbox', // Manually created tasks go directly to inbox
     };
 
     const { error: insertError } = await supabase.from('tasks').insert(insertPayload);

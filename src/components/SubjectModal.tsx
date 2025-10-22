@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { canCreateSubject, getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits'
+import UsageLimitModal from './UsageLimitModal'
 
 const colorOptions = [
   '#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6',
@@ -20,13 +22,18 @@ interface SubjectModalProps {
   onClose: () => void
   onSave: (subject: { title: string, color: string, is_stressful: boolean }) => Promise<void>
   subjectToEdit?: Subject | null
+  userId?: string
 }
 
-export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit }: SubjectModalProps) {
+export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, userId }: SubjectModalProps) {
   const [title, setTitle] = useState('')
   const [color, setColor] = useState(colorOptions[8])
   const [isStressful, setIsStressful] = useState(false) // New state for the warning
   const [loading, setLoading] = useState(false)
+  
+  // Usage limit state
+  const [planInfo, setPlanInfo] = useState<UserPlanInfo | null>(null)
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -39,12 +46,37 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit }:
         setColor(colorOptions[8])
         setIsStressful(false)
       }
+      
+      // Load plan info when modal opens
+      if (userId) {
+        loadPlanInfo()
+      }
     }
-  }, [isOpen, subjectToEdit])
+  }, [isOpen, subjectToEdit, userId])
+
+  const loadPlanInfo = async () => {
+    if (!userId) return
+    try {
+      const info = await getUserPlanInfo(userId)
+      setPlanInfo(info)
+    } catch (err) {
+      console.error('Failed to load plan info:', err)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
+    
+    // Check if this is a new subject (not editing) and if user can create more subjects
+    if (!subjectToEdit && userId) {
+      const canCreate = await canCreateSubject(userId)
+      if (!canCreate) {
+        setShowUsageLimitModal(true)
+        return
+      }
+    }
+    
     setLoading(true)
     await onSave({ title, color, is_stressful: isStressful })
     setLoading(false)
@@ -53,8 +85,22 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit }:
   if (!isOpen) return null
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <>
+      {/* Usage Limit Modal */}
+      {planInfo && (
+        <UsageLimitModal
+          isOpen={showUsageLimitModal}
+          onClose={() => setShowUsageLimitModal(false)}
+          planInfo={planInfo}
+          limitType="subjects"
+          onUpgrade={() => {
+            window.location.href = '/pricing'
+          }}
+        />
+      )}
+      
+      <div style={styles.overlay} onClick={onClose}>
+        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h2 style={styles.header}>{subjectToEdit ? 'Edit Subject' : 'Add New Subject'}</h2>
         <form onSubmit={handleSubmit}>
           <div style={styles.inputGroup}>
@@ -93,6 +139,7 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit }:
         </form>
       </div>
     </div>
+    </>
   )
 }
 

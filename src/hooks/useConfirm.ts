@@ -21,22 +21,30 @@ export function useConfirm() {
     onConfirm: () => {},
   });
 
+  const [currentResolve, setCurrentResolve] = useState<((value: boolean) => void) | null>(null);
+
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
+      setCurrentResolve(() => resolve);
       setConfirmState({
         ...options,
         isOpen: true,
         onConfirm: () => {
           resolve(true);
           setConfirmState(prev => ({ ...prev, isOpen: false }));
+          setCurrentResolve(null);
         },
       });
     });
   }, []);
 
   const closeConfirm = useCallback(() => {
+    if (currentResolve) {
+      currentResolve(false);
+      setCurrentResolve(null);
+    }
     setConfirmState(prev => ({ ...prev, isOpen: false }));
-  }, []);
+  }, [currentResolve]);
 
   return {
     confirm,

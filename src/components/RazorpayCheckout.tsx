@@ -5,6 +5,7 @@ import { useUser } from '@supabase/auth-helpers-react';
 
 interface RazorpayCheckoutProps {
   planName: string;
+  planId: string;
   amount: number;
   currency?: string;
   onSuccess?: (paymentData: any) => void;
@@ -20,8 +21,9 @@ declare global {
 
 export default function RazorpayCheckout({
   planName,
+  planId,
   amount,
-  currency = 'USD',
+  currency = 'INR',
   onSuccess,
   onError,
   children
@@ -39,7 +41,7 @@ export default function RazorpayCheckout({
     });
   };
 
-  const handlePayment = async () => {
+  const handleSubscription = async () => {
     if (!user) {
       window.location.href = '/login?redirect=/pricing';
       return;
@@ -48,72 +50,72 @@ export default function RazorpayCheckout({
     setLoading(true);
 
     try {
+      // Create subscription
+      const subscriptionResponse = await fetch('/api/razorpay/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.user_metadata?.full_name || user.email?.split('@')[0],
+        }),
+      });
+
+      const subscriptionData = await subscriptionResponse.json();
+
+      if (!subscriptionData.success) {
+        throw new Error(subscriptionData.error || 'Failed to create subscription');
+      }
+
       // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Failed to load Razorpay script');
       }
 
-      // Create order
-      const orderResponse = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount,
-          currency,
-          planName,
-          userId: user.id,
-        }),
-      });
-
-      const orderData = await orderResponse.json();
-
-      if (!orderData.success) {
-        throw new Error(orderData.error || 'Failed to create order');
-      }
-
-      // Configure Razorpay options
+      // Configure Razorpay options for subscription
       const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
+        key: subscriptionData.keyId,
+        subscription_id: subscriptionData.subscriptionId,
         name: 'NeuroNest',
         description: `${planName} Plan Subscription`,
         image: '/favicon.ico',
-        order_id: orderData.orderId,
         handler: async function (response: any) {
           try {
-            // Verify payment
-            const verifyResponse = await fetch('/api/razorpay/verify-payment', {
+            // Handle successful subscription
+            console.log('Subscription successful:', response);
+            
+            // Update subscription status in database
+            const updateResponse = await fetch('/api/razorpay/update-subscription', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
+                subscriptionId: subscriptionData.subscriptionId,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
                 planName,
                 userId: user.id,
-                amount,
               }),
             });
 
-            const verifyData = await verifyResponse.json();
+            const updateData = await updateResponse.json();
 
-            if (verifyData.success) {
-              onSuccess?.(verifyData);
-              // Redirect to dashboard or show success message
-              window.location.href = '/dashboard?payment=success';
+            if (updateData.success) {
+              onSuccess?.(updateData);
+              // Redirect to dashboard with success message
+              window.location.href = '/dashboard?subscription=success';
             } else {
-              throw new Error(verifyData.error || 'Payment verification failed');
+              throw new Error(updateData.error || 'Failed to update subscription');
             }
           } catch (error) {
-            console.error('Payment verification error:', error);
+            console.error('Subscription update error:', error);
             onError?.(error);
-            alert('Payment verification failed. Please contact support.');
+            alert('Subscription activation failed. Please contact support.');
           }
         },
         prefill: {
@@ -134,21 +136,21 @@ export default function RazorpayCheckout({
         }
       };
 
-      // Open Razorpay checkout
+      // Open Razorpay checkout for subscription
       const razorpay = new window.Razorpay(options);
       razorpay.open();
 
     } catch (error) {
-      console.error('Payment initiation error:', error);
+      console.error('Subscription initiation error:', error);
       onError?.(error);
-      alert('Failed to initiate payment. Please try again.');
+      alert('Failed to initiate subscription. Please try again.');
       setLoading(false);
     }
   };
 
   return (
     <div 
-      onClick={handlePayment} 
+      onClick={handleSubscription} 
       style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
       className="w-full"
     >

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Sparkles, Clock, CheckCircle, AlertCircle, Zap, Loader2, Heart, Star } from 'lucide-react';
+import { X, Sparkles, Clock, CheckCircle, AlertCircle, Loader2, Heart } from 'lucide-react';
+import { canUseAIBreakdown, getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits';
+import UsageLimitModal from './UsageLimitModal';
 
 interface TaskBreakdownStep {
   step: string;
@@ -43,28 +45,43 @@ export default function AIBreakdownModal({
 }: AIBreakdownModalProps) {
   const router = useRouter();
 
-  // Load user's subjects when modal opens
+  // Load user's subjects and plan info when modal opens
   useEffect(() => {
     if (isOpen && userId) {
       loadUserSubjects();
+      loadPlanInfo();
     }
   }, [isOpen, userId]);
 
   const loadUserSubjects = async () => {
     setLoadingSubjects(true);
     try {
-      const { data, error } = await fetch('/api/subjects/list', {
+      const response = await fetch('/api/subjects/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
-      }).then(res => res.json());
+      });
+      
+      const result = await response.json();
 
-      if (error) throw new Error(error);
-      setSubjects(data || []);
+      if (result.error) throw new Error(result.error);
+      setSubjects(result.data || []);
     } catch (err) {
       console.error('Failed to load subjects:', err);
     } finally {
       setLoadingSubjects(false);
+    }
+  };
+
+  const loadPlanInfo = async () => {
+    setLoadingPlanInfo(true);
+    try {
+      const info = await getUserPlanInfo(userId);
+      setPlanInfo(info);
+    } catch (err) {
+      console.error('Failed to load plan info:', err);
+    } finally {
+      setLoadingPlanInfo(false);
     }
   };
   const [breakdown, setBreakdown] = useState<TaskBreakdownStep[]>([]);
@@ -85,8 +102,20 @@ export default function AIBreakdownModal({
   const [createNewSubject, setCreateNewSubject] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  
+  // Usage limit state
+  const [planInfo, setPlanInfo] = useState<UserPlanInfo | null>(null);
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
+  const [loadingPlanInfo, setLoadingPlanInfo] = useState(false);
 
   const generateBreakdown = async () => {
+    // Check usage limits before proceeding
+    const usageCheck = await canUseAIBreakdown(userId);
+    if (!usageCheck.allowed) {
+      setShowUsageLimitModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -109,7 +138,7 @@ export default function AIBreakdownModal({
 
       if (!response.ok) {
         if (response.status === 429) {
-          setError(`Daily limit reached (${data.used}/${data.limit}). Upgrade for more breakdowns!`);
+          setShowUsageLimitModal(true);
         } else {
           setError(data.error || 'Failed to generate breakdown');
         }
@@ -118,6 +147,9 @@ export default function AIBreakdownModal({
 
       setBreakdown(data.breakdown);
       setUsage(data.usage);
+
+      // Refresh plan info to show updated usage
+      await loadPlanInfo();
 
       // Trigger celebration animation
       setShowConfetti(true);
@@ -196,6 +228,13 @@ export default function AIBreakdownModal({
   };
 
   const handleBreakDownStep = async (step: TaskBreakdownStep) => {
+    // Check usage limits before proceeding
+    const usageCheck = await canUseAIBreakdown(userId);
+    if (!usageCheck.allowed) {
+      setShowUsageLimitModal(true);
+      return;
+    }
+
     setBreakingDownStep(step);
     setLoading(true);
     setError(null);
@@ -218,7 +257,11 @@ export default function AIBreakdownModal({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to break down step further');
+        if (response.status === 429) {
+          setShowUsageLimitModal(true);
+        } else {
+          setError(data.error || 'Failed to break down step further');
+        }
         return;
       }
 
@@ -237,6 +280,9 @@ export default function AIBreakdownModal({
       setCelebrationMessage(`🎯 Broke "${step.step}" into ${data.breakdown.length} smaller steps!`);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 2000);
+
+      // Refresh plan info to show updated usage
+      await loadPlanInfo();
 
     } catch (err) {
       setError('Failed to break down step further');
@@ -261,7 +307,7 @@ export default function AIBreakdownModal({
           selectedSubjectId: selectedSubject?.subject_id,
           newSubjectName,
           createNewSubject,
-          saveTasksToInbox: true // Create tasks from breakdown steps
+          saveTasksToInbox: true // Always create tasks from breakdown steps
         })
       });
 
@@ -274,7 +320,7 @@ export default function AIBreakdownModal({
 
       // Show success animation
       setShowConfetti(true);
-      setCelebrationMessage(`🎉 Breakdown saved! Use it as your guide.`);
+      setCelebrationMessage(`🎉 Breakdown saved with ${breakdown.length} tasks! Check your dashboard.`);
       
       if (onBreakdownComplete) {
         onBreakdownComplete(breakdown, data.subjectId, data.chapterId);
@@ -329,6 +375,20 @@ export default function AIBreakdownModal({
   return (
     <>
       {showConfetti && <Confetti />}
+      
+      {/* Usage Limit Modal */}
+      {planInfo && (
+        <UsageLimitModal
+          isOpen={showUsageLimitModal}
+          onClose={() => setShowUsageLimitModal(false)}
+          planInfo={planInfo}
+          limitType="ai"
+          onUpgrade={() => {
+            window.location.href = '/pricing';
+          }}
+        />
+      )}
+      
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
           {/* Header - iPhone Style */}
@@ -360,24 +420,50 @@ export default function AIBreakdownModal({
           {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
             {/* Usage Info */}
-            {usage && (
+            {planInfo && (
               <div className="mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300">Daily Usage</span>
+                  <div>
+                    <span className="text-slate-300">Daily AI Breakdowns</span>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {planInfo.plan_type === 'free' ? 'Free Plan' : 
+                       planInfo.plan_type === 'master' ? 'Master Plan' : 'Warrior Plan'}
+                    </div>
+                  </div>
                   <span className="text-white font-semibold">
-                    {usage.used}/{usage.limit} breakdowns used
+                    {planInfo.breakdowns_used}/{planInfo.breakdowns_limit} used
                   </span>
                 </div>
                 <div className="mt-2 w-full bg-slate-600 rounded-full h-2">
                   <div
-                    className="bg-purple-500 h-2 rounded-full transition-all"
-                    style={{ width: `${(usage.used / usage.limit) * 100}%` }}
+                    className={`h-2 rounded-full transition-all ${
+                      planInfo.breakdowns_used >= planInfo.breakdowns_limit 
+                        ? 'bg-red-500' 
+                        : planInfo.breakdowns_used / planInfo.breakdowns_limit > 0.8 
+                        ? 'bg-yellow-500' 
+                        : 'bg-purple-500'
+                    }`}
+                    style={{ width: `${Math.min((planInfo.breakdowns_used / planInfo.breakdowns_limit) * 100, 100)}%` }}
                   ></div>
                 </div>
-                {usage.remaining <= 2 && (
+                {!planInfo.can_use_ai && (
+                  <p className="text-red-400 text-sm mt-2">
+                    Daily limit reached. 
+                    <button 
+                      onClick={() => setShowUsageLimitModal(true)}
+                      className="underline ml-1 hover:text-red-300"
+                    >
+                      Upgrade for more
+                    </button>
+                  </p>
+                )}
+                {planInfo.can_use_ai && (planInfo.breakdowns_limit - planInfo.breakdowns_used) <= 2 && (
                   <p className="text-yellow-400 text-sm mt-2">
-                    Only {usage.remaining} breakdowns remaining today.
-                    <button className="underline ml-1 hover:text-yellow-300">
+                    Only {planInfo.breakdowns_limit - planInfo.breakdowns_used} breakdowns remaining today.
+                    <button 
+                      onClick={() => setShowUsageLimitModal(true)}
+                      className="underline ml-1 hover:text-yellow-300"
+                    >
                       Upgrade for more
                     </button>
                   </p>
@@ -410,23 +496,47 @@ export default function AIBreakdownModal({
                   <div className="space-y-3">
                     {/* Existing Subject Dropdown */}
                     {!createNewSubject && (
-                      <select
-                        value={selectedSubject?.subject_id || ''}
-                        onChange={(e) => {
-                          const subjectId = parseInt(e.target.value);
-                          const subject = subjects.find(s => s.subject_id === subjectId);
-                          setSelectedSubject(subject || null);
-                        }}
-                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:border-purple-500 focus:outline-none transition-colors"
-                        disabled={loadingSubjects}
-                      >
-                        <option value="">Select existing subject...</option>
-                        {subjects.map(subject => (
-                          <option key={subject.subject_id} value={subject.subject_id}>
-                            {subject.title}
+                      <div>
+                        <select
+                          value={selectedSubject?.subject_id || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            
+                            if (!value || value === '') {
+                              setSelectedSubject(null);
+                              return;
+                            }
+                            
+                            const subjectId = parseInt(value);
+                            
+                            if (isNaN(subjectId)) {
+                              setSelectedSubject(null);
+                              return;
+                            }
+                            
+                            const subject = subjects.find(s => s.subject_id === subjectId);
+                            setSelectedSubject(subject || null);
+                          }}
+                          className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:border-purple-500 focus:outline-none transition-colors"
+                          disabled={loadingSubjects}
+                        >
+                          <option value="">
+                            {loadingSubjects ? 'Loading subjects...' : 
+                             subjects.length === 0 ? 'No subjects found' : 
+                             'Select existing subject...'}
                           </option>
-                        ))}
-                      </select>
+                          {subjects.map(subject => (
+                            <option key={subject.subject_id} value={subject.subject_id}>
+                              {subject.title}
+                            </option>
+                          ))}
+                        </select>
+                        {subjects.length === 0 && !loadingSubjects && (
+                          <p className="text-slate-400 text-xs mt-1">
+                            No subjects found. Create a new subject or add subjects from your dashboard first.
+                          </p>
+                        )}
+                      </div>
                     )}
 
                     {/* New Subject Input */}
@@ -556,6 +666,8 @@ export default function AIBreakdownModal({
                     </button>
                   </div>
                 </div>
+
+
 
                 {/* Steps List - iPhone Style Clean Design */}
                 <div className="space-y-3">

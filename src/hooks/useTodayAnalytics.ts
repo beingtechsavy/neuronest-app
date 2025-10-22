@@ -47,10 +47,14 @@ export function useTodayAnalytics() {
           }
           
           localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-          console.log('Auto-initialized focus session data for demo');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Auto-initialized focus session data for demo');
+          }
         }
       } catch (error) {
-        console.log('Could not initialize focus session data:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Could not initialize focus session data:', error);
+        }
       }
     };
 
@@ -65,6 +69,9 @@ export function useTodayAnalytics() {
 
     try {
       const today = new Date().toISOString().split('T')[0];
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📅 Fetching today\'s stats for:', today, 'user:', user.id);
+      }
 
       // Get today's tasks
       const { data: todayTasks, error: tasksError } = await supabase
@@ -73,11 +80,23 @@ export function useTodayAnalytics() {
         .eq('user_id', user.id)
         .eq('scheduled_date', today);
 
-      if (tasksError) throw tasksError;
+      if (tasksError) {
+        console.warn('Today tasks error:', tasksError);
+        // Continue with empty tasks array
+      }
 
-      const totalTodayTasks = todayTasks?.length || 0;
-      const completedTodayTasks = todayTasks?.filter(t => t.status === 'Completed').length || 0;
+      const totalTodayTasks = (todayTasks && !tasksError) ? todayTasks.length : 0;
+      const completedTodayTasks = (todayTasks && !tasksError) ? todayTasks.filter(t => t.status === 'Completed').length : 0;
       const todayProgress = totalTodayTasks > 0 ? (completedTodayTasks / totalTodayTasks) * 100 : 0;
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Today\'s task stats:', { 
+          totalTodayTasks, 
+          completedTodayTasks, 
+          todayProgress,
+          tasksError: !!tasksError
+        });
+      }
 
       // Get focus session data from localStorage (primary source)
       let focusTimeFromSessions = 0;
@@ -89,38 +108,60 @@ export function useTodayAnalytics() {
           focusTimeFromSessions = todaySessionTime;
         }
       } catch (e) {
-        console.log('No focus session data available');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('No focus session data available');
+        }
       }
 
       // Calculate focus time from completed tasks (effort_units are in minutes) - fallback
-      const focusTimeFromTasks = todayTasks
-        ?.filter(t => t.status === 'Completed')
-        .reduce((sum, t) => sum + (t.effort_units || 0), 0) || 0;
+      const focusTimeFromTasks = (todayTasks && !tasksError)
+        ? todayTasks.filter(t => t.status === 'Completed')
+          .reduce((sum, t) => sum + (t.effort_units || 0), 0)
+        : 0;
 
       // Use focus session data if available, otherwise fall back to task effort
       const totalFocusTime = focusTimeFromSessions > 0 ? focusTimeFromSessions : focusTimeFromTasks;
       
-      console.log('Focus time calculation:', {
-        today,
-        focusTimeFromSessions,
-        focusTimeFromTasks,
-        totalFocusTime,
-        todayTasks: todayTasks?.length
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Focus time calculation:', {
+          today,
+          focusTimeFromSessions,
+          focusTimeFromTasks,
+          totalFocusTime,
+          todayTasks: todayTasks?.length
+        });
+      }
 
       // Check if user has achieved streak today (30+ minutes of focus)
       const hasStreakToday = totalFocusTime >= 30;
 
-      setTodayStats({
+      const finalStats = {
         todayTasks: totalTodayTasks,
         completedToday: completedTodayTasks,
         progress: todayProgress,
         focusTimeToday: totalFocusTime,
         hasStreakToday
-      });
+      };
+
+      setTodayStats(finalStats);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Today\'s stats updated:', finalStats);
+      }
 
     } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Today\'s stats error:', err);
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch today\'s stats');
+      
+      // Set fallback data
+      setTodayStats({
+        todayTasks: 0,
+        completedToday: 0,
+        progress: 0,
+        focusTimeToday: 0,
+        hasStreakToday: false
+      });
     } finally {
       setLoading(false);
     }
@@ -153,7 +194,9 @@ export function useFocusSessionStats() {
         if (sessionData) {
           const stats = JSON.parse(sessionData);
           const todayTime = stats[today] || 0;
-          console.log('Focus session stats for today:', { today, todayTime, allStats: stats });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Focus session stats for today:', { today, todayTime, allStats: stats });
+          }
           setTodayFocusTime(todayTime);
           return;
         }
@@ -165,12 +208,16 @@ export function useFocusSessionStats() {
           if (session.isActive && session.sessionStartTime) {
             const sessionDuration = Date.now() - session.sessionStartTime;
             const sessionMinutes = Math.floor(sessionDuration / (1000 * 60));
-            console.log('Active session found:', { sessionMinutes });
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Active session found:', { sessionMinutes });
+            }
             setTodayFocusTime(sessionMinutes);
           }
         }
       } catch (error) {
-        console.log('Error getting focus session stats:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Error getting focus session stats:', error);
+        }
       }
     };
 

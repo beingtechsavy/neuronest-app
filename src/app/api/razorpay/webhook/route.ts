@@ -73,6 +73,14 @@ export async function POST(req: NextRequest) {
         await handleSubscriptionCancelled(event.payload.subscription.entity, client);
         break;
       
+      case 'subscription.charged':
+        await handleSubscriptionCharged(event.payload.subscription.entity, event.payload.payment.entity, client);
+        break;
+      
+      case 'subscription.completed':
+        await handleSubscriptionCompleted(event.payload.subscription.entity, client);
+        break;
+      
       default:
         console.log('Unhandled Razorpay webhook event:', event.event);
     }
@@ -180,5 +188,55 @@ async function handleSubscriptionCancelled(subscription: any, client: any) {
       .eq('razorpay_subscription_id', subscription.id);
   } catch (error) {
     console.error('Error handling subscription cancelled:', error);
+  }
+}
+
+async function handleSubscriptionCharged(subscription: any, payment: any, client: any) {
+  console.log('Processing subscription charged:', subscription.id, 'Payment:', payment.id);
+  
+  try {
+    // Log the payment
+    await client.from('payment_logs').insert({
+      payment_id: payment.id,
+      order_id: subscription.id,
+      amount: payment.amount / 100, // Convert from paise
+      currency: payment.currency,
+      status: 'success',
+      plan_type: subscription.notes?.plan_name?.toLowerCase() || 'unknown',
+      created_at: new Date().toISOString(),
+    });
+
+    // Update subscription period
+    const currentPeriodEnd = new Date();
+    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1); // Add 1 month
+
+    await client
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        current_period_start: new Date().toISOString(),
+        current_period_end: currentPeriodEnd.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('razorpay_subscription_id', subscription.id);
+  } catch (error) {
+    console.error('Error handling subscription charged:', error);
+  }
+}
+
+async function handleSubscriptionCompleted(subscription: any, client: any) {
+  console.log('Processing subscription completed:', subscription.id);
+  
+  try {
+    // Update subscription status to completed
+    await client
+      .from('subscriptions')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('razorpay_subscription_id', subscription.id);
+  } catch (error) {
+    console.error('Error handling subscription completed:', error);
   }
 }

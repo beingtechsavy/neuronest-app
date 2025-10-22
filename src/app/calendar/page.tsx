@@ -41,6 +41,7 @@ export interface CalendarTask {
   chapter_id: number | null;
   deadline: string | null;
   status: string;
+  task_status?: 'breakdown' | 'inbox' | 'scheduled' | 'completed';
   is_stressful: boolean;
 }
 
@@ -157,7 +158,7 @@ export default function CalendarPage() {
           new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
         const [tasksRes, unscheduledRes, prefsRes, blocksRes] = await Promise.all([
           supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).not('scheduled_date', 'is', null).gte('scheduled_date', toUTC_YYYYMMDD(firstDay)).lte('scheduled_date', toUTC_YYYYMMDD(lastDay)),
-          supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).is('scheduled_date', null),
+          supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).is('scheduled_date', null).eq('task_status', 'inbox'),
           supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
           supabase.from('time_blocks').select('*').eq('user_id', user.id)
         ]);
@@ -283,6 +284,7 @@ export default function CalendarPage() {
               deadline: task.deadline,
               is_stressful: task.is_stressful,
               status: "Scheduled",
+              task_status: "scheduled", // Update workflow status
               scheduled_date: dateKey,
               start_time: startDate.toISOString(),
               end_time: endDate.toISOString()
@@ -427,6 +429,7 @@ export default function CalendarPage() {
             scheduled_date: toUTC_YYYYMMDD(newStartTime),
             start_time: newStartTime.toISOString(),
             end_time: newEndTime.toISOString(),
+            task_status: 'scheduled', // Update status when scheduling
           }).eq('task_id', taskId);
           await fetchData();
           setIsRescheduleOpen(false);
@@ -494,6 +497,7 @@ export default function CalendarPage() {
           }
           if (updates.scheduled_date && updates.scheduled_date !== editTask.scheduled_date) {
             updatePayload.scheduled_date = updates.scheduled_date;
+            updatePayload.task_status = 'scheduled'; // Update status when scheduling
             if (editTask.start_time) {
               const oldStart = new Date(editTask.start_time);
               const newStart = new Date(updates.scheduled_date);

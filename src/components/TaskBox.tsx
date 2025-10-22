@@ -8,11 +8,17 @@ import AddChapterModal from './AddChapterModal'
 import ConfirmModal from './ConfirmModal'
 import { Pencil, Trash2, AlertTriangle, ChevronDown, Sparkles } from 'lucide-react'
 import React from 'react'
-import { Subject, Chapter } from '@/types/definitions'
+import { Subject, Chapter as BaseChapter } from '@/types/definitions'
+
+interface Chapter extends BaseChapter {
+  ai_generated?: boolean;
+}
 import { useToastContext } from './ToastProvider'
 import { useTimeouts } from '@/hooks/useTimeout'
 import { useConfirm } from '@/hooks/useConfirm'
 import AIBreakdownModal from './AIBreakdownModal'
+import ChapterBreakdownView from './ChapterBreakdownView'
+import ReadyBadge from './ReadyBadge'
 import { useUser } from '@supabase/auth-helpers-react'
 
 interface TaskBoxProps {
@@ -32,6 +38,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   const [expanded, setExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today')
   const [progress, setProgress] = useState(0)
+  const [chapterTasks, setChapterTasks] = useState<Record<number, any[]>>({})
+  const [breakdownTasksCount, setBreakdownTasksCount] = useState(0)
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
@@ -51,27 +59,68 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
 
   const loadChapters = useCallback(async () => {
     setLoadingChapters(true);
-    const { data, error } = await supabase
-      .from('chapters')
-      .select('chapter_id, title, order_idx, completed, is_stressful')
-      .eq('subject_id', subject.subject_id)
-      .order('order_idx', { ascending: true })
+    
+    try {
+      // Fetch chapters and their tasks in parallel
+      const [chaptersRes, tasksRes] = await Promise.all([
+        supabase
+          .from('chapters')
+          .select('chapter_id, title, order_idx, completed, is_stressful, ai_generated')
+          .eq('subject_id', subject.subject_id)
+          .order('order_idx', { ascending: true }),
+        supabase
+          .from('tasks')
+          .select('task_id, title, chapter_id, task_status, difficulty_level, estimated_minutes')
+          .in('chapter_id', 
+            await supabase
+              .from('chapters')
+              .select('chapter_id')
+              .eq('subject_id', subject.subject_id)
+              .then(res => res.data?.map(c => c.chapter_id) || [])
+          )
+      ]);
 
-    if (error) {
-      console.error('Error loading chapters:', error)
-      showError(`Failed to load chapters for ${subject.title}`)
+      if (chaptersRes.error) {
+        console.error('Error loading chapters:', chaptersRes.error)
+        showError(`Failed to load chapters for ${subject.title}`)
+        return
+      }
+
+      const initializedChapters = (chaptersRes.data || []).map(chapter => ({
+        ...chapter,
+        completed: chapter.completed || false,
+        is_stressful: chapter.is_stressful || false,
+        ai_generated: chapter.ai_generated || false,
+      }))
+
+      // Group tasks by chapter
+      const tasksByChapter: Record<number, any[]> = {};
+      let totalBreakdownTasks = 0;
+
+      if (tasksRes.data) {
+        tasksRes.data.forEach(task => {
+          if (!tasksByChapter[task.chapter_id]) {
+            tasksByChapter[task.chapter_id] = [];
+          }
+          tasksByChapter[task.chapter_id].push(task);
+          
+          if (task.task_status === 'breakdown') {
+            totalBreakdownTasks++;
+          }
+        });
+      }
+
+      setChapters(initializedChapters)
+      setChapterTasks(tasksByChapter)
+      setBreakdownTasksCount(totalBreakdownTasks)
+      updateProgress(initializedChapters)
+      updateTodayView(initializedChapters)
+    } catch (error) {
+      console.error('Error loading data:', error)
+      showError(`Failed to load data for ${subject.title}`)
+    } finally {
       setLoadingChapters(false);
-      return
     }
-    const initializedChapters = (data || []).map(chapter => ({
-      ...chapter,
-      completed: chapter.completed || false,
-      is_stressful: chapter.is_stressful || false,
-    }))
-    setChapters(initializedChapters)
-    updateProgress(initializedChapters)
-    updateTodayView(initializedChapters)
-    setLoadingChapters(false);
   }, [subject.subject_id, subject.title, updateProgress, updateTodayView, showError])
 
   useEffect(() => {
@@ -126,23 +175,32 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
     const chapter = chapters.find(c => c.chapter_id === chapterId);
     const confirmed = await confirm({
       title: 'Delete Chapter',
-      message: `Are you sure you want to delete "${chapter?.title}"? This action cannot be undone.`,
+      message: `Are you sure you want to delete "${chapter?.title}"? This will also delete all tasks, AI breakdowns, and progress data in this chapter. This action cannot be undone.`,
       confirmText: 'Delete',
       variant: 'danger'
     });
 
     if (confirmed) {
       try {
-        const { error } = await supabase.from('chapters').delete().eq('chapter_id', chapterId);
+        // Use SQL function to handle complex cascade deletion
+        const { data, error } = await supabase.rpc('delete_chapter_cascade', {
+          chapter_id_param: chapterId
+        });
+        
         if (error) throw error;
         
-        const updatedChapters = chapters.filter(c => c.chapter_id !== chapterId);
-        setChapters(updatedChapters);
-        updateProgress(updatedChapters);
-        updateTodayView(updatedChapters);
-        success('Chapter deleted successfully');
+        if (data) {
+          const updatedChapters = chapters.filter(c => c.chapter_id !== chapterId);
+          setChapters(updatedChapters);
+          updateProgress(updatedChapters);
+          updateTodayView(updatedChapters);
+          success('Chapter and all related data deleted successfully');
+        } else {
+          throw new Error('Deletion failed');
+        }
       } catch (error) {
-        showError('Failed to delete chapter');
+        console.error('Delete chapter error:', error);
+        showError('Failed to delete chapter. Please try again.');
       }
     }
   }
@@ -176,8 +234,15 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
   }
 
   const handleAIBreakdownComplete = async (breakdown: any[]) => {
-    // Just show success message, don't create tasks/chapters
-    success(`🎉 AI breakdown generated! Use it as a reference guide.`);
+    // Reload chapters to get the new breakdown tasks
+    await loadChapters();
+    success(`🎉 AI breakdown generated! Check your chapters for new tasks.`);
+  }
+
+  const handleTaskMoved = async () => {
+    // Reload data when tasks are moved to inbox
+    setLoadingChapters(true);
+    await loadChapters();
   }
 
   const chaptersToDisplay = activeTab === 'today' ? chapters.filter(c => todayChapterIds.includes(c.chapter_id)) : chapters
@@ -242,6 +307,11 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                 </span>
               )}
               <span style={styles.cardTitle}>{subject.title}</span>
+              {breakdownTasksCount > 0 && (
+                <div style={{ marginLeft: 8 }}>
+                  <ReadyBadge count={breakdownTasksCount} type="breakdown" size="sm" />
+                </div>
+              )}
             </div>
             <div style={styles.actionsGroup}>
               <button onClick={onEdit} style={styles.iconButton}>
@@ -311,20 +381,41 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                   <div style={styles.loadingState}>
                     <span style={styles.loadingText}>Loading chapters...</span>
                   </div>
-                ) : chaptersToDisplay.length > 0 ? (
-                  chaptersToDisplay.map(chapter => (
-                    <ChapterItem
-                      key={chapter.chapter_id}
-                      chapter={chapter}
-                      onToggleComplete={toggleChapterCompletion}
-                      onEdit={handleEditChapterClick}
-                      onDelete={handleDeleteChapter}
-                    />
-                  ))
                 ) : (
-                  <div style={styles.emptyState}>
-                    <span style={styles.emptyText}>No chapters yet. Add one to get started!</span>
-                  </div>
+                  <>
+                    {/* AI Breakdown Chapters - Show First */}
+                    {chaptersToDisplay
+                      .filter(chapter => chapter.ai_generated && chapterTasks[chapter.chapter_id]?.some(t => t.task_status === 'breakdown'))
+                      .map(chapter => (
+                        <div key={`breakdown-${chapter.chapter_id}`} style={{ marginBottom: 16 }}>
+                          <ChapterBreakdownView
+                            chapter={chapter}
+                            tasks={chapterTasks[chapter.chapter_id] || []}
+                            onTaskMoved={handleTaskMoved}
+                          />
+                        </div>
+                      ))
+                    }
+                    
+                    {/* Regular Chapters */}
+                    {chaptersToDisplay.length > 0 ? (
+                      chaptersToDisplay
+                        .filter(chapter => !chapter.ai_generated || !chapterTasks[chapter.chapter_id]?.some(t => t.task_status === 'breakdown'))
+                        .map(chapter => (
+                          <ChapterItem
+                            key={chapter.chapter_id}
+                            chapter={chapter}
+                            onToggleComplete={toggleChapterCompletion}
+                            onEdit={handleEditChapterClick}
+                            onDelete={handleDeleteChapter}
+                          />
+                        ))
+                    ) : (
+                      <div style={styles.emptyState}>
+                        <span style={styles.emptyText}>No chapters yet. Add one to get started!</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

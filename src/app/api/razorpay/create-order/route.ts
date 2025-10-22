@@ -40,10 +40,15 @@ export async function POST(req: NextRequest) {
     const client = getRazorpayClient();
 
     // Create Razorpay order
+    // Generate short receipt ID (max 40 chars)
+    const shortUserId = userId.substring(0, 8);
+    const timestamp = Date.now().toString().slice(-8);
+    const receipt = `rcpt_${shortUserId}_${timestamp}`;
+    
     const order = await client.orders.create({
       amount: Math.round(amount * 100), // Convert to paise (smallest currency unit)
       currency: currency,
-      receipt: `receipt_${userId}_${Date.now()}`,
+      receipt: receipt, // Keep under 40 characters
       notes: {
         plan: planName,
         user_id: userId,
@@ -59,10 +64,17 @@ export async function POST(req: NextRequest) {
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Razorpay order creation error:', error);
+    
+    // Return specific error message for debugging
+    const errorMessage = error?.error?.description || error?.message || 'Failed to create payment order';
+    
     return NextResponse.json(
-      { error: 'Failed to create payment order' },
+      { 
+        error: errorMessage,
+        details: error?.error || error
+      },
       { status: 500 }
     );
   }

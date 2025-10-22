@@ -6,6 +6,7 @@ import { User, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import SetUsernameModal from './SetUsernameModal';
 import { useToastContext } from './ToastProvider';
+import PlanBadge from './PlanBadge';
 
 export default function Topbar() {
   const session = useSession();
@@ -73,13 +74,21 @@ export default function Topbar() {
 
       <nav className="sticky top-0 z-40 p-4 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 text-white flex justify-between items-center">
         <div className="flex items-center gap-4">
-          {/* Upgrade Button */}
-          <a
-            href="/pricing"
-            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 text-sm"
-          >
-            ⚡ Upgrade
-          </a>
+          {/* Plan Status & Upgrade Button */}
+          <div className="flex items-center gap-3">
+            {/* Plan Badge */}
+            <div className="hidden sm:block">
+              <PlanBadge />
+            </div>
+            
+            {/* Upgrade Button */}
+            <a
+              href="/pricing"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 text-sm"
+            >
+              ⚡ Upgrade
+            </a>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {/* This content is now only shown for logged-in users */}

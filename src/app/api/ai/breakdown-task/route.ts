@@ -111,46 +111,102 @@ async function checkUsageLimits(userId: string): Promise<UsageCheckResult> {
   try {
     const client = getSupabaseClient();
     
-    // Get user's usage limits (includes plan info)
-    const { data: limits } = await client
-      .from('usage_limits')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (!limits) {
-      // Create default limits if they don't exist
-      await client.from('usage_limits').insert({
-        user_id: userId,
-        plan_type: 'free',
-        breakdowns_used: 0,
-        breakdowns_limit: 3,
-        subjects_limit: 3
+    // First try to use the database function
+    let usageData;
+    try {
+      const { data, error } = await client.rpc('can_use_ai_breakdown', {
+        user_uuid: userId
       });
+
+      if (error) {
+        console.error('Database function error:', error);
+        throw error;
+      }
+      usageData = Array.isArray(data) ? data[0] : data;
+    } catch (dbError) {
+      console.error('Database function failed, using direct query:', dbError);
       
+      // Fallback to direct query if function doesn't exist
+      const { data: limitsData, error: limitsError } = await client
+        .from('usage_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (limitsError && limitsError.code !== 'PGRST116') {
+        console.error('Direct query also failed:', limitsError);
+        return {
+          allowed: false,
+          used: 0,
+          limit: 3,
+          resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        };
+      }
+
+      if (!limitsData) {
+        // Create default limits
+        await client.from('usage_limits').insert({
+          user_id: userId,
+          plan_type: 'free',
+          breakdowns_used: 0,
+          breakdowns_limit: 3,
+          subjects_limit: 3,
+          reset_date: new Date().toISOString().split('T')[0]
+        });
+        
+        return {
+          allowed: true,
+          used: 0,
+          limit: 3,
+          resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        };
+      }
+
+      // Check if reset is needed
+      const today = new Date().toISOString().split('T')[0];
+      if ((limitsData as any)?.reset_date < today) {
+        await client
+          .from('usage_limits')
+          .update({
+            breakdowns_used: 0,
+            flashcards_used: 0,
+            reset_date: today,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+        
+        (limitsData as any).breakdowns_used = 0;
+      }
+
+      usageData = {
+        allowed: (limitsData as any).breakdowns_used < (limitsData as any).breakdowns_limit,
+        used: (limitsData as any).breakdowns_used,
+        limit_val: (limitsData as any).breakdowns_limit,
+        plan_type: (limitsData as any).plan_type
+      };
+    }
+
+    if (!usageData) {
       return {
-        allowed: true,
+        allowed: false,
         used: 0,
         limit: 3,
         resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
       };
     }
 
-    const usedToday = typeof limits.breakdowns_used === 'number' ? limits.breakdowns_used : 0;
-    const limit = typeof limits.breakdowns_limit === 'number' ? limits.breakdowns_limit : 3;
-
     return {
-      allowed: usedToday < limit,
-      used: usedToday,
-      limit,
+      allowed: usageData.allowed || false,
+      used: usageData.used || 0,
+      limit: usageData.limit_val || 3,
       resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000) // Tomorrow
     };
 
   } catch (error) {
     console.error('Usage check error:', error);
-    // Default to safe values on error
+    // Default to safe values on error - don't allow to prevent abuse
     return {
-      allowed: true, // Allow on error to not block users
+      allowed: false,
       used: 0,
       limit: 3,
       resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -163,33 +219,53 @@ async function trackUsage(userId: string, featureType: string, tokensUsed: numbe
   try {
     const client = getSupabaseClient();
     
-    // Insert into ai_usage for detailed tracking
-    await client.from('ai_usage').insert({
-      user_id: userId,
-      feature_type: featureType,
-      tokens_used: tokensUsed,
-      cost: tokensUsed * 0.0001, // Rough estimate
-      created_at: new Date().toISOString()
-    });
+    // Insert into ai_usage for detailed tracking (if table exists)
+    try {
+      await client.from('ai_usage').insert({
+        user_id: userId,
+        feature_type: featureType,
+        tokens_used: tokensUsed,
+        cost: tokensUsed * 0.0001, // Rough estimate
+        created_at: new Date().toISOString()
+      });
+    } catch (aiUsageError) {
+      // ai_usage table might not exist, continue with usage limits update
+      console.log('ai_usage table not available, skipping detailed tracking');
+    }
 
-    // Update usage_limits table for UI display
-    const { data: currentLimits } = await client
-      .from('usage_limits')
-      .select('breakdowns_used')
-      .eq('user_id', userId)
-      .single();
+    // Try to use the database function first, fallback to direct update
+    try {
+      const { error } = await client.rpc('increment_ai_usage', {
+        user_uuid: userId
+      });
 
-    if (currentLimits) {
-      // Safely convert to number before arithmetic
-      const currentUsage = typeof currentLimits.breakdowns_used === 'number' ? currentLimits.breakdowns_used : 0;
+      if (error) {
+        throw error;
+      }
+    } catch (dbError) {
+      console.error('Database function failed, using direct update:', dbError);
       
-      await client
+      // Get current usage first
+      const { data: currentLimits } = await client
+        .from('usage_limits')
+        .select('breakdowns_used')
+        .eq('user_id', userId)
+        .single();
+      
+      const currentUsed = (currentLimits as any)?.breakdowns_used || 0;
+      
+      // Fallback to direct update
+      const { error: updateError } = await client
         .from('usage_limits')
         .update({ 
-          breakdowns_used: currentUsage + 1,
+          breakdowns_used: currentUsed + 1,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId);
+
+      if (updateError) {
+        console.error('Direct update also failed:', updateError);
+      }
     }
   } catch (error) {
     console.error('Usage tracking error:', error);

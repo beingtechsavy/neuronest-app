@@ -154,13 +154,14 @@ export async function POST(req: NextRequest) {
         .eq('id', breakdownId);
     }
 
-    // Step 4: Only create tasks if requested (not for reference-only breakdowns)
-    if (saveTasksToInbox) {
+    // Step 4: Always create tasks from breakdown steps
+    if (chapterId) {
       const tasksToInsert = breakdown.map((step: TaskBreakdownStep, index: number) => ({
         title: step.step,
         chapter_id: chapterId,
         user_id: userId,
         status: 'pending',
+        task_status: 'breakdown', // New workflow status
         ai_generated: true,
         ai_breakdown_id: breakdownId,
         difficulty_level: step.difficulty,
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Initialize progress tracking only if tasks were created
+      // Initialize progress tracking
       await client
         .from('breakdown_progress')
         .insert({
@@ -199,8 +200,8 @@ export async function POST(req: NextRequest) {
       breakdownId,
       subjectId,
       chapterId,
-      tasksCreated: saveTasksToInbox ? breakdown.length : 0,
-      savedAsReference: !saveTasksToInbox
+      tasksCreated: breakdown.length,
+      savedAsReference: false
     });
 
   } catch (error) {

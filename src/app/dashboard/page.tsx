@@ -8,7 +8,11 @@ import TaskBox from '@/components/TaskBox';
 import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
 import FocusSessionWidget from '@/components/FocusSessionWidget';
+import FloatingHint from '@/components/FloatingHint';
 import { PlusCircle, Loader2 } from 'lucide-react';
+import { useConfirm } from '@/hooks/useConfirm';
+import ConfirmModal from '@/components/ConfirmModal';
+import { useToastContext } from '@/components/ToastProvider';
 
 // --- TYPE DEFINITIONS ---
 interface Subject {
@@ -26,6 +30,8 @@ interface Profile {
 export default function Dashboard() {
   const router = useRouter();
   const user = useUser();
+  const { confirm, confirmState, closeConfirm } = useConfirm();
+  const { success, error: showError } = useToastContext();
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +40,8 @@ export default function Dashboard() {
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
+  const [showBreakdownHint, setShowBreakdownHint] = useState(false);
+  const [hasBreakdownTasks, setHasBreakdownTasks] = useState(false);
 
   // --- DATA FETCHING ---
   const fetchDashboardData = useCallback(async () => {
@@ -44,10 +52,11 @@ export default function Dashboard() {
         return;
       }
 
-      // Fetch profile and subjects in parallel
-      const [profileRes, subjectsRes] = await Promise.all([
+      // Fetch profile, subjects, and breakdown tasks in parallel
+      const [profileRes, subjectsRes, breakdownTasksRes] = await Promise.all([
         supabase.from('profiles').select('username').eq('id', user.id).single(),
-        supabase.from('subjects').select('*').eq('user_id', user.id).order('subject_id')
+        supabase.from('subjects').select('*').eq('user_id', user.id).order('subject_id'),
+        supabase.from('tasks').select('task_id').eq('user_id', user.id).eq('task_status', 'breakdown').limit(1)
       ]);
 
       if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
@@ -58,6 +67,15 @@ export default function Dashboard() {
       }
       setProfile(profileRes.data);
       setSubjects(subjectsRes.data || []);
+      
+      // Check if user has breakdown tasks and show hint
+      const hasBreakdown = (breakdownTasksRes.data?.length || 0) > 0;
+      setHasBreakdownTasks(hasBreakdown);
+      
+      // Show hint for first-time users with breakdown tasks
+      if (hasBreakdown && !localStorage.getItem('breakdown-hint-dismissed')) {
+        setShowBreakdownHint(true);
+      }
 
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
@@ -90,10 +108,33 @@ export default function Dashboard() {
   };
 
   const handleDeleteSubject = async (subjectId: number) => {
-    // Note: window.confirm is often replaced with a custom modal in production apps
-    if (window.confirm("Are you sure? This will delete the subject and all its chapters and tasks.")) {
-      await supabase.from('subjects').delete().eq('subject_id', subjectId);
-      await fetchDashboardData();
+    const subject = subjects.find(s => s.subject_id === subjectId);
+    const confirmed = await confirm({
+      title: 'Delete Subject',
+      message: `Are you sure you want to delete "${subject?.title}"? This will delete the subject and all its chapters, tasks, AI breakdowns, and progress data. This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        // Use SQL function to handle complex cascade deletion
+        const { data, error } = await supabase.rpc('delete_subject_cascade', {
+          subject_id_param: subjectId
+        });
+        
+        if (error) throw error;
+        
+        if (data) {
+          await fetchDashboardData();
+          success('Subject and all related data deleted successfully');
+        } else {
+          throw new Error('Deletion failed');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showError('Failed to delete subject. Please try again.');
+      }
     }
   };
 
@@ -131,6 +172,7 @@ export default function Dashboard() {
         onClose={() => setIsSubjectModalOpen(false)}
         onSave={handleSaveSubject}
         subjectToEdit={editingSubject}
+        userId={user?.id}
       />
       
       {/* Main content area */}
@@ -193,6 +235,28 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Jobs-Style Floating Hint */}
+      <FloatingHint
+        show={showBreakdownHint}
+        message="💡 Hover over any purple task to add it to your schedule"
+        onDismiss={() => {
+          setShowBreakdownHint(false);
+          localStorage.setItem('breakdown-hint-dismissed', 'true');
+        }}
+        position="bottom"
+      />
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+      />
     </>
   );
 }

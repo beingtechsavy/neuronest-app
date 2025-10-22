@@ -19,5 +19,8 @@ export interface Task {
   task_id: number;
   title: string;
   status: 'pending' | 'completed';
+  task_status?: 'breakdown' | 'inbox' | 'scheduled' | 'completed';
+  scheduled_date?: string | null;
   is_stressful: boolean;
+  ai_generated?: boolean;
 }

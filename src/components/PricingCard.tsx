@@ -11,7 +11,7 @@ interface Plan {
   features: string[];
   cta: string;
   popular: boolean;
-  paddleProductId: string | null | undefined;
+  razorpayPlanId: string | null | undefined;
 }
 
 interface PricingCardProps {
@@ -80,54 +80,61 @@ export default function PricingCard({
       return;
     }
 
+    if (!plan.razorpayPlanId) {
+      alert('Plan configuration error. Please contact support.');
+      return;
+    }
+
     // Load Razorpay script
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = async () => {
       try {
-        // Create order
-        const orderResponse = await fetch('/api/razorpay/create-order', {
+        // Create subscription
+        const subscriptionResponse = await fetch('/api/razorpay/create-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: getPrice(),
-            currency: 'USD',
-            planName: plan.name,
+            planId: plan.razorpayPlanId,
             userId: user.id,
+            userEmail: user.email,
+            userName: user.user_metadata?.full_name || user.email?.split('@')[0],
           }),
         });
 
-        const orderData = await orderResponse.json();
-        if (!orderData.success) throw new Error(orderData.error);
+        const subscriptionData = await subscriptionResponse.json();
+        if (!subscriptionData.success) throw new Error(subscriptionData.error);
 
-        // Configure Razorpay options
+        // Configure Razorpay options for subscription
         const options = {
-          key: orderData.keyId,
-          amount: orderData.amount,
-          currency: orderData.currency,
+          key: subscriptionData.keyId,
+          subscription_id: subscriptionData.subscriptionId,
           name: 'NeuroNest',
           description: `${plan.name} Plan Subscription`,
-          order_id: orderData.orderId,
           handler: async function (response: any) {
-            // Verify payment
-            const verifyResponse = await fetch('/api/razorpay/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                planName: plan.name,
-                userId: user.id,
-                amount: getPrice(),
-              }),
-            });
+            try {
+              // Update subscription status
+              const updateResponse = await fetch('/api/razorpay/update-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  subscriptionId: subscriptionData.subscriptionId,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                  planName: plan.name,
+                  userId: user.id,
+                }),
+              });
 
-            const verifyData = await verifyResponse.json();
-            if (verifyData.success) {
-              window.location.href = '/dashboard?payment=success';
-            } else {
-              alert('Payment verification failed. Please contact support.');
+              const updateData = await updateResponse.json();
+              if (updateData.success) {
+                window.location.href = '/dashboard?subscription=success';
+              } else {
+                alert('Subscription activation failed. Please contact support.');
+              }
+            } catch (error) {
+              console.error('Subscription update error:', error);
+              alert('Subscription activation failed. Please contact support.');
             }
           },
           prefill: {
@@ -140,8 +147,8 @@ export default function PricingCard({
         const razorpay = new (window as any).Razorpay(options);
         razorpay.open();
       } catch (error) {
-        console.error('Payment error:', error);
-        alert('Failed to initiate payment. Please try again.');
+        console.error('Subscription error:', error);
+        alert('Failed to initiate subscription. Please try again.');
       }
     };
     document.body.appendChild(script);

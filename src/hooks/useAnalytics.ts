@@ -65,12 +65,24 @@ export function useAnalytics() {
     const calculateTaskStats = useCallback(async (): Promise<TaskCompletionStats> => {
         if (!user) throw new Error('User not authenticated');
 
-        const { data: tasks, error } = await supabase
-            .from('tasks')
-            .select('status, deadline, end_time')
-            .eq('user_id', user.id);
+        try {
+            const { data: tasks, error } = await supabase
+                .from('tasks')
+                .select('status, deadline, end_time')
+                .eq('user_id', user.id);
 
-        if (error) throw error;
+            if (error) {
+                console.warn('Task stats error:', error);
+                // Return default stats if query fails
+                return {
+                    totalTasks: 0,
+                    completedTasks: 0,
+                    completionRate: 0,
+                    overdueTasks: 0,
+                    onTimeTasks: 0,
+                    averageCompletionTime: 0
+                };
+            }
 
         const totalTasks = tasks?.length || 0;
         const completedTasks = tasks?.filter(t => t.status === 'Completed').length || 0;
@@ -100,97 +112,125 @@ export function useAnalytics() {
             }, 0) / completedWithDeadlines.length
             : 0;
 
-        return {
-            totalTasks,
-            completedTasks,
-            completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-            overdueTasks,
-            onTimeTasks,
-            averageCompletionTime: avgCompletionTime
-        };
+            return {
+                totalTasks,
+                completedTasks,
+                completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+                overdueTasks,
+                onTimeTasks,
+                averageCompletionTime: avgCompletionTime
+            };
+        } catch (error) {
+            console.warn('Error calculating task stats:', error);
+            return {
+                totalTasks: 0,
+                completedTasks: 0,
+                completionRate: 0,
+                overdueTasks: 0,
+                onTimeTasks: 0,
+                averageCompletionTime: 0
+            };
+        }
     }, [user]);
 
     const calculateSubjectStats = useCallback(async (): Promise<SubjectStats[]> => {
         if (!user) throw new Error('User not authenticated');
 
-        const { data: subjects, error: subjectsError } = await supabase
-            .from('subjects')
-            .select(`
-        subject_id,
-        title,
-        color,
-        is_stressful,
-        chapters (
-          chapter_id,
-          completed,
-          is_stressful,
-          tasks (
-            task_id,
-            status,
-            effort_units,
-            is_stressful
-          )
-        )
-      `)
-            .eq('user_id', user.id);
+        try {
+            const { data: subjects, error: subjectsError } = await supabase
+                .from('subjects')
+                .select(`
+            subject_id,
+            title,
+            color,
+            is_stressful,
+            chapters (
+              chapter_id,
+              completed,
+              is_stressful,
+              tasks (
+                task_id,
+                status,
+                effort_units,
+                is_stressful
+              )
+            )
+          `)
+                .eq('user_id', user.id);
 
-        if (subjectsError) throw subjectsError;
+            if (subjectsError) {
+                console.warn('Subject stats error:', subjectsError);
+                return [];
+            }
 
-        return (subjects || []).map(subject => {
-            const chapters = subject.chapters || [];
-            const totalChapters = chapters.length;
-            const completedChapters = chapters.filter(c => c.completed).length;
+            return (subjects || []).map(subject => {
+                const chapters = subject.chapters || [];
+                const totalChapters = chapters.length;
+                const completedChapters = chapters.filter(c => c.completed).length;
 
-            const allTasks = chapters.flatMap(c => c.tasks || []);
-            const totalTasks = allTasks.length;
-            const completedTasks = allTasks.filter(t => t.status === 'Completed').length;
+                const allTasks = chapters.flatMap(c => c.tasks || []);
+                const totalTasks = allTasks.length;
+                const completedTasks = allTasks.filter(t => t.status === 'Completed').length;
 
-            const stressfulItems = [
-                subject.is_stressful ? 1 : 0,
-                ...chapters.map(c => c.is_stressful ? 1 : 0),
-                ...allTasks.map(t => t.is_stressful ? 1 : 0)
-            ];
-            const averageStressLevel = stressfulItems.length > 0
-                ? (stressfulItems.reduce((sum, val) => sum + val, 0) / stressfulItems.length) * 100
-                : 0;
+                const stressfulItems = [
+                    subject.is_stressful ? 1 : 0,
+                    ...chapters.map(c => c.is_stressful ? 1 : 0),
+                    ...allTasks.map(t => t.is_stressful ? 1 : 0)
+                ];
+                const averageStressLevel = stressfulItems.length > 0
+                    ? (stressfulItems.reduce((sum, val) => sum + val, 0) / stressfulItems.length) * 100
+                    : 0;
 
-            const timeSpent = allTasks
-                .filter(t => t.status === 'Completed')
-                .reduce((sum, t) => sum + (t.effort_units || 0), 0);
+                const timeSpent = allTasks
+                    .filter(t => t.status === 'Completed')
+                    .reduce((sum, t) => sum + (t.effort_units || 0), 0);
 
-            return {
-                subject_id: subject.subject_id,
-                subject_title: subject.title,
-                subject_color: subject.color,
-                totalChapters,
-                completedChapters,
-                completionRate: totalChapters > 0 ? (completedChapters / totalChapters) * 100 : 0,
-                totalTasks,
-                completedTasks,
-                taskCompletionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-                averageStressLevel,
-                timeSpent
-            };
-        });
+                return {
+                    subject_id: subject.subject_id,
+                    subject_title: subject.title,
+                    subject_color: subject.color,
+                    totalChapters,
+                    completedChapters,
+                    completionRate: totalChapters > 0 ? (completedChapters / totalChapters) * 100 : 0,
+                    totalTasks,
+                    completedTasks,
+                    taskCompletionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+                    averageStressLevel,
+                    timeSpent
+                };
+            });
+        } catch (error) {
+            console.warn('Error calculating subject stats:', error);
+            return [];
+        }
     }, [user]);
 
     const calculateStudyStreak = useCallback(async (): Promise<StudyStreak> => {
         if (!user) throw new Error('User not authenticated');
 
-        // Get tasks with effort units (focus time) for the last 60 days
-        const sixtyDaysAgo = new Date();
-        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        try {
+            // Get tasks with effort units (focus time) for the last 60 days
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-        const { data: tasks, error } = await supabase
-            .from('tasks')
-            .select('scheduled_date, status, effort_units, end_time')
-            .eq('user_id', user.id)
-            .eq('status', 'Completed')
-            .not('scheduled_date', 'is', null)
-            .gte('scheduled_date', sixtyDaysAgo.toISOString().split('T')[0])
-            .order('scheduled_date', { ascending: false });
+            const { data: tasks, error } = await supabase
+                .from('tasks')
+                .select('scheduled_date, status, effort_units, end_time')
+                .eq('user_id', user.id)
+                .eq('status', 'Completed')
+                .not('scheduled_date', 'is', null)
+                .gte('scheduled_date', sixtyDaysAgo.toISOString().split('T')[0])
+                .order('scheduled_date', { ascending: false });
 
-        if (error) throw error;
+            if (error) {
+                console.warn('Study streak error:', error);
+                return {
+                    currentStreak: 0,
+                    longestStreak: 0,
+                    lastStudyDate: null,
+                    streakDates: []
+                };
+            }
 
         // Group tasks by date and calculate daily focus time
         const dailyFocusTime: { [date: string]: number } = {};
@@ -218,10 +258,14 @@ export function useAnalytics() {
                 });
             }
         } catch (e) {
-            console.log('No focus session data available for streak calculation');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('No focus session data available for streak calculation');
+            }
         }
 
-        console.log('Daily focus time for streak calculation:', dailyFocusTime);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Daily focus time for streak calculation:', dailyFocusTime);
+        }
 
         // Find dates with 30+ minutes of focus (streak days)
         const streakDates = Object.entries(dailyFocusTime)
@@ -273,21 +317,31 @@ export function useAnalytics() {
         }
         longestStreak = Math.max(longestStreak, tempStreak);
 
-        return {
-            currentStreak,
-            longestStreak,
-            lastStudyDate: streakDates[streakDates.length - 1] || null,
-            streakDates
-        };
+            return {
+                currentStreak,
+                longestStreak,
+                lastStudyDate: streakDates[streakDates.length - 1] || null,
+                streakDates
+            };
+        } catch (error) {
+            console.warn('Error calculating study streak:', error);
+            return {
+                currentStreak: 0,
+                longestStreak: 0,
+                lastStudyDate: null,
+                streakDates: []
+            };
+        }
     }, [user]);
 
     const calculateWeeklyProgress = useCallback(async (): Promise<WeeklyProgress[]> => {
         if (!user) throw new Error('User not authenticated');
 
-        const weeks: WeeklyProgress[] = [];
-        const today = new Date();
+        try {
+            const weeks: WeeklyProgress[] = [];
+            const today = new Date();
 
-        for (let i = 0; i < 8; i++) { // Last 8 weeks
+            for (let i = 0; i < 8; i++) { // Last 8 weeks
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() - (today.getDay() + (i * 7)));
             weekStart.setHours(0, 0, 0, 0);
@@ -326,21 +380,29 @@ export function useAnalytics() {
             });
         }
 
-        return weeks;
+            return weeks;
+        } catch (error) {
+            console.warn('Error calculating weekly progress:', error);
+            return [];
+        }
     }, [user]);
 
     const calculateProductivityHeatmap = useCallback(async (): Promise<ProductivityData[]> => {
         if (!user) throw new Error('User not authenticated');
 
-        const { data: tasks, error } = await supabase
-            .from('tasks')
-            .select('scheduled_date, status, effort_units, end_time')
-            .eq('user_id', user.id)
-            .eq('status', 'Completed')
-            .not('scheduled_date', 'is', null)
-            .gte('scheduled_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        try {
+            const { data: tasks, error } = await supabase
+                .from('tasks')
+                .select('scheduled_date, status, effort_units, end_time')
+                .eq('user_id', user.id)
+                .eq('status', 'Completed')
+                .not('scheduled_date', 'is', null)
+                .gte('scheduled_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 
-        if (error) throw error;
+            if (error) {
+                console.warn('Productivity heatmap error:', error);
+                return [];
+            }
 
         const dailyData: { [date: string]: ProductivityData } = {};
 
@@ -365,7 +427,11 @@ export function useAnalytics() {
             day.focusScore = Math.min(100, efficiency * 10); // Scale to 0-100
         });
 
-        return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+            return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+        } catch (error) {
+            console.warn('Error calculating productivity heatmap:', error);
+            return [];
+        }
     }, [user]);
 
     const fetchAnalytics = useCallback(async () => {
@@ -375,6 +441,10 @@ export function useAnalytics() {
         setError(null);
 
         try {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🚀 Starting analytics fetch for user:', user.id);
+            }
+
             // Initialize focus session data if needed (for demo purposes)
             const initializeFocusData = () => {
                 try {
@@ -398,17 +468,31 @@ export function useAnalytics() {
                         }
 
                         localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-                        console.log('Auto-initialized focus session data for analytics');
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('✅ Auto-initialized focus session data for analytics');
+                        }
+                    } else {
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('✅ Focus session data already exists');
+                        }
                     }
                 } catch (error) {
-                    console.log('Could not initialize focus session data:', error);
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('⚠️ Could not initialize focus session data:', error);
+                    }
                 }
             };
 
             initializeFocusData();
 
             // Phase 1: Load critical stats first for immediate display
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📊 Phase 1: Loading task stats...');
+            }
             const taskStats = await calculateTaskStats();
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Task stats loaded:', taskStats);
+            }
 
             // Show basic analytics immediately
             setAnalytics(prev => ({
@@ -419,8 +503,14 @@ export function useAnalytics() {
                 productivityHeatmap: prev?.productivityHeatmap || [],
                 peakHours: prev?.peakHours || []
             }));
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Phase 1 complete - basic analytics set');
+            }
 
             // Phase 2: Load remaining data in parallel
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📊 Phase 2: Loading detailed analytics...');
+            }
             const [
                 subjectStats,
                 studyStreak,
@@ -432,6 +522,14 @@ export function useAnalytics() {
                 calculateWeeklyProgress(),
                 calculateProductivityHeatmap()
             ]);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Phase 2 complete:', { 
+                    subjectCount: subjectStats.length, 
+                    currentStreak: studyStreak.currentStreak,
+                    weekCount: weeklyProgress.length,
+                    heatmapDays: productivityHeatmap.length
+                });
+            }
 
             // Calculate peak hours from productivity data
             const hourlyProductivity: { [hour: number]: number[] } = {};
@@ -461,8 +559,31 @@ export function useAnalytics() {
                 productivityHeatmap,
                 peakHours
             });
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🎉 Analytics fully loaded successfully!');
+            }
         } catch (err) {
+            if (process.env.NODE_ENV === 'development') {
+                console.error('❌ Analytics fetch error:', err);
+            }
             setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
+            
+            // Set minimal fallback data so UI doesn't break
+            setAnalytics({
+                taskStats: {
+                    totalTasks: 0,
+                    completedTasks: 0,
+                    completionRate: 0,
+                    overdueTasks: 0,
+                    onTimeTasks: 0,
+                    averageCompletionTime: 0
+                },
+                subjectStats: [],
+                studyStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, streakDates: [] },
+                weeklyProgress: [],
+                productivityHeatmap: [],
+                peakHours: []
+            });
         } finally {
             setLoading(false);
         }

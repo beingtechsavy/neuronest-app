@@ -19,12 +19,12 @@ const plans = [
     ],
     cta: 'Current Plan',
     popular: false,
-    paddleProductId: null,
+    razorpayPlanId: null,
   },
   {
     name: 'Master',
-    price: 6.99,
-    annualPrice: 69,
+    price: 599, // INR
+    annualPrice: 5990, // INR (save ~17%)
     description: 'Perfect for regular students',
     features: [
       '15 subjects',
@@ -36,12 +36,12 @@ const plans = [
     ],
     cta: 'Upgrade to Master',
     popular: true,
-    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_MASTER_PRODUCT_ID || null,
+    razorpayPlanId: 'plan_RWeRVyGgnaoYsF', // LIVE Master plan ID
   },
   {
     name: 'Warrior',
-    price: 9.99,
-    annualPrice: 99,
+    price: 899, // INR
+    annualPrice: 8990, // INR (save ~17%)
     description: 'For power users and heavy studiers',
     features: [
       'Unlimited subjects',
@@ -53,7 +53,7 @@ const plans = [
     ],
     cta: 'Upgrade to Warrior',
     popular: false,
-    paddleProductId: process.env.NEXT_PUBLIC_PADDLE_WARRIOR_PRODUCT_ID || null,
+    razorpayPlanId: 'plan_RWeRWemFi6XeES', // LIVE Warrior plan ID
   },
 ];
 

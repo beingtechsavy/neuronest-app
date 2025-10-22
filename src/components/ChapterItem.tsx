@@ -53,12 +53,17 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
       return;
     }
     const newStatus: 'pending' | 'completed' = taskToToggle.status === 'completed' ? 'pending' : 'completed';
+    const newTaskStatus = newStatus === 'completed' ? 'completed' : 
+                         (taskToToggle.scheduled_date ? 'scheduled' : 'inbox');
 
     const updatedTasks = tasks.map(t => t.task_id === taskId ? { ...t, status: newStatus } : t);
     setTasks(updatedTasks);
     
     try {
-      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('task_id', taskId);
+      const { error } = await supabase.from('tasks').update({ 
+        status: newStatus,
+        task_status: newTaskStatus 
+      }).eq('task_id', taskId);
       if (error) {
         console.error('Error updating task status:', error);
         // Revert the optimistic update on error

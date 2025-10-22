@@ -25,6 +25,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import DemoActions from './DemoActions';
 import EnhancedProgressRing from './EnhancedProgressRing';
+import AIInsightsPanel from './AIInsightsPanel';
+import GestureAnalyticsView from './GestureAnalyticsView';
+import FallbackAnalytics from './FallbackAnalytics';
 
 
 // Celebration animations component
@@ -767,11 +770,17 @@ const SubjectCards = ({ subjectStats }: { subjectStats: any[] }) => {
 };
 
 export default function ADHDAnalyticsDashboard() {
-  const { analytics, loading: analyticsLoading, error: analyticsError } = useAnalytics();
-  const { todayStats, loading: todayLoading, error: todayError } = useTodayAnalytics();
+  const { analytics, loading: analyticsLoading, error: analyticsError, refetch: refetchAnalytics } = useAnalytics();
+  const { todayStats, loading: todayLoading, error: todayError, refetch: refetchToday } = useTodayAnalytics();
   const todayFocusTime = useFocusSessionStats();
   const { checkAndReward } = useProgressRewards();
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const [showAIInsights, setShowAIInsights] = useState(true);
+
+  const handleRetry = () => {
+    refetchAnalytics();
+    refetchToday();
+  };
 
   // Combine loading states
   const loading = analyticsLoading || todayLoading;
@@ -790,19 +799,7 @@ export default function ADHDAnalyticsDashboard() {
   }, [analytics, todayStats, checkAndReward]);
 
   if (error) {
-    return (
-      <div className="p-8 text-center">
-        <div className="text-6xl mb-4">😅</div>
-        <p className="text-red-400 mb-4">Oops! Something went wrong</p>
-        <p className="text-slate-400 text-sm mb-6">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    );
+    return <FallbackAnalytics onRetry={handleRetry} />;
   }
 
   if (loading && !analytics) {
@@ -848,31 +845,129 @@ export default function ADHDAnalyticsDashboard() {
         </motion.button>
       </div>
 
-      {/* Hero Section */}
-      <TodayHero todayStats={todayStats} />
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <StreakCard studyStreak={analytics?.studyStreak} todayFocusTime={todayFocusTime} />
-        <WeeklyDots weeklyProgress={analytics?.weeklyProgress || []} />
-        <RecentWins analytics={analytics} todayStats={todayStats} />
-      </div>
-
-      {/* Demo Actions */}
-      <DemoActions />
-
-      {/* Subject Progress */}
-      <div className="space-y-6">
-        <motion.h2
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-2xl font-bold text-white flex items-center gap-3"
+      {/* Revolutionary AI Insights Panel */}
+      {showAIInsights && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative"
         >
-          <BookOpen className="text-blue-400" size={28} />
-          Your Subjects
-        </motion.h2>
-        <SubjectCards subjectStats={analytics?.subjectStats || []} />
-      </div>
+          <AIInsightsPanel analytics={analytics} todayStats={todayStats} />
+          
+          {/* Toggle button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAIInsights(false)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/60 hover:text-white transition-all"
+            title="Hide AI Insights"
+          >
+            ×
+          </motion.button>
+        </motion.div>
+      )}
+
+      {/* Show AI Insights button when hidden */}
+      {!showAIInsights && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowAIInsights(true)}
+          className="w-full py-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-2xl text-white font-medium flex items-center justify-center gap-3 hover:from-indigo-500/30 hover:to-purple-500/30 transition-all"
+        >
+          <Brain size={20} />
+          Show AI Insights
+          <Sparkles size={16} />
+        </motion.button>
+      )}
+
+      {/* Gesture-Driven Analytics Navigation */}
+      <GestureAnalyticsView>
+        {(timeRange) => (
+          <div className="space-y-6">
+            {timeRange.id === 'today' && (
+              <>
+                <TodayHero todayStats={todayStats} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <StreakCard studyStreak={analytics?.studyStreak} todayFocusTime={todayFocusTime} />
+                  <WeeklyDots weeklyProgress={analytics?.weeklyProgress || []} />
+                  <RecentWins analytics={analytics} todayStats={todayStats} />
+                </div>
+              </>
+            )}
+            
+            {timeRange.id === 'week' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-gradient-to-br from-green-900/50 to-emerald-900/50 backdrop-blur-md border border-green-500/20 rounded-2xl p-6"
+                >
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <Calendar className="text-green-400" size={24} />
+                    Weekly Overview
+                  </h3>
+                  <WeeklyDots weeklyProgress={analytics?.weeklyProgress || []} />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-gradient-to-br from-blue-900/50 to-cyan-900/50 backdrop-blur-md border border-blue-500/20 rounded-2xl p-6"
+                >
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                    <TrendingUp className="text-blue-400" size={24} />
+                    Weekly Progress
+                  </h3>
+                  <div className="space-y-4">
+                    {analytics?.weeklyProgress?.slice(-4).map((week, index) => (
+                      <div key={week.weekStart} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                        <span className="text-sm text-gray-300">
+                          Week {index + 1}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 bg-gray-700 rounded-full h-2">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${week.completionRate}%` }}
+                              transition={{ delay: index * 0.1, duration: 1 }}
+                              className="h-2 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full"
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-blue-400">
+                            {Math.round(week.completionRate)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+            
+            {timeRange.id === 'month' && (
+              <div className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6"
+                >
+                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                    <Trophy className="text-purple-400" size={24} />
+                    Monthly Achievements
+                  </h3>
+                  <SubjectCards subjectStats={analytics?.subjectStats || []} />
+                </motion.div>
+              </div>
+            )}
+          </div>
+        )}
+      </GestureAnalyticsView>
+
+      {/* Demo Actions - Only show in development */}
+      {process.env.NODE_ENV === 'development' && <DemoActions />}
 
       {/* Detailed view toggle */}
       <AnimatePresence>
