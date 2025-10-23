@@ -238,16 +238,22 @@ interface TaskDetailModalProps {
 export default function TaskDetailModal({ isOpen, onClose, task, onEdit, onDelete }: TaskDetailModalProps) {
   if (!isOpen || !task) return null;
 
-  // --- BUG FIX IS HERE ---
-  // This function now explicitly uses the 'UTC' timeZone, ensuring the displayed
-  // time matches the data in the rest of the application, regardless of the
-  // user's local timezone.
+  // Format time from time string (HH:MM:SS) to display format
+  const formatTimeFromString = (timeStr: string) => {
+    if (!timeStr) return '';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  // Fallback to Date formatting if needed
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
-      timeZone: 'UTC', // This is the critical fix
+      timeZone: 'UTC',
     });
   };
 
@@ -296,7 +302,12 @@ export default function TaskDetailModal({ isOpen, onClose, task, onEdit, onDelet
             )}
             <div className="flex items-center gap-4">
                 <Clock size={18} className="text-slate-400 flex-shrink-0" />
-                <span className="text-base text-slate-200">{formatTime(task.startTime)} - {formatTime(task.endTime)} (UTC)</span>
+                <span className="text-base text-slate-200">
+                  {task.start_time && task.end_time 
+                    ? `${formatTimeFromString(task.start_time)} - ${formatTimeFromString(task.end_time)}`
+                    : `${formatTime(task.startTime)} - ${formatTime(task.endTime)}`
+                  }
+                </span>
             </div>
         </div>
 

@@ -230,6 +230,13 @@ function robustTimeToMinutes(dt: Date): number {
   const min = dt.getUTCHours() * 60 + dt.getUTCMinutes();
   return isNaN(min) ? 0 : min;
 }
+
+// Helper function to parse time strings like "08:00:00" to minutes
+function timeStringToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return (hours * 60) + (minutes || 0);
+}
 const toUTC_YYYYMMDD = (date: Date): string => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -246,10 +253,11 @@ function DraggableTask({ task, style, onClick }: { task: CalendarTask; style: Re
   let start = 1, end = 2;
   if (task.start_time && task.end_time) {
     try {
-      const dtStart = new Date(task.start_time);
-      const dtEnd = new Date(task.end_time);
-      start = Math.max(1, Math.floor(robustTimeToMinutes(dtStart) / 15) + 1);
-      end = Math.max(start + 1, Math.ceil(robustTimeToMinutes(dtEnd) / 15) + 1);
+      // Parse time strings like "08:00:00" directly to minutes
+      const startMinutes = timeStringToMinutes(task.start_time);
+      const endMinutes = timeStringToMinutes(task.end_time);
+      start = Math.max(1, Math.floor(startMinutes / 15) + 1);
+      end = Math.max(start + 1, Math.ceil(endMinutes / 15) + 1);
     } catch { start = 1; end = 2; }
   }
 
@@ -274,6 +282,7 @@ interface BlockData { title: string; start_time: string; end_time: string; type?
 const StaticBlock = ({ block, style, onClick }: { block: BlockData; style: React.CSSProperties; onClick?: (e: React.MouseEvent) => void; }) => {
   let gridStart = 1, gridEnd = 2;
   try {
+    // TimeBlocks still use full timestamps, so parse them normally
     const startMinutes = robustTimeToMinutes(new Date(block.start_time));
     const endMinutes = robustTimeToMinutes(new Date(block.end_time));
     gridStart = Math.max(1, Math.floor(startMinutes / 15) + 1);
@@ -283,12 +292,12 @@ const StaticBlock = ({ block, style, onClick }: { block: BlockData; style: React
 };
 
 function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlockClick }: { day: Date; preferences: UserPreferences | null; timeBlocks: TimeBlock[]; tasks: Record<string, CalendarTask[]>; onTaskClick: (task: CalendarTask, startTime: Date, endTime: Date) => void; onTimeBlockClick: (block: TimeBlock) => void; }) {
-  const { setNodeRef, isOver } = useDroppable({ id: day.toISOString(), });
-  const dayColumnStyle = { backgroundColor: isOver ? 'rgba(79, 70, 229, 0.13)' : 'transparent', transition: 'background-color 0.2s ease-in-out', };
   const dateKey = toUTC_YYYYMMDD(day);
+  const { setNodeRef, isOver } = useDroppable({ id: dateKey });
+  const dayColumnStyle = { backgroundColor: isOver ? 'rgba(79, 70, 229, 0.13)' : 'transparent', transition: 'background-color 0.2s ease-in-out', };
 
   return (
-    <div ref={setNodeRef} key={day.toISOString()} className="relative border-l border-slate-700 grid" style={{ ...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)' }}>
+    <div ref={setNodeRef} key={dateKey} className="relative border-l border-slate-700 grid" style={{ ...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)' }}>
        {preferences && (() => {
          const blocks: BlockData[] = [];
          const year = day.getUTCFullYear();
@@ -347,7 +356,12 @@ function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlo
               backgroundColor: `${task.chapters?.subjects?.color || '#6366f1'}30`,
               borderLeft: `2px solid ${task.chapters?.subjects?.color || '#6366f1'}`,
             }}
-            onClick={() => onTaskClick(task, new Date(task.start_time!), new Date(task.end_time!))}
+            onClick={() => {
+              // Create proper UTC Date objects from scheduled_date + time
+              const startDate = new Date(`${task.scheduled_date}T${task.start_time}Z`);
+              const endDate = new Date(`${task.scheduled_date}T${task.end_time}Z`);
+              onTaskClick(task, startDate, endDate);
+            }}
           />
         ))}
     </div>
@@ -406,7 +420,7 @@ export default function WeeklyView({
         ))}
       </div>
       <div className="row-start-2 col-start-2 grid grid-cols-7 relative">
-        {weekDays.map(day => ( <DayColumn key={day.toISOString()} day={day} preferences={preferences} timeBlocks={timeBlocks} tasks={tasks} onTaskClick={onTaskClick} onTimeBlockClick={onTimeBlockClick} /> ))}
+        {weekDays.map(day => ( <DayColumn key={toUTC_YYYYMMDD(day)} day={day} preferences={preferences} timeBlocks={timeBlocks} tasks={tasks} onTaskClick={onTaskClick} onTimeBlockClick={onTimeBlockClick} /> ))}
         <NavEdge id="navigate-prev" position="left" />
         <NavEdge id="navigate-next" position="right" />
       </div>

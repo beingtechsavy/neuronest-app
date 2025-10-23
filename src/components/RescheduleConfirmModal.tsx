@@ -23,18 +23,18 @@ export default function RescheduleConfirmModal({ isOpen, onClose, onConfirm, det
   const [endTime, setEndTime] = useState('10:00');
   const [error, setError] = useState<string | null>(null);
 
-  // Helper to format a Date object to a 'YYYY-MM-DD' string in UTC
+  // Helper to format a Date object to a 'YYYY-MM-DD' string in local time
   const formatToDateInput = (d: Date) => {
-    const year = d.getUTCFullYear();
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
-  // Helper to format a Date object to an 'HH:mm' string in UTC
+  // Helper to format a Date object to an 'HH:mm' string in local time
   const formatToTimeInput = (d: Date) => {
-    const hours = String(d.getUTCHours()).padStart(2, '0');
-    const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 
@@ -49,6 +49,8 @@ export default function RescheduleConfirmModal({ isOpen, onClose, onConfirm, det
   }, [details]);
 
   if (!isOpen || !details) return null;
+  
+  console.log('RescheduleConfirmModal is rendering with:', { isOpen, details });
 
   // When the user clicks confirm, validate the inputs and send data to the parent
   const handleConfirmClick = () => {
@@ -90,8 +92,9 @@ export default function RescheduleConfirmModal({ isOpen, onClose, onConfirm, det
         }
       `}</style>
       <div 
-        className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[50]"
+        className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[9999]"
         onClick={onClose}
+        style={{ zIndex: 9999 }}
       >
         <div 
           id="reschedule-modal"

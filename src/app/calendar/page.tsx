@@ -19,7 +19,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WeeklyView from '@/components/WeeklyView';
 import AddTimeBlockModal from '@/components/AddTimeBlockModal';
 import TaskDetailModal from '@/components/TaskDetailModal';
-import RescheduleConfirmModal from '@/components/RescheduleConfirmModal';
+
 import TimeBlockDetailModal from '@/components/TimeBlockDetailModal';
 import UnscheduledTasks from '@/components/UnscheduledTasks';
 import DeleteTaskConfirmModal from '@/components/DeleteTaskConfirmModal';
@@ -79,6 +79,25 @@ const timeToUTCMinutes = (time: string | Date): number => {
   }
   return time.getUTCHours() * 60 + time.getUTCMinutes();
 };
+
+// Helper function to extract time in HH:MM:SS format for database TIME columns
+const extractTimeString = (date: Date): string => {
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
+};
+
+// Helper functions for simple time handling
+const minutesToTimeString = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`;
+};
+
+const getDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const toUTC_YYYYMMDD = (d: Date): string => {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -126,8 +145,7 @@ export default function CalendarPage() {
 
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState<(CalendarTask & { startTime: Date; endTime: Date }) | null>(null);
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-  const [rescheduleDetails, setRescheduleDetails] = useState<{ taskId: number; title: string; newStartTime: Date; newEndTime: Date } | null>(null);
+
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [isBlockDetailOpen, setIsBlockDetailOpen] = useState(false);
@@ -253,7 +271,10 @@ export default function CalendarPage() {
 
         for (const t of (tasks[dateKey] || [])) {
           if (t.start_time && t.end_time) {
-            busySlots.push({ start: timeToUTCMinutes(new Date(t.start_time)), end: timeToUTCMinutes(new Date(t.end_time)) });
+            // Tasks now have TIME fields, parse them as time strings
+            const startMinutes = timeToUTCMinutes(t.start_time);
+            const endMinutes = timeToUTCMinutes(t.end_time);
+            busySlots.push({ start: startMinutes, end: endMinutes });
           }
         }
 
@@ -286,8 +307,8 @@ export default function CalendarPage() {
               status: "Scheduled",
               task_status: "scheduled", // Update workflow status
               scheduled_date: dateKey,
-              start_time: startDate.toISOString(),
-              end_time: endDate.toISOString()
+              start_time: extractTimeString(startDate),
+              end_time: extractTimeString(endDate)
             });
 
             queue.shift();
@@ -356,7 +377,7 @@ export default function CalendarPage() {
       else { scrollDirectionRef.current = null; }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setDraggedTask(null);
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); }
     scrollDirectionRef.current = null;
@@ -370,34 +391,97 @@ export default function CalendarPage() {
     const task = active.data.current.task as CalendarTask;
     if (!task.start_time) return;
 
-    const originalStartDate = new Date(task.start_time);
-    const minutesOffset = delta.y / HOUR_HEIGHT * 60;
-    const targetDay = new Date(over.id as string);
-    const newStartDate = new Date(Date.UTC(targetDay.getUTCFullYear(), targetDay.getUTCMonth(), targetDay.getUTCDate(), originalStartDate.getUTCHours(), originalStartDate.getUTCMinutes()));
-    newStartDate.setUTCMinutes(newStartDate.getUTCMinutes() + minutesOffset);
-    const roundedMinutes = Math.round(newStartDate.getUTCMinutes() / 15) * 15;
-    newStartDate.setUTCMinutes(roundedMinutes, 0, 0);
+    // Simple drag logic - work with minutes directly
+    const originalStartMinutes = timeToUTCMinutes(task.start_time);
+    const minutesOffset = Math.round((delta.y / HOUR_HEIGHT * 60) / 15) * 15; // Round to 15-min slots
+    const newStartMinutes = Math.max(0, Math.min(1440, originalStartMinutes + minutesOffset));
     const duration = task.effort_units ?? preferences.session_length ?? 60;
-    const newEndDate = new Date(newStartDate.getTime() + duration * 60000);
-    const dateKey = toUTC_YYYYMMDD(newStartDate);
+    const newEndMinutes = newStartMinutes + duration;
+    
+    // Get target date - handle both string and Date objects
+    let dateKey: string;
+    if (typeof over.id === 'string' && over.id.includes('-')) {
+      // It's already a date string like "2024-01-15"
+      dateKey = over.id;
+    } else {
+      // Convert to date string
+      const targetDate = new Date(over.id as string);
+      dateKey = getDateString(targetDate);
+    }
+    
+    // Simple busy slots calculation
     let busySlots: {start:number, end:number}[] = [];
+    
+    // Add sleep time
     const sleepStart = timeToUTCMinutes(preferences.sleep_start);
     const sleepEnd = timeToUTCMinutes(preferences.sleep_end);
-    if(sleepStart > sleepEnd) { busySlots.push({start:sleepStart, end:1440}, {start:0,end:sleepEnd}); } 
-    else { busySlots.push({start:sleepStart, end:sleepEnd}); }
-    preferences.meal_start_times.forEach(ms => { const s = timeToUTCMinutes(ms); busySlots.push({start:s, end:s + preferences.meal_duration}); });
-    timeBlocks.filter(b => new Date(b.start_time).toISOString().startsWith(dateKey)).forEach(b => { busySlots.push({start:timeToUTCMinutes(new Date(b.start_time)), end:timeToUTCMinutes(new Date(b.end_time))}); });
-    (tasks[dateKey] ?? []).forEach(t => { if(t.task_id !== task.task_id && t.start_time && t.end_time) { busySlots.push({start:timeToUTCMinutes(new Date(t.start_time)), end:timeToUTCMinutes(new Date(t.end_time))}); } });
-    busySlots = mergeSlots(busySlots);
-    const newStartMins = newStartDate.getUTCHours()*60 + newStartDate.getUTCMinutes();
-    const newEndMins = newStartMins + duration;
-    const isBlocked = busySlots.some(slot => newStartMins < slot.end && newEndMins > slot.start);
-    if (isBlocked) { 
-      // Could show a toast notification here instead
-      return; 
+    if(sleepStart > sleepEnd) { 
+      busySlots.push({start:sleepStart, end:1440}, {start:0,end:sleepEnd}); 
+    } else { 
+      busySlots.push({start:sleepStart, end:sleepEnd}); 
     }
-    setRescheduleDetails({taskId: task.task_id, title: task.title, newStartTime: newStartDate, newEndTime: newEndDate});
-    setIsRescheduleOpen(true);
+    
+    // Add meal times
+    preferences.meal_start_times.forEach(mealTime => { 
+      const start = timeToUTCMinutes(mealTime); 
+      busySlots.push({start, end: start + preferences.meal_duration}); 
+    });
+    
+    // Add existing tasks for this day (except the one being dragged)
+    (tasks[dateKey] ?? []).forEach(t => { 
+      if(t.task_id !== task.task_id && t.start_time && t.end_time) { 
+        busySlots.push({
+          start: timeToUTCMinutes(t.start_time), 
+          end: timeToUTCMinutes(t.end_time)
+        }); 
+      } 
+    });
+    
+    busySlots = mergeSlots(busySlots);
+    
+    // Check for collisions using simple minutes
+    const hasCollision = busySlots.some(slot => !(newEndMinutes <= slot.start || newStartMinutes >= slot.end));
+    
+    if (hasCollision) {
+      console.log('❌ Invalid slot - task will snap back to original position');
+      // Don't update anything - task will automatically snap back to original position
+      // This provides immediate visual feedback that the slot is unavailable
+      return;
+    }
+    
+    // Valid slot - update task directly
+    const { error } = await supabase.from('tasks').update({
+      scheduled_date: dateKey,
+      start_time: minutesToTimeString(newStartMinutes),
+      end_time: minutesToTimeString(newEndMinutes),
+      task_status: 'scheduled',
+    }).eq('task_id', task.task_id);
+    
+    if (!error) {
+      console.log('✅ Task moved to valid slot');
+      // Update local state directly instead of full refresh
+      setTasks(prevTasks => {
+        const newTasks = { ...prevTasks };
+        
+        // Remove task from old date
+        Object.keys(newTasks).forEach(date => {
+          newTasks[date] = newTasks[date].filter(t => t.task_id !== task.task_id);
+          if (newTasks[date].length === 0) delete newTasks[date];
+        });
+        
+        // Add task to new date with updated times
+        if (!newTasks[dateKey]) newTasks[dateKey] = [];
+        newTasks[dateKey].push({
+          ...task,
+          scheduled_date: dateKey,
+          start_time: minutesToTimeString(newStartMinutes),
+          end_time: minutesToTimeString(newEndMinutes),
+          task_status: 'scheduled'
+        });
+        
+        return newTasks;
+      });
+    }
   };
 
   // --- RENDER LOGIC ---
@@ -421,22 +505,7 @@ export default function CalendarPage() {
           setIsEditOpen(true);
         }}
       />
-      <RescheduleConfirmModal
-        isOpen={isRescheduleOpen}
-        onClose={() => setIsRescheduleOpen(false)}
-        onConfirm={async ({ taskId, newStartTime, newEndTime }) => {
-          await supabase.from('tasks').update({
-            scheduled_date: toUTC_YYYYMMDD(newStartTime),
-            start_time: newStartTime.toISOString(),
-            end_time: newEndTime.toISOString(),
-            task_status: 'scheduled', // Update status when scheduling
-          }).eq('task_id', taskId);
-          await fetchData();
-          setIsRescheduleOpen(false);
-          setRescheduleDetails(null);
-        }}
-        details={rescheduleDetails}
-      />
+
       <AddTimeBlockModal
         isOpen={isAddBlockOpen}
         onClose={() => setIsAddBlockOpen(false)}
@@ -453,8 +522,8 @@ export default function CalendarPage() {
           await supabase.from('time_blocks').insert({
             title,
             user_id: user.id,
-            start_time: startDate.toISOString(),
-            end_time: endDate.toISOString(),
+            start_time: extractTimeString(startDate),
+            end_time: extractTimeString(endDate),
           });
           await fetchData();
           setIsAddBlockOpen(false);
@@ -499,13 +568,14 @@ export default function CalendarPage() {
             updatePayload.scheduled_date = updates.scheduled_date;
             updatePayload.task_status = 'scheduled'; // Update status when scheduling
             if (editTask.start_time) {
-              const oldStart = new Date(editTask.start_time);
+              // Parse time string and create new date
+              const [hours, minutes] = editTask.start_time.split(':').map(Number);
               const newStart = new Date(updates.scheduled_date);
-              newStart.setUTCHours(oldStart.getUTCHours(), oldStart.getUTCMinutes(), 0, 0);
+              newStart.setHours(hours, minutes, 0, 0);
               const newEffort = updates.effort_units || editTask.effort_units || 50;
               const newEnd = new Date(newStart.getTime() + newEffort * 60 * 1000);
-              updatePayload.start_time = newStart.toISOString();
-              updatePayload.end_time = newEnd.toISOString();
+              updatePayload.start_time = extractTimeString(newStart);
+              updatePayload.end_time = extractTimeString(newEnd);
             }
           }
           if (Object.keys(updatePayload).length > 0) {
