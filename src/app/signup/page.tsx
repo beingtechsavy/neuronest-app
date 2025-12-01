@@ -54,6 +54,22 @@ export default function SignupPage() {
       } else if (data.session && data.user) {
         // User signed up successfully - database trigger should handle profile creation
         console.log('✅ User created:', data.user.email)
+        
+        // Send welcome email
+        try {
+          await fetch('/api/email/send-welcome', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: data.user.email,
+              username: email.split('@')[0],
+            }),
+          })
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError)
+          // Don't block signup if email fails
+        }
+        
         setMessage('🎉 Account created! Redirecting...')
         addTimeout(() => router.push('/dashboard'), 1000)
       } else if (data.user && !data.session) {

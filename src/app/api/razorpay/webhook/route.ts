@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { sendSubscriptionConfirmationEmail, sendPaymentReceiptEmail } from '@/lib/email-service';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -168,6 +169,39 @@ async function handleSubscriptionActivated(subscription: any, client: any) {
         updated_at: new Date().toISOString(),
       })
       .eq('razorpay_subscription_id', subscription.id);
+    
+    // Get user details for email
+    const { data: subData } = await client
+      .from('subscriptions')
+      .select('user_id, plan_type')
+      .eq('razorpay_subscription_id', subscription.id)
+      .single();
+    
+    if (subData) {
+      const { data: userData } = await client.auth.admin.getUserById(subData.user_id);
+      
+      if (userData?.user?.email) {
+        const planName = subData.plan_type === 'master' ? 'Master Plan' : 'Warrior Plan';
+        const features = subData.plan_type === 'master' 
+          ? ['Unlimited AI Breakdowns', 'Priority Support', 'Advanced Analytics']
+          : ['Unlimited AI Breakdowns', 'All Premium Features', 'Priority Support', 'Advanced Analytics', 'Custom Integrations'];
+        
+        const nextBillingDate = new Date();
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+        
+        const amount = subData.plan_type === 'master' ? '₹99/month' : '₹199/month';
+        
+        // Send subscription confirmation email
+        await sendSubscriptionConfirmationEmail(
+          userData.user.email,
+          userData.user.email.split('@')[0],
+          planName,
+          features,
+          nextBillingDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+          amount
+        ).catch(err => console.error('Failed to send subscription email:', err));
+      }
+    }
   } catch (error) {
     console.error('Error handling subscription activated:', error);
   }
@@ -219,6 +253,32 @@ async function handleSubscriptionCharged(subscription: any, payment: any, client
         updated_at: new Date().toISOString(),
       })
       .eq('razorpay_subscription_id', subscription.id);
+    
+    // Get user details for receipt email
+    const { data: subData } = await client
+      .from('subscriptions')
+      .select('user_id, plan_type')
+      .eq('razorpay_subscription_id', subscription.id)
+      .single();
+    
+    if (subData) {
+      const { data: userData } = await client.auth.admin.getUserById(subData.user_id);
+      
+      if (userData?.user?.email) {
+        const planName = subData.plan_type === 'master' ? 'Master Plan' : 'Warrior Plan';
+        const amount = `₹${(payment.amount / 100).toFixed(2)}`;
+        
+        // Send payment receipt email
+        await sendPaymentReceiptEmail(
+          userData.user.email,
+          userData.user.email.split('@')[0],
+          planName,
+          amount,
+          payment.id,
+          new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+        ).catch(err => console.error('Failed to send receipt email:', err));
+      }
+    }
   } catch (error) {
     console.error('Error handling subscription charged:', error);
   }
