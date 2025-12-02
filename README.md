@@ -2,6 +2,26 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### 1. Environment Setup
+
+Copy `.env.example` to `.env.local` and configure your environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local` with your actual credentials. **Never commit this file to git.**
+
+### 2. Security Check
+
+Before running the app, verify your security configuration:
+
+```bash
+npm run security-check
+```
+
+### 3. Run Development Server
+
 First, run the development server:
 
 ```bash
@@ -34,3 +54,25 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 🔒 Security
+
+This project follows strict security practices:
+
+- **Environment variables** are never committed to git
+- **Service role keys** are only used server-side in API routes
+- **Sensitive keys** are never exposed to the browser
+- **Automatic security checks** run before each build
+
+For detailed security guidelines, see [SECURITY.md](./SECURITY.md).
+
+### Quick Security Verification
+
+```bash
+npm run security-check
+```
+
+This will verify:
+- ✅ `.env.local` is not tracked by git
+- ✅ No sensitive keys have `NEXT_PUBLIC_` prefix
+- ✅ Service role key is not used in client-side code

@@ -112,11 +112,40 @@ CMD ["npm", "start"]
 
 ## 🔒 Security Considerations
 
-- [x] **Supabase RLS**: Row Level Security enabled
-- [x] **Authentication**: Secure email-based auth
-- [x] **API Keys**: Environment variables properly configured
+### Critical Security Checks
+- [x] **Environment Variables**: `.env.local` not tracked by git
+- [x] **Service Role Key**: Only used in server-side API routes
+- [x] **Key Prefixes**: No sensitive keys have `NEXT_PUBLIC_` prefix
+- [x] **Client-Side Safety**: No admin keys exposed to browser
+- [x] **Supabase RLS**: Row Level Security enabled on all tables
+- [x] **Authentication**: Secure email-based auth with Supabase
 - [x] **Input Validation**: Form validation implemented
 - [x] **XSS Prevention**: React's built-in protection
+
+### Security Verification
+Run the security verification script before deployment:
+```bash
+node verify-security.js
+```
+
+### Production Environment Setup
+1. **Vercel Environment Variables** (Project Settings → Environment Variables):
+   - `NEXT_PUBLIC_SUPABASE_URL` - Public (safe)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public (safe)
+   - `SUPABASE_SERVICE_ROLE_KEY` - **Mark as Sensitive** ⚠️
+   - `AZURE_OPENAI_API_KEY` - **Mark as Sensitive** ⚠️
+   - `RAZORPAY_KEY_SECRET` - **Mark as Sensitive** ⚠️
+   - `RESEND_API_KEY` - **Mark as Sensitive** ⚠️
+
+2. **Key Rotation** (if keys were ever exposed):
+   - Supabase: Project Settings → API → Reset service_role key
+   - Azure OpenAI: Regenerate in Azure Portal
+   - Razorpay: Regenerate in Dashboard
+   - Resend: Create new key, delete old
+
+3. **Security Documentation**:
+   - Review `SECURITY.md` for detailed guidelines
+   - Use `.env.example` as template for new environments
 
 ## 📈 Success Metrics
 

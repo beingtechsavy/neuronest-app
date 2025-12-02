@@ -50,6 +50,7 @@ next-env.d.ts
 # Private documentation and planning files
 *.md
 !README.md
+!SECURITY.md
 *.sql
 ENVIRONMENT_VARIABLES.md
 QUICK_SETUP_CHECKLIST.md

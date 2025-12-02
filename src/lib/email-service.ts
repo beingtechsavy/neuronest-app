@@ -1,4 +1,4 @@
-import { resend, EMAIL_FROM } from './resend';
+import { resend, EMAIL_FROM, isEmailServiceConfigured } from './resend';
 import {
   welcomeEmail,
   verificationEmail,
@@ -13,10 +13,25 @@ interface SendEmailResult {
   error?: string;
 }
 
+// Helper to check if email service is available
+function checkEmailService(): SendEmailResult | null {
+  if (!isEmailServiceConfigured()) {
+    console.warn('Email service not configured - RESEND_API_KEY missing');
+    return { 
+      success: false, 
+      error: 'Email service is not configured. Please set RESEND_API_KEY environment variable.' 
+    };
+  }
+  return null;
+}
+
 export async function sendWelcomeEmail(
   to: string,
   username: string
 ): Promise<SendEmailResult> {
+  const configCheck = checkEmailService();
+  if (configCheck) return configCheck;
+
   try {
     const template = welcomeEmail(username);
     
@@ -45,6 +60,9 @@ export async function sendVerificationEmail(
   username: string,
   verificationLink: string
 ): Promise<SendEmailResult> {
+  const configCheck = checkEmailService();
+  if (configCheck) return configCheck;
+
   try {
     const template = verificationEmail(verificationLink, username);
     
@@ -73,6 +91,9 @@ export async function sendPasswordResetEmail(
   username: string,
   resetLink: string
 ): Promise<SendEmailResult> {
+  const configCheck = checkEmailService();
+  if (configCheck) return configCheck;
+
   try {
     const template = passwordResetEmail(resetLink, username);
     
@@ -104,6 +125,9 @@ export async function sendSubscriptionConfirmationEmail(
   nextBillingDate: string,
   amount: string
 ): Promise<SendEmailResult> {
+  const configCheck = checkEmailService();
+  if (configCheck) return configCheck;
+
   try {
     const template = subscriptionConfirmationEmail(
       username,
@@ -141,6 +165,9 @@ export async function sendPaymentReceiptEmail(
   transactionId: string,
   date: string
 ): Promise<SendEmailResult> {
+  const configCheck = checkEmailService();
+  if (configCheck) return configCheck;
+
   try {
     const template = paymentReceiptEmail(
       username,
