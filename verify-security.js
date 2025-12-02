@@ -12,10 +12,17 @@ console.log('🔒 Running Security Verification...\n');
 
 let hasIssues = false;
 
-// 1. Check if .env.local exists
+// Detect if running in CI/CD environment (Vercel, GitHub Actions, etc.)
+const isCI = process.env.CI || process.env.VERCEL || process.env.GITHUB_ACTIONS;
+
+// 1. Check if .env.local exists (skip in CI/CD)
 if (!fs.existsSync('.env.local')) {
-  console.log('❌ .env.local not found - create it from .env.example');
-  hasIssues = true;
+  if (isCI) {
+    console.log('ℹ️  .env.local not found (expected in CI/CD - using platform environment variables)');
+  } else {
+    console.log('⚠️  .env.local not found - create it from .env.example for local development');
+    // Don't fail the build, just warn
+  }
 } else {
   console.log('✅ .env.local exists');
 }
@@ -105,10 +112,17 @@ if (hasIssues) {
   process.exit(1);
 } else {
   console.log('✅ All security checks passed!');
-  console.log('\n📋 Next steps for production:');
-  console.log('   1. Set environment variables in Vercel');
-  console.log('   2. Mark sensitive keys as "Sensitive"');
-  console.log('   3. Enable Supabase RLS on all tables');
-  console.log('   4. Review SECURITY.md for best practices');
+  
+  if (isCI) {
+    console.log('\n📋 CI/CD Environment Detected:');
+    console.log('   ✓ Ensure environment variables are set in deployment platform');
+    console.log('   ✓ Mark sensitive keys as "Sensitive" or "Secret"');
+  } else {
+    console.log('\n📋 Next steps for production:');
+    console.log('   1. Set environment variables in Vercel');
+    console.log('   2. Mark sensitive keys as "Sensitive"');
+    console.log('   3. Enable Supabase RLS on all tables');
+    console.log('   4. Review SECURITY.md for best practices');
+  }
   process.exit(0);
 }
