@@ -20,6 +20,7 @@ export default function GoogleSignInButton({ mode, className = '' }: GoogleSignI
       const redirectUrl = `${window.location.origin}/auth/callback`
       console.log('🚀 Initiating Google OAuth')
       console.log('Redirect URL:', redirectUrl)
+      console.log('Timestamp:', new Date().toISOString())
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -27,8 +28,9 @@ export default function GoogleSignInButton({ mode, className = '' }: GoogleSignI
           redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account', // Changed from 'consent' to allow account selection
           },
+          skipBrowserRedirect: false,
         }
       })
 
@@ -36,8 +38,10 @@ export default function GoogleSignInButton({ mode, className = '' }: GoogleSignI
         console.error('❌ OAuth initiation error:', error)
         setError(error.message)
         setLoading(false)
+      } else {
+        console.log('✅ OAuth initiated successfully')
+        // User will be redirected to Google
       }
-      // If successful, user will be redirected to Google
     } catch (err) {
       console.error('💥 OAuth exception:', err)
       setError('Failed to connect with Google')

@@ -61,22 +61,32 @@ export async function GET(request: NextRequest) {
     )
     
     console.log('🔄 Exchanging code for session...')
-    console.log('🔍 Checking for code verifier in cookies...')
     
-    // The code verifier should be in cookies - log if it's missing
-    const allCookies = cookieStore.getAll()
-    console.log('Total cookies:', allCookies.length)
-    const codeVerifierCookie = allCookies.find(c => c.name.includes('code-verifier') || c.name.includes('pkce'))
-    console.log('Code verifier cookie:', codeVerifierCookie ? 'FOUND' : 'MISSING')
-    if (codeVerifierCookie) {
-      console.log('Code verifier cookie name:', codeVerifierCookie.name)
-    }
+    // Exchange the code for a session with timeout
+    const exchangePromise = supabase.auth.exchangeCodeForSession(code)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Exchange timeout')), 10000)
+    )
     
-    // Exchange the code for a session
-    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error: exchangeError } = await Promise.race([
+      exchangePromise,
+      timeoutPromise
+    ]).catch(err => {
+      console.error('❌ Exchange timeout or error:', err)
+      return { data: null, error: err }
+    }) as any
     
     if (exchangeError) {
       console.error('❌ Code exchange failed:', exchangeError)
+      
+      // Check for specific PKCE errors
+      if (exchangeError.message?.includes('code_verifier') || exchangeError.message?.includes('PKCE')) {
+        console.error('🔴 PKCE verification failed - code verifier missing or invalid')
+        return NextResponse.redirect(
+          `${requestUrl.origin}/login?error=pkce_failed&message=${encodeURIComponent('Authentication failed. Please try again.')}`
+        )
+      }
+      
       return NextResponse.redirect(
         `${requestUrl.origin}/login?error=exchange_failed&message=${encodeURIComponent(exchangeError.message)}`
       )
@@ -91,31 +101,18 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Session created for:', data.user.email)
     
-    // Wait for profile creation (with retries)
-    let profileExists = false
-    const maxRetries = 6 // 3 seconds total
+    // Check for profile (quick check, don't wait)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', data.user.id)
+      .single()
     
-    for (let i = 0; i < maxRetries; i++) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single()
-      
-      if (profile) {
-        console.log('✅ Profile found')
-        profileExists = true
-        break
-      }
-      
-      if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-    }
-    
-    if (!profileExists) {
-      console.warn('⚠️  Profile not found after 3 seconds, but continuing...')
-      // Don't block login - profile might be created by trigger eventually
+    if (profile) {
+      console.log('✅ Profile exists')
+    } else {
+      console.log('⚠️  Profile not found yet - will be created by trigger')
+      // Don't block - profile creation happens async via database trigger
     }
     
     // Redirect to dashboard
