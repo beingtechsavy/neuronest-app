@@ -52,20 +52,30 @@ export default function Dashboard() {
         return;
       }
 
-      // Fetch profile, subjects, and breakdown tasks in parallel
-      const [profileRes, subjectsRes, breakdownTasksRes] = await Promise.all([
-        supabase.from('profiles').select('username').eq('id', user.id).single(),
+      // Ensure profile exists with retry logic (handles race conditions)
+      const { ensureProfileExists } = await import('@/lib/profileInitializer');
+      const profileData = await ensureProfileExists(supabase, user.id, {
+        maxRetries: 5,
+        retryDelay: 500,
+        createIfMissing: true,
+      });
+
+      if (!profileData) {
+        throw new Error('Failed to initialize user profile. Please try refreshing the page.');
+      }
+
+      // Fetch subjects and breakdown tasks in parallel
+      const [subjectsRes, breakdownTasksRes] = await Promise.all([
         supabase.from('subjects').select('*').eq('user_id', user.id).order('subject_id'),
         supabase.from('tasks').select('task_id').eq('user_id', user.id).eq('task_status', 'breakdown').limit(1)
       ]);
 
-      if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
       if (subjectsRes.error) throw subjectsRes.error;
 
-      if (!profileRes.data || !profileRes.data.username) {
+      if (!profileData.username) {
         setIsUsernameModalOpen(true);
       }
-      setProfile(profileRes.data);
+      setProfile({ username: profileData.username || null });
       setSubjects(subjectsRes.data || []);
       
       // Check if user has breakdown tasks and show hint

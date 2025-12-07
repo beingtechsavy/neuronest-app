@@ -52,23 +52,33 @@ export default function SignupPage() {
           setError(signUpError.message)
         }
       } else if (data.session && data.user) {
-        // User signed up successfully - database trigger should handle profile creation
+        // User signed up successfully - ensure profile is initialized
         console.log('✅ User created:', data.user.email)
         
-        // Send welcome email
+        // Initialize profile with retry logic
         try {
-          await fetch('/api/email/send-welcome', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: data.user.email,
-              username: email.split('@')[0],
-            }),
-          })
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError)
-          // Don't block signup if email fails
+          const { initializeUserData } = await import('@/lib/profileInitializer');
+          const result = await initializeUserData(supabase, data.user.id);
+          
+          if (result.success) {
+            console.log('✅ User data initialized successfully');
+          } else {
+            console.warn('⚠️  Profile initialization incomplete');
+          }
+        } catch (initError) {
+          console.error('Profile initialization error:', initError);
+          // Continue anyway - dashboard will handle it
         }
+        
+        // Send welcome email (non-blocking)
+        fetch('/api/email/send-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.user.email,
+            username: email.split('@')[0],
+          }),
+        }).catch(err => console.error('Failed to send welcome email:', err));
         
         setMessage('🎉 Account created! Redirecting...')
         addTimeout(() => router.push('/dashboard'), 1000)

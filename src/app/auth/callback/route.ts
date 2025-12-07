@@ -101,18 +101,23 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Session created for:', data.user.email)
     
-    // Check for profile (quick check, don't wait)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', data.user.id)
-      .single()
-    
-    if (profile) {
-      console.log('✅ Profile exists')
-    } else {
-      console.log('⚠️  Profile not found yet - will be created by trigger')
-      // Don't block - profile creation happens async via database trigger
+    // Ensure profile exists with retry logic (handles race conditions)
+    try {
+      const { ensureProfileExists } = await import('@/lib/profileInitializer');
+      const profile = await ensureProfileExists(supabase, data.user.id, {
+        maxRetries: 5,
+        retryDelay: 500,
+        createIfMissing: true,
+      });
+      
+      if (profile) {
+        console.log('✅ Profile verified and ready');
+      } else {
+        console.warn('⚠️  Profile initialization incomplete, but continuing');
+      }
+    } catch (profileError) {
+      console.error('❌ Profile initialization error:', profileError);
+      // Don't block login - dashboard will handle it
     }
     
     // Redirect to dashboard
