@@ -22,6 +22,15 @@ function getSupabaseClient() {
 
 export async function POST(req: NextRequest) {
   try {
+    // CRITICAL: Webhook secret must be configured
+    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+      console.error('RAZORPAY_WEBHOOK_SECRET not configured - webhook rejected');
+      return NextResponse.json(
+        { error: 'Webhook not configured' },
+        { status: 503 }
+      );
+    }
+
     // Check if required services are configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json(
@@ -38,23 +47,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
-    // Verify Razorpay webhook signature (if webhook secret is configured)
-    if (process.env.RAZORPAY_WEBHOOK_SECRET) {
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
-        .update(body)
-        .digest('hex');
+    // ALWAYS verify webhook signature - CRITICAL SECURITY CHECK
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+      .update(body)
+      .digest('hex');
 
-      if (signature !== expectedSignature) {
-        console.error('Invalid Razorpay webhook signature');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-      }
+    if (signature !== expectedSignature) {
+      console.error('Invalid Razorpay webhook signature - potential fraud attempt');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     const event = JSON.parse(body);
     console.log('Razorpay webhook event:', event.event);
 
     const client = getSupabaseClient();
+
+    // Log webhook event for audit trail and idempotency
+    const eventId = event.payload?.payment?.entity?.id || event.payload?.subscription?.entity?.id || `event_${Date.now()}`;
+    
+    // Check for duplicate webhook (idempotency)
+    const { data: existingLog } = await client
+      .from('webhook_logs')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('event_type', event.event)
+      .single();
+
+    if (existingLog) {
+      console.log('Duplicate webhook detected, skipping:', eventId);
+      return NextResponse.json({ success: true, message: 'Duplicate event ignored' });
+    }
+
+    // Log the webhook event
+    try {
+      await client.from('webhook_logs').insert({
+        event_id: eventId,
+        event_type: event.event,
+        payload: event,
+        signature: signature,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to log webhook:', err);
+    }
 
     // Handle different webhook events
     switch (event.event) {

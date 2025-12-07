@@ -1,8 +1,10 @@
+import { env } from './env';
+
 // Paddle configuration and utilities
 export const paddleConfig = {
-  vendorId: process.env.NEXT_PUBLIC_PADDLE_VENDOR_ID!,
-  clientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN!,
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+  vendorId: env.NEXT_PUBLIC_PADDLE_VENDOR_ID || '',
+  clientToken: env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '',
+  environment: env.NODE_ENV === 'production' ? 'production' : 'sandbox',
 };
 
 // Product configurations for Paddle
