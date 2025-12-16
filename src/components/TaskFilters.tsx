@@ -7,8 +7,8 @@ import { Search, ListFilter, ArrowUpDown } from 'lucide-react';
 interface TaskFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
+  statusFilter: 'all' | 'breakdown' | 'inbox' | 'scheduled' | 'completed';
+  setStatusFilter: (value: 'all' | 'breakdown' | 'inbox' | 'scheduled' | 'completed') => void;
   sortOrder: string;
   setSortOrder: (value: string) => void;
 }
@@ -42,12 +42,13 @@ export default function TaskFilters({
             <ListFilter size={16} className="text-slate-400" />
             <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
                 className="bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
             >
                 <option value="all">All Statuses</option>
-                <option value="pending">Inbox</option>
-                <option value="Scheduled">Scheduled</option>
+                <option value="breakdown">Breakdown</option>
+                <option value="inbox">Inbox</option>
+                <option value="scheduled">Scheduled</option>
                 <option value="completed">Completed</option>
             </select>
         </div>

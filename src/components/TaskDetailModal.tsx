@@ -222,6 +222,12 @@ interface CalendarTask {
   deadline: string | null;
   status: string;
   is_stressful: boolean;
+  task_status: 'breakdown' | 'inbox' | 'scheduled' | 'completed';
+  ai_generated?: boolean;
+  difficulty_level?: 'EASY' | 'MEDIUM' | 'HARD';
+  estimated_minutes?: number;
+  ai_step_order?: number;
+  ai_breakdown_id?: number;
 }
 
 type DetailedTask = CalendarTask & { startTime: Date; endTime: Date; };
@@ -290,25 +296,25 @@ export default function TaskDetailModal({ isOpen, onClose, task, onEdit, onDelet
 
         {/* Content */}
         <div className="px-6 pb-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <Tag size={18} className="text-slate-400 flex-shrink-0" style={{ color: subjectColor }} />
+            <span className="text-base text-slate-200">{subjectTitle}</span>
+          </div>
+          {chapterTitle && (
             <div className="flex items-center gap-4">
-                <Tag size={18} className="text-slate-400 flex-shrink-0" style={{ color: subjectColor }} />
-                <span className="text-base text-slate-200">{subjectTitle}</span>
+              <Folder size={18} className="text-slate-400 flex-shrink-0" />
+              <span className="text-base text-slate-200">{chapterTitle}</span>
             </div>
-            {chapterTitle && (
-                <div className="flex items-center gap-4">
-                    <Folder size={18} className="text-slate-400 flex-shrink-0" />
-                    <span className="text-base text-slate-200">{chapterTitle}</span>
-                </div>
-            )}
-            <div className="flex items-center gap-4">
-                <Clock size={18} className="text-slate-400 flex-shrink-0" />
-                <span className="text-base text-slate-200">
-                  {task.start_time && task.end_time 
-                    ? `${formatTimeFromString(task.start_time)} - ${formatTimeFromString(task.end_time)}`
-                    : `${formatTime(task.startTime)} - ${formatTime(task.endTime)}`
-                  }
-                </span>
-            </div>
+          )}
+          <div className="flex items-center gap-4">
+            <Clock size={18} className="text-slate-400 flex-shrink-0" />
+            <span className="text-base text-slate-200">
+              {task.start_time && task.end_time
+                ? `${formatTimeFromString(task.start_time)} - ${formatTimeFromString(task.end_time)}`
+                : `${formatTime(task.startTime)} - ${formatTime(task.endTime)}`
+              }
+            </span>
+          </div>
         </div>
 
         {/* Footer */}

@@ -21,7 +21,7 @@ export default function TasksPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'breakdown' | 'inbox' | 'scheduled' | 'completed'>('all');
   const [sortOrder, setSortOrder] = useState('deadline');
   
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -36,7 +36,7 @@ export default function TasksPage() {
       const { data, error: fetchError } = await supabase
         .from('tasks')
         .select(`
-          task_id, title, status, deadline, created_at, effort_units,
+          task_id, title, task_status, deadline, created_at, effort_units, scheduled_date, is_stressful, ai_generated,
           chapters ( title, subjects ( title, color ) )
         `)
         .eq('user_id', user.id);
@@ -57,7 +57,7 @@ export default function TasksPage() {
   const filteredAndSortedTasks = useMemo(() => {
     return allTasks
       .filter(task => {
-        if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+        if (statusFilter !== 'all' && task.task_status !== statusFilter) return false;
         if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
         return true;
       })

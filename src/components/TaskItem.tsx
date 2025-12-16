@@ -12,19 +12,24 @@ interface TaskItemProps {
 }
 
 // --- HELPER for Status Badges ---
-const StatusBadge = ({ status }: { status: string }) => {
-  // --- FIX IS HERE ---
-  // We've explicitly typed the 'styles' object to tell TypeScript
-  // that it can be indexed by any string. This resolves the error.
-  const styles: { [key: string]: string } = {
-    pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-    Scheduled: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+const StatusBadge = ({ taskStatus }: { taskStatus: 'breakdown' | 'inbox' | 'scheduled' | 'completed' }) => {
+  const styles: Record<string, string> = {
+    breakdown: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+    inbox: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+    scheduled: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     completed: 'bg-green-500/10 text-green-400 border-green-500/30',
   };
-  const text = status === 'pending' ? 'Inbox' : status;
+  
+  const labels: Record<string, string> = {
+    breakdown: 'Breakdown',
+    inbox: 'Inbox',
+    scheduled: 'Scheduled',
+    completed: 'Completed',
+  };
+  
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${styles[status] || 'bg-slate-600'}`}>
-      {text}
+    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${styles[taskStatus]}`}>
+      {labels[taskStatus]}
     </span>
   );
 };
@@ -54,7 +59,7 @@ export default function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <StatusBadge status={task.status} />
+        <StatusBadge taskStatus={task.task_status} />
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
           <button onClick={() => onEdit(task)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-600 rounded-md"><Edit size={16} /></button>
           <button onClick={() => onDelete(task)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded-md"><Trash2 size={16} /></button>

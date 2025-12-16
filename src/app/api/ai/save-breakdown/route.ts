@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getUserPlanInfo, canCreateSubject } from '@/lib/subscriptionLimits';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -55,6 +56,32 @@ export async function POST(req: NextRequest) {
     }
 
     const client = getSupabaseClient();
+
+    // Validate subscription status before allowing save
+    const planInfo = await getUserPlanInfo(userId);
+    if (!planInfo) {
+      return NextResponse.json(
+        { error: 'Unable to verify subscription status' },
+        { status: 403 }
+      );
+    }
+
+    // Check if user can create subjects (if creating new subject)
+    if (createNewSubject && newSubjectName) {
+      const canCreate = await canCreateSubject(userId);
+      if (!canCreate) {
+        return NextResponse.json(
+          { 
+            error: planInfo.subscription_active 
+              ? 'Subject limit reached for your plan' 
+              : 'Subscription expired - upgrade to create more subjects',
+            planType: planInfo.plan_type,
+            subscriptionActive: planInfo.subscription_active
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     let subjectId = selectedSubjectId;
     let chapterId = null;

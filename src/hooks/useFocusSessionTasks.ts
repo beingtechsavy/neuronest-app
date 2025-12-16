@@ -57,7 +57,7 @@ export function useFocusSessionTasks() {
           )
         `)
         .eq('user_id', user.id)
-        .neq('status', 'Completed')
+        .neq('task_status', 'completed')
         .order('scheduled_date', { ascending: true, nullsFirst: false })
         .limit(10);
 

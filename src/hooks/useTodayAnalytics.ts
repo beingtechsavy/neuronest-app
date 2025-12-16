@@ -76,7 +76,7 @@ export function useTodayAnalytics() {
       // Get today's tasks
       const { data: todayTasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('task_id, status, effort_units, scheduled_date')
+        .select('task_id, task_status, effort_units, scheduled_date')
         .eq('user_id', user.id)
         .eq('scheduled_date', today);
 
@@ -86,7 +86,7 @@ export function useTodayAnalytics() {
       }
 
       const totalTodayTasks = (todayTasks && !tasksError) ? todayTasks.length : 0;
-      const completedTodayTasks = (todayTasks && !tasksError) ? todayTasks.filter(t => t.status === 'Completed').length : 0;
+      const completedTodayTasks = (todayTasks && !tasksError) ? todayTasks.filter(t => t.task_status === 'completed').length : 0;
       const todayProgress = totalTodayTasks > 0 ? (completedTodayTasks / totalTodayTasks) * 100 : 0;
       
       if (process.env.NODE_ENV === 'development') {
@@ -115,7 +115,7 @@ export function useTodayAnalytics() {
 
       // Calculate focus time from completed tasks (effort_units are in minutes) - fallback
       const focusTimeFromTasks = (todayTasks && !tasksError)
-        ? todayTasks.filter(t => t.status === 'Completed')
+        ? todayTasks.filter(t => t.task_status === 'completed')
           .reduce((sum, t) => sum + (t.effort_units || 0), 0)
         : 0;
 

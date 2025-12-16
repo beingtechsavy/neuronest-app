@@ -53,10 +53,18 @@ export async function POST(req: NextRequest) {
       .update(body)
       .digest('hex');
 
+    // Log for debugging (remove in production)
+    console.log('Received signature:', signature);
+    console.log('Expected signature:', expectedSignature);
+
     if (signature !== expectedSignature) {
-      console.error('Invalid Razorpay webhook signature - potential fraud attempt');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      console.error('🚨 SECURITY ALERT: Invalid Razorpay webhook signature - potential fraud attempt');
+      console.error('Received:', signature);
+      console.error('Expected:', expectedSignature);
+      return NextResponse.json({ error: 'Unauthorized - Invalid signature' }, { status: 401 });
     }
+
+    console.log('✅ Webhook signature verified successfully');
 
     const event = JSON.parse(body);
     console.log('Razorpay webhook event:', event.event);

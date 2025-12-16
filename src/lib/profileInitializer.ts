@@ -8,8 +8,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 interface ProfileData {
   id: string;
   username?: string | null;
-  full_name?: string | null;
-  avatar_url?: string | null;
 }
 
 interface InitOptions {
@@ -40,7 +38,7 @@ export async function ensureProfileExists(
       // Try to fetch existing profile
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, username, full_name, avatar_url')
+        .select('id, username')
         .eq('id', userId)
         .single();
 
@@ -108,17 +106,15 @@ async function createProfileManually(
       return null;
     }
 
-    // Extract metadata
-    const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-    const avatarUrl = user.user_metadata?.avatar_url || null;
+    // Extract username from email
+    const username = user.email?.split('@')[0] || 'User';
 
     // Insert profile
     const { data: profile, error: insertError } = await supabase
       .from('profiles')
       .insert({
         id: userId,
-        full_name: fullName,
-        avatar_url: avatarUrl,
+        username: username,
       })
       .select()
       .single();
@@ -130,7 +126,7 @@ async function createProfileManually(
         // Fetch the existing profile
         const { data: existing } = await supabase
           .from('profiles')
-          .select('id, username, full_name, avatar_url')
+          .select('id, username')
           .eq('id', userId)
           .single();
         return existing;

@@ -68,7 +68,7 @@ export function useAnalytics() {
         try {
             const { data: tasks, error } = await supabase
                 .from('tasks')
-                .select('status, deadline, end_time')
+                .select('task_status, deadline, end_time')
                 .eq('user_id', user.id);
 
             if (error) {
@@ -85,22 +85,22 @@ export function useAnalytics() {
             }
 
         const totalTasks = tasks?.length || 0;
-        const completedTasks = tasks?.filter(t => t.status === 'Completed').length || 0;
+        const completedTasks = tasks?.filter(t => t.task_status === 'completed').length || 0;
         const overdueTasks = tasks?.filter(t => {
-            if (t.status === 'Completed') return false;
+            if (t.task_status === 'completed') return false;
             if (!t.deadline) return false;
             return new Date(t.deadline) < new Date();
         }).length || 0;
 
         const onTimeTasks = tasks?.filter(t => {
-            if (t.status !== 'Completed') return false;
+            if (t.task_status !== 'completed') return false;
             if (!t.deadline || !t.end_time) return false;
             return new Date(t.end_time) <= new Date(t.deadline);
         }).length || 0;
 
         // Calculate average completion time
         const completedWithDeadlines = tasks?.filter(t =>
-            t.status === 'Completed' && t.deadline && t.end_time
+            t.task_status === 'completed' && t.deadline && t.end_time
         ) || [];
 
         const avgCompletionTime = completedWithDeadlines.length > 0
@@ -150,7 +150,7 @@ export function useAnalytics() {
               is_stressful,
               tasks (
                 task_id,
-                status,
+                task_status,
                 effort_units,
                 is_stressful
               )
@@ -170,7 +170,7 @@ export function useAnalytics() {
 
                 const allTasks = chapters.flatMap(c => c.tasks || []);
                 const totalTasks = allTasks.length;
-                const completedTasks = allTasks.filter(t => t.status === 'Completed').length;
+                const completedTasks = allTasks.filter(t => t.task_status === 'completed').length;
 
                 const stressfulItems = [
                     subject.is_stressful ? 1 : 0,
@@ -182,7 +182,7 @@ export function useAnalytics() {
                     : 0;
 
                 const timeSpent = allTasks
-                    .filter(t => t.status === 'Completed')
+                    .filter(t => t.task_status === 'completed')
                     .reduce((sum, t) => sum + (t.effort_units || 0), 0);
 
                 return {
@@ -215,9 +215,9 @@ export function useAnalytics() {
 
             const { data: tasks, error } = await supabase
                 .from('tasks')
-                .select('scheduled_date, status, effort_units, end_time')
+                .select('scheduled_date, task_status, effort_units, end_time')
                 .eq('user_id', user.id)
-                .eq('status', 'Completed')
+                .eq('task_status', 'completed')
                 .not('scheduled_date', 'is', null)
                 .gte('scheduled_date', sixtyDaysAgo.toISOString().split('T')[0])
                 .order('scheduled_date', { ascending: false });
@@ -352,7 +352,7 @@ export function useAnalytics() {
 
             const { data: weekTasks } = await supabase
                 .from('tasks')
-                .select('task_id, status, effort_units, scheduled_date')
+                .select('task_id, task_status, effort_units, scheduled_date')
                 .eq('user_id', user.id)
                 .gte('scheduled_date', weekStart.toISOString().split('T')[0])
                 .lte('scheduled_date', weekEnd.toISOString().split('T')[0]);
@@ -365,10 +365,10 @@ export function useAnalytics() {
                 .lte('updated_at', weekEnd.toISOString())
                 .eq('completed', true);
 
-            const tasksCompleted = weekTasks?.filter(t => t.status === 'Completed').length || 0;
+            const tasksCompleted = weekTasks?.filter(t => t.task_status === 'completed').length || 0;
             const totalTasks = weekTasks?.length || 0;
             const timeSpent = weekTasks
-                ?.filter(t => t.status === 'Completed')
+                ?.filter(t => t.task_status === 'completed')
                 .reduce((sum, t) => sum + (t.effort_units || 0), 0) || 0;
 
             weeks.unshift({
@@ -393,9 +393,9 @@ export function useAnalytics() {
         try {
             const { data: tasks, error } = await supabase
                 .from('tasks')
-                .select('scheduled_date, status, effort_units, end_time')
+                .select('scheduled_date, task_status, effort_units, end_time')
                 .eq('user_id', user.id)
-                .eq('status', 'Completed')
+                .eq('task_status', 'completed')
                 .not('scheduled_date', 'is', null)
                 .gte('scheduled_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 

@@ -14,6 +14,16 @@ import {
 } from '@dnd-kit/core';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@supabase/auth-helpers-react';
+import { 
+  timeStringToMinutes, 
+  minutesToTimeString, 
+  getLocalDateString,
+  parsePreferenceTime,
+  mergeTimeSlots,
+  createPreferenceSlots,
+  findNextAvailableSlot,
+  type TimeSlot
+} from '@/lib/safeTimeUtils';
 // import Sidebar from '@/components/SideBar'; // No longer needed here
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WeeklyView from '@/components/WeeklyView';
@@ -41,15 +51,23 @@ export interface CalendarTask {
   chapter_id: number | null;
   deadline: string | null;
   status: string;
-  task_status?: 'breakdown' | 'inbox' | 'scheduled' | 'completed';
+  task_status: 'breakdown' | 'inbox' | 'scheduled' | 'completed';
   is_stressful: boolean;
+  ai_generated?: boolean;
+  difficulty_level?: 'EASY' | 'MEDIUM' | 'HARD';
+  estimated_minutes?: number;
+  ai_step_order?: number;
+  ai_breakdown_id?: number;
 }
 
 export interface TimeBlock {
   block_id: number;
   title: string;
-  start_time: string;
-  end_time: string;
+  start_time: string; // Legacy timestamp field
+  end_time: string;   // Legacy timestamp field
+  safe_start_time?: string; // New safe TIME field
+  safe_end_time?: string;   // New safe TIME field
+  block_date?: string;      // New safe DATE field
 }
 
 export interface UserPreferences {
@@ -71,54 +89,14 @@ const HOUR_HEIGHT = 64;
 const SCROLL_SPEED = 10;
 const SCROLL_THRESHOLD = 50;
 
-const timeToUTCMinutes = (time: string | Date): number => {
-  if (typeof time === 'string') {
-    if (!time) return 0;
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-  }
-  return time.getUTCHours() * 60 + time.getUTCMinutes();
+// REMOVED: Dangerous timezone conversion functions that caused crashes
+// These have been replaced with safe utilities in timeUtils.ts
+// SAFE: Get date string in local timezone (no UTC conversion)
+const getDateKey = (date: Date): string => {
+  return getLocalDateString(date);
 };
-
-// Helper function to extract time in HH:MM:SS format for database TIME columns
-const extractTimeString = (date: Date): string => {
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
-};
-
-// Helper functions for simple time handling
-const minutesToTimeString = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`;
-};
-
-const getDateString = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-const toUTC_YYYYMMDD = (d: Date): string => {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-const getDaysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-const mergeSlots = (slots: { start: number; end: number }[]): { start: number; end: number }[] => {
-  if (slots.length === 0) return [];
-  const sorted = [...slots].sort((a, b) => a.start - b.start);
-  const merged = [sorted[0]];
-  for (let i = 1; i < sorted.length; i++) {
-    const last = merged[merged.length - 1];
-    if (sorted[i].start <= last.end) {
-      last.end = Math.max(last.end, sorted[i].end);
-    } else {
-      merged.push(sorted[i]);
-    }
-  }
-  return merged;
-};
+// SAFE: Get days in month using local timezone
+const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
 
 
 export default function CalendarPage() {
@@ -126,6 +104,9 @@ export default function CalendarPage() {
   const user = useUser();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  
+  // CRASH PREVENTION: Track user changes to clear state
+  const previousUserIdRef = useRef<string | null>(null);
   const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>({});
   const [unscheduledTasks, setUnscheduledTasks] = useState<CalendarTask[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
@@ -136,6 +117,12 @@ export default function CalendarPage() {
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleMessage, setScheduleMessage] = useState('');
   const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null);
+  const [draggedTaskBackup, setDraggedTaskBackup] = useState<CalendarTask | null>(null);
+  const [pendingTaskMove, setPendingTaskMove] = useState<{
+    task: CalendarTask;
+    targetDate: string;
+    targetTime: number;
+  } | null>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'up' | 'down' | null>(null);
@@ -159,45 +146,173 @@ export default function CalendarPage() {
   const fetchData = useCallback(async (isNavigation = false) => {
     if (!currentDate) return;
     if (isNavigation) { setIsNavigating(true); } else { setLoading(true); }
+    
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        // Align data fetching with WeeklyView display logic: 7 consecutive days starting from currentDate
-        const firstDay = view === 'week' ? 
-          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), 0, 0, 0, 0)) :
-          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1, 0, 0, 0, 0));
-        const lastDay = view === 'week' ? 
-          (() => { 
-            const d = new Date(firstDay); 
-            d.setUTCDate(d.getUTCDate() + 6); 
-            d.setUTCHours(23, 59, 59, 999); 
-            return d; 
-          })() : 
-          new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-        const [tasksRes, unscheduledRes, prefsRes, blocksRes] = await Promise.all([
-          supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).not('scheduled_date', 'is', null).gte('scheduled_date', toUTC_YYYYMMDD(firstDay)).lte('scheduled_date', toUTC_YYYYMMDD(lastDay)),
-          supabase.from('tasks').select('*, chapters(*, subjects(*))').eq('user_id', user.id).is('scheduled_date', null).eq('task_status', 'inbox'),
-          supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
-          supabase.from('time_blocks').select('*').eq('user_id', user.id)
-        ]);
-        const groupedTasks = (tasksRes.data ?? []).reduce<Record<string, CalendarTask[]>>((acc, task) => {
-          if (!acc[task.scheduled_date]) acc[task.scheduled_date] = [];
-          acc[task.scheduled_date].push(task as CalendarTask);
-          return acc;
-        }, {});
-        setTasks(groupedTasks);
-        setUnscheduledTasks(unscheduledRes.data ?? []);
-        setTimeBlocks(blocksRes.data ?? []);
-        setPreferences(prefsRes.data ?? null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // SAFE: Use local dates, no UTC conversion
+      const firstDay = view === 'week' ? 
+        (() => {
+          // Calculate proper week start (Sunday) to match WeeklyView logic
+          const startOfWeek = new Date(currentDate);
+          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+          return startOfWeek;
+        })() :
+        new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        
+      const lastDay = view === 'week' ? 
+        (() => { 
+          const d = new Date(firstDay); 
+          d.setDate(d.getDate() + 6); 
+          return d; 
+        })() : 
+        new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      // DEBUG: Log date range for week view
+      if (view === 'week') {
+        console.log('🔍 DEBUG Calendar - Week date range:', {
+          currentDate: currentDate.toDateString(),
+          firstDay: firstDay.toDateString(),
+          lastDay: lastDay.toDateString(),
+          firstDayKey: getDateKey(firstDay),
+          lastDayKey: getDateKey(lastDay)
+        });
+      }
+
+      const [tasksRes, unscheduledRes, prefsRes, blocksRes] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('*, chapters(*, subjects(*))')
+          .eq('user_id', user.id)
+          .not('scheduled_date', 'is', null)
+          .gte('scheduled_date', getDateKey(firstDay))
+          .lte('scheduled_date', getDateKey(lastDay)),
+        supabase
+          .from('tasks')
+          .select('*, chapters(*, subjects(*))')
+          .eq('user_id', user.id)
+          .is('scheduled_date', null)
+          .eq('task_status', 'inbox'),
+        supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('time_blocks')
+          .select('*')
+          .eq('user_id', user.id)
+      ]);
+      
+      const groupedTasks = (tasksRes.data ?? []).reduce<Record<string, CalendarTask[]>>((acc, task) => {
+        if (!acc[task.scheduled_date]) acc[task.scheduled_date] = [];
+        acc[task.scheduled_date].push(task as CalendarTask);
+        return acc;
+      }, {});
+      
+      // DEBUG: Log fetched tasks
+      if (view === 'week') {
+        console.log('🔍 DEBUG Calendar - Fetched tasks:', {
+          totalTasks: tasksRes.data?.length || 0,
+          groupedTaskDates: Object.keys(groupedTasks),
+          todayTasks: groupedTasks['2025-12-15'] || 'No tasks for today'
+        });
+      }
+      
+      setTasks(groupedTasks);
+      setUnscheduledTasks(unscheduledRes.data ?? []);
+      setTimeBlocks(blocksRes.data ?? []);
+      setPreferences(prefsRes.data ?? null);
+      
     } catch (error) { 
-      // Error handling could be improved with toast notifications
+      console.error('Error fetching calendar data:', error);
+      // Reset to safe state on error
+      setTasks({});
+      setUnscheduledTasks([]);
+      setTimeBlocks([]);
+      setPreferences(null);
     } 
-    finally { setLoading(false); setIsNavigating(false); }
-  }, [currentDate, view, user]);
+    finally { 
+      setLoading(false); 
+      setIsNavigating(false); 
+    }
+  }, [currentDate, view]);
 
   // --- EFFECTS ---
-  useEffect(() => { const now = new Date(); now.setUTCHours(0,0,0,0); setCurrentDate(now); }, []);
-  useEffect(() => { if(currentDate) { const isNav = !loading; fetchData(isNav); } }, [currentDate, view, fetchData, loading]);
+  
+  // CRASH PREVENTION: Clear state when switching accounts
+  useEffect(() => {
+    if (user?.id && user.id !== previousUserIdRef.current) {
+      console.log('Account switched - clearing calendar state to prevent crashes');
+      
+      // Clear all time-related state
+      setTasks({});
+      setUnscheduledTasks([]);
+      setTimeBlocks([]);
+      setPreferences(null);
+      setLoading(true);
+      
+      // Reset to current date in new user's local context
+      const now = new Date();
+      setCurrentDate(now);
+      
+      // Update reference
+      previousUserIdRef.current = user.id;
+    }
+  }, [user?.id]);
+  
+  useEffect(() => { 
+    if (!currentDate) {
+      const now = new Date(); 
+      setCurrentDate(now); 
+    }
+  }, []);
+  
+  useEffect(() => { 
+    if (currentDate && user?.id) { 
+      const isNav = !loading; 
+      fetchData(isNav); 
+    } 
+  }, [currentDate, view, fetchData, loading, user?.id]);
+
+  // Handle pending task moves after navigation
+  useEffect(() => {
+    if (pendingTaskMove && !loading && !isNavigating) {
+      console.log('🎯 PENDING MOVE - Executing pending task move:', pendingTaskMove);
+      
+      const executePendingMove = async () => {
+        const { task, targetDate, targetTime } = pendingTaskMove;
+        const duration = task.effort_units || preferences?.session_length || 60;
+        
+        try {
+          const { error } = await supabase.from('tasks').update({
+            scheduled_date: targetDate,
+            start_time: minutesToTimeString(targetTime),
+            end_time: minutesToTimeString(targetTime + duration),
+            task_status: 'scheduled',
+          }).eq('task_id', task.task_id);
+          
+          if (error) {
+            console.error('❌ PENDING MOVE - Database update failed:', error);
+          } else {
+            console.log('✅ PENDING MOVE - Task moved successfully');
+            // Refresh data to show the moved task
+            await fetchData();
+          }
+        } catch (error) {
+          console.error('❌ PENDING MOVE - Exception:', error);
+        }
+        
+        // Clear pending move
+        setPendingTaskMove(null);
+        setDraggedTask(null);
+        setDraggedTaskBackup(null);
+      };
+      
+      executePendingMove();
+    }
+  }, [pendingTaskMove, loading, isNavigating, preferences, fetchData]);
 
   useEffect(() => {
     const handleRightClick = (event: MouseEvent) => {
@@ -205,17 +320,45 @@ export default function CalendarPage() {
         event.preventDefault();
         const direction = isOverNavEdge.current === 'right' ? 'next' : 'prev';
         navigatedInDragRef.current = true;
+        
+        console.log('🔄 NAVIGATION - Right-click navigation triggered:', direction);
+        
+        // Calculate target date for the pending move
+        if (!currentDate) return;
+        const targetDate = new Date(currentDate);
+        targetDate.setDate(targetDate.getDate() + (direction === 'next' ? 7 : -7));
+        const targetDateString = getLocalDateString(targetDate);
+        
+        // Store pending move information
+        setPendingTaskMove({
+          task: draggedTaskBackup || draggedTask,
+          targetDate: targetDateString,
+          targetTime: timeStringToMinutes(draggedTask.start_time || '09:00:00')
+        });
+        
+        console.log('📝 NAVIGATION - Pending move created:', {
+          taskTitle: draggedTask.title,
+          targetDate: targetDateString,
+          targetTime: timeStringToMinutes(draggedTask.start_time || '09:00:00')
+        });
+        
+        // Navigate to new week
         setCurrentDate(prevDate => {
           if (!prevDate) return null;
           const newDate = new Date(prevDate);
-          newDate.setUTCDate(newDate.getUTCDate() + (direction === 'next' ? 7 : -7));
+          newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
           return newDate;
         });
+        
+        // Force immediate data refresh for the new week
+        setTimeout(() => {
+          fetchData(true); // true = isNavigation
+        }, 100);
       }
     };
     window.addEventListener('contextmenu', handleRightClick);
     return () => { window.removeEventListener('contextmenu', handleRightClick); };
-  }, [draggedTask]);
+  }, [draggedTask, draggedTaskBackup, currentDate, fetchData]);
 
   // --- CORE LOGIC & HANDLERS ---
   const scheduleTasks = async () => {
@@ -248,12 +391,12 @@ export default function CalendarPage() {
       for (let d = 0; d < 7 && queue.length > 0; d++) {
         const day = new Date(baseDate);
         day.setUTCDate(baseDate.getUTCDate() + w * 7 + d);
-        const dateKey = toUTC_YYYYMMDD(day);
+        const dateKey = getLocalDateString(day);
 
         let busySlots: { start: number; end: number }[] = [];
         
-        const sleepStart = timeToUTCMinutes(preferences.sleep_start);
-        const sleepEnd = timeToUTCMinutes(preferences.sleep_end);
+        const sleepStart = parsePreferenceTime(preferences.sleep_start);
+        const sleepEnd = parsePreferenceTime(preferences.sleep_end);
         if (sleepStart > sleepEnd) {
             busySlots.push({ start: sleepStart, end: 1440 }, { start: 0, end: sleepEnd });
         } else {
@@ -261,24 +404,35 @@ export default function CalendarPage() {
         }
 
         for (const meal of preferences.meal_start_times) {
-          const m = timeToUTCMinutes(meal);
+          const m = parsePreferenceTime(meal);
           busySlots.push({ start: m, end: m + preferences.meal_duration });
         }
 
-        for (const block of timeBlocks.filter(b => b.start_time.startsWith(dateKey))) {
-          busySlots.push({ start: timeToUTCMinutes(new Date(block.start_time)), end: timeToUTCMinutes(new Date(block.end_time)) });
+        for (const block of timeBlocks.filter(b => 
+          // Use safe fields if available, fallback to legacy timestamp
+          (b.block_date === dateKey) || 
+          (b.start_time && b.start_time.startsWith(dateKey))
+        )) {
+          // Use safe time fields if available, otherwise parse timestamp
+          const startTime = block.safe_start_time || (block.start_time ? block.start_time.split('T')[1]?.split('.')[0] : '00:00:00');
+          const endTime = block.safe_end_time || (block.end_time ? block.end_time.split('T')[1]?.split('.')[0] : '00:00:00');
+          
+          busySlots.push({ 
+            start: timeStringToMinutes(startTime), 
+            end: timeStringToMinutes(endTime) 
+          });
         }
 
         for (const t of (tasks[dateKey] || [])) {
           if (t.start_time && t.end_time) {
             // Tasks now have TIME fields, parse them as time strings
-            const startMinutes = timeToUTCMinutes(t.start_time);
-            const endMinutes = timeToUTCMinutes(t.end_time);
+            const startMinutes = timeStringToMinutes(t.start_time);
+            const endMinutes = timeStringToMinutes(t.end_time);
             busySlots.push({ start: startMinutes, end: endMinutes });
           }
         }
 
-        busySlots = mergeSlots(busySlots);
+        busySlots = mergeTimeSlots(busySlots);
 
         let lastEnd = 0;
         while (queue.length > 0) {
@@ -292,9 +446,7 @@ export default function CalendarPage() {
 
           if (freeWindowEnd - freeWindowStart >= duration + buffer) {
             const startMinute = freeWindowStart + buffer;
-            const startDate = new Date(day);
-            startDate.setUTCHours(Math.floor(startMinute / 60), startMinute % 60, 0, 0);
-            const endDate = new Date(startDate.getTime() + duration * 60000);
+            const endMinute = startMinute + duration;
 
             updates.push({
               task_id: task.task_id,
@@ -307,14 +459,14 @@ export default function CalendarPage() {
               status: "Scheduled",
               task_status: "scheduled", // Update workflow status
               scheduled_date: dateKey,
-              start_time: extractTimeString(startDate),
-              end_time: extractTimeString(endDate)
+              start_time: minutesToTimeString(startMinute),
+              end_time: minutesToTimeString(endMinute)
             });
 
             queue.shift();
             
             busySlots.push({ start: startMinute, end: startMinute + duration });
-            busySlots = mergeSlots(busySlots);
+            busySlots = mergeTimeSlots(busySlots);
             lastEnd = startMinute + duration;
           } else {
             lastEnd = nextBusySlot ? nextBusySlot.end : 1440;
@@ -351,7 +503,11 @@ export default function CalendarPage() {
   const handleDragStart = (event: DragStartEvent) => {
     navigatedInDragRef.current = false;
     const task = Object.values(tasks).flat().find(t => t.task_id == event.active.id);
-    if (task) setDraggedTask(task);
+    if (task) {
+      setDraggedTask(task);
+      setDraggedTaskBackup(task); // Backup task data in case it gets lost during navigation
+      console.log('🎯 DRAG START - Task backup created:', task.title);
+    }
     animationFrameRef.current = requestAnimationFrame(scrollLoop);
   };
 
@@ -378,21 +534,72 @@ export default function CalendarPage() {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    console.log('🎯 DRAG END - Starting drag end handler');
+    
     setDraggedTask(null);
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); }
     scrollDirectionRef.current = null;
     isOverNavEdge.current = null;
+    
+    // Store navigation state before resetting
+    const wasCrossWeekDrop = navigatedInDragRef.current;
+    console.log('🔍 DRAG END - Cross-week drop detected:', wasCrossWeekDrop);
+    
+    // If this was a cross-week drop, the pending move system will handle it
+    if (wasCrossWeekDrop) {
+      console.log('🔄 DRAG END - Cross-week drop detected, pending move system will handle it');
+      // Reset navigation flag after drag completes
+      setTimeout(() => {
+        navigatedInDragRef.current = false;
+      }, 100);
+      return;
+    }
+    
+    // Clear any pending moves since this is a normal drop
+    setPendingTaskMove(null);
+    setDraggedTaskBackup(null);
+    
+    // Reset navigation flag after drag completes
+    setTimeout(() => {
+      navigatedInDragRef.current = false;
+    }, 100);
 
     const { active, over, delta } = event;
-    if (!over || !active.data.current?.task || !preferences) return;
+    console.log('🔍 DRAG END - Event details:', { 
+      activeId: active.id, 
+      overId: over?.id, 
+      hasTask: !!active.data.current?.task,
+      hasPreferences: !!preferences
+    });
     
-    if (String(over.id).startsWith('navigate-')) return;
+    if (!over) {
+      console.log('❌ DRAG END - No drop target (over is null)');
+      return;
+    }
+    
+    if (!active.data.current?.task) {
+      console.log('❌ DRAG END - No task data in active.data.current');
+      return;
+    }
+    
+    if (!preferences) {
+      console.log('❌ DRAG END - No user preferences loaded');
+      return;
+    }
+    
+    if (String(over.id).startsWith('navigate-')) {
+      console.log('🔄 DRAG END - Dropped on navigation edge, ignoring');
+      return;
+    }
 
     const task = active.data.current.task as CalendarTask;
-    if (!task.start_time) return;
+    if (!task.start_time) {
+      console.log('❌ DRAG END - Task has no start_time, aborting');
+      return;
+    }
 
     // Simple drag logic - work with minutes directly
-    const originalStartMinutes = timeToUTCMinutes(task.start_time);
+    const originalStartMinutes = timeStringToMinutes(task.start_time);
     const minutesOffset = Math.round((delta.y / HOUR_HEIGHT * 60) / 15) * 15; // Round to 15-min slots
     const newStartMinutes = Math.max(0, Math.min(1440, originalStartMinutes + minutesOffset));
     const duration = task.effort_units ?? preferences.session_length ?? 60;
@@ -403,18 +610,24 @@ export default function CalendarPage() {
     if (typeof over.id === 'string' && over.id.includes('-')) {
       // It's already a date string like "2024-01-15"
       dateKey = over.id;
+      console.log('🔍 DRAG END - Using date string directly:', dateKey);
     } else {
       // Convert to date string
       const targetDate = new Date(over.id as string);
-      dateKey = getDateString(targetDate);
+      dateKey = getLocalDateString(targetDate);
+      console.log('🔍 DRAG END - Converted to date string:', { overId: over.id, dateKey });
     }
+    
+    console.log('🎯 DRAG END - Target date key:', dateKey);
+    console.log('🔍 DRAG END - Original task date:', task.scheduled_date);
+    console.log('🔍 DRAG END - Is cross-date move:', task.scheduled_date !== dateKey);
     
     // Simple busy slots calculation
     let busySlots: {start:number, end:number}[] = [];
     
     // Add sleep time
-    const sleepStart = timeToUTCMinutes(preferences.sleep_start);
-    const sleepEnd = timeToUTCMinutes(preferences.sleep_end);
+    const sleepStart = parsePreferenceTime(preferences.sleep_start);
+    const sleepEnd = parsePreferenceTime(preferences.sleep_end);
     if(sleepStart > sleepEnd) { 
       busySlots.push({start:sleepStart, end:1440}, {start:0,end:sleepEnd}); 
     } else { 
@@ -423,33 +636,65 @@ export default function CalendarPage() {
     
     // Add meal times
     preferences.meal_start_times.forEach(mealTime => { 
-      const start = timeToUTCMinutes(mealTime); 
+      const start = parsePreferenceTime(mealTime); 
       busySlots.push({start, end: start + preferences.meal_duration}); 
     });
     
     // Add existing tasks for this day (except the one being dragged)
-    (tasks[dateKey] ?? []).forEach(t => { 
+    // For cross-week drops, we might not have the target week's data loaded yet
+    const existingTasksForDay = tasks[dateKey] ?? [];
+    existingTasksForDay.forEach(t => { 
       if(t.task_id !== task.task_id && t.start_time && t.end_time) { 
         busySlots.push({
-          start: timeToUTCMinutes(t.start_time), 
-          end: timeToUTCMinutes(t.end_time)
+          start: timeStringToMinutes(t.start_time), 
+          end: timeStringToMinutes(t.end_time)
         }); 
       } 
     });
     
-    busySlots = mergeSlots(busySlots);
+    // Determine if this is a cross-week or cross-date drop
+    const isCrossWeekDrop = wasCrossWeekDrop;
+    const isCrossDateDrop = task.scheduled_date !== dateKey;
+    
+    console.log('🔍 DRAG END - Drop analysis:', {
+      isCrossWeekDrop,
+      isCrossDateDrop,
+      originalDate: task.scheduled_date,
+      targetDate: dateKey
+    });
+    
+    busySlots = mergeTimeSlots(busySlots);
     
     // Check for collisions using simple minutes
     const hasCollision = busySlots.some(slot => !(newEndMinutes <= slot.start || newStartMinutes >= slot.end));
     
-    if (hasCollision) {
-      console.log('❌ Invalid slot - task will snap back to original position');
-      // Don't update anything - task will automatically snap back to original position
-      // This provides immediate visual feedback that the slot is unavailable
+    console.log('🔍 DRAG END - Collision check:', {
+      hasCollision,
+      newStartMinutes,
+      newEndMinutes,
+      busySlots: busySlots.length
+    });
+    
+    // For cross-date drops (including cross-week), be more permissive
+    if (hasCollision && !isCrossDateDrop) {
+      console.log('❌ Same-day collision - task will snap back');
       return;
     }
     
-    // Valid slot - update task directly
+    if (hasCollision && isCrossDateDrop) {
+      console.log('⚠️ Cross-date drop has collision - trying to place anyway');
+      // For cross-date drops, we'll try to place it and let the database/UI handle conflicts
+      // This is more user-friendly than rejecting the drop
+    }
+    
+    // Update task in database
+    console.log('💾 DRAG END - Updating task in database:', {
+      taskId: task.task_id,
+      newDate: dateKey,
+      newStartTime: minutesToTimeString(newStartMinutes),
+      newEndTime: minutesToTimeString(newEndMinutes)
+    });
+    
     const { error } = await supabase.from('tasks').update({
       scheduled_date: dateKey,
       start_time: minutesToTimeString(newStartMinutes),
@@ -457,9 +702,20 @@ export default function CalendarPage() {
       task_status: 'scheduled',
     }).eq('task_id', task.task_id);
     
-    if (!error) {
-      console.log('✅ Task moved to valid slot');
-      // Update local state directly instead of full refresh
+    if (error) {
+      console.error('❌ DRAG END - Database update failed:', error);
+      return;
+    }
+    
+    console.log('✅ DRAG END - Database update successful');
+    
+    if (isCrossDateDrop) {
+      // For any cross-date drops, do a full data refresh to ensure consistency
+      console.log('🔄 DRAG END - Refreshing data after cross-date drop');
+      await fetchData();
+    } else {
+      // For same-day drops, update local state directly for better performance
+      console.log('⚡ DRAG END - Updating local state for same-day drop');
       setTasks(prevTasks => {
         const newTasks = { ...prevTasks };
         
@@ -482,6 +738,8 @@ export default function CalendarPage() {
         return newTasks;
       });
     }
+    
+    console.log('🎉 DRAG END - Task move completed successfully');
   };
 
   // --- RENDER LOGIC ---
@@ -513,17 +771,20 @@ export default function CalendarPage() {
           if (!selectedDateTime) return;
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
-          const [sh, sm] = startTime.split(':').map(Number);
-          const [eh, em] = endTime.split(':').map(Number);
-          const startDate = new Date(selectedDateTime);
-          startDate.setUTCHours(sh, sm, 0, 0);
-          const endDate = new Date(selectedDateTime);
-          endDate.setUTCHours(eh, em, 0, 0);
+          const startMinutes = timeStringToMinutes(startTime);
+          const endMinutes = timeStringToMinutes(endTime);
+          const dateString = getLocalDateString(selectedDateTime);
+          
           await supabase.from('time_blocks').insert({
             title,
             user_id: user.id,
-            start_time: extractTimeString(startDate),
-            end_time: extractTimeString(endDate),
+            // Use new safe format
+            start_time_safe: minutesToTimeString(startMinutes),
+            end_time_safe: minutesToTimeString(endMinutes),
+            block_date: dateString,
+            // Keep legacy fields for backward compatibility
+            start_time: `${dateString}T${minutesToTimeString(startMinutes)}`,
+            end_time: `${dateString}T${minutesToTimeString(endMinutes)}`,
           });
           await fetchData();
           setIsAddBlockOpen(false);
@@ -568,14 +829,12 @@ export default function CalendarPage() {
             updatePayload.scheduled_date = updates.scheduled_date;
             updatePayload.task_status = 'scheduled'; // Update status when scheduling
             if (editTask.start_time) {
-              // Parse time string and create new date
-              const [hours, minutes] = editTask.start_time.split(':').map(Number);
-              const newStart = new Date(updates.scheduled_date);
-              newStart.setHours(hours, minutes, 0, 0);
+              // Keep the same time, just update the date
+              const startMinutes = timeStringToMinutes(editTask.start_time);
               const newEffort = updates.effort_units || editTask.effort_units || 50;
-              const newEnd = new Date(newStart.getTime() + newEffort * 60 * 1000);
-              updatePayload.start_time = extractTimeString(newStart);
-              updatePayload.end_time = extractTimeString(newEnd);
+              const endMinutes = startMinutes + newEffort;
+              updatePayload.start_time = minutesToTimeString(startMinutes);
+              updatePayload.end_time = minutesToTimeString(endMinutes);
             }
           }
           if (Object.keys(updatePayload).length > 0) {
@@ -596,15 +855,23 @@ export default function CalendarPage() {
         <main className="flex-1 p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
           <div className="flex-grow flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold text-slate-100">{currentDate && months[currentDate.getUTCMonth()]} {currentDate && currentDate.getUTCFullYear()}</h1>
+              <div className="flex flex-col">
+                <h1 className="text-2xl font-bold text-slate-100">{currentDate && months[currentDate.getMonth()]} {currentDate && currentDate.getFullYear()}</h1>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                  <span>📍</span>
+                  <span>Your time bubble</span>
+                  <span className="text-slate-500">•</span>
+                  <span>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+                </div>
+              </div>
               <div className="flex items-center gap-2 sm:gap-4">
                 <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
                   <button onClick={() => setView('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'month' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Month</button>
                   <button onClick={() => setView('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${view === 'week' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Week</button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() - 1); else newDate.setUTCDate(newDate.getUTCDate() - 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronLeft size={20} /></button>
-                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setUTCMonth(newDate.getUTCMonth() + 1); else newDate.setUTCDate(newDate.getUTCDate() + 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronRight size={20} /></button>
+                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setMonth(newDate.getMonth() - 1); else newDate.setDate(newDate.getDate() - 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronLeft size={20} /></button>
+                  <button onClick={() => { if (!currentDate) return; const newDate = new Date(currentDate); if (view === 'month') newDate.setMonth(newDate.getMonth() + 1); else newDate.setDate(newDate.getDate() + 7); setCurrentDate(newDate); }} className="p-2 rounded-md hover:bg-slate-700 transition-colors text-slate-300"><ChevronRight size={20} /></button>
                 </div>
               </div>
             </div>
@@ -613,13 +880,13 @@ export default function CalendarPage() {
               {currentDate && (view === 'month' ? (
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {daysOfWeek.map(day => <div key={day} className="text-xs font-bold text-slate-400 uppercase pb-2">{day}</div>)}
-                  {Array.from({ length: new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1)).getUTCDay() }).map((_, i) => <div key={`empty-${i}`} className="border-t border-slate-700/50"></div>)}
-                  {Array.from({ length: getDaysInMonth(currentDate.getUTCFullYear(), currentDate.getUTCMonth()) }).map((_, day) => {
+                  {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} className="border-t border-slate-700/50"></div>)}
+                  {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, day) => {
                     const dayNumber = day + 1;
-                    const date = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), dayNumber));
-                    const dateStr = toUTC_YYYYMMDD(date);
+                    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+                    const dateStr = getLocalDateString(date);
                     const tasksForDay = tasks[dateStr] || [];
-                    const isToday = toUTC_YYYYMMDD(new Date()) === dateStr;
+                    const isToday = getLocalDateString(new Date()) === dateStr;
                     return (
                       <div key={dayNumber} className="border-t border-slate-700/50 pt-2 h-24 sm:h-32 overflow-hidden cursor-pointer hover:bg-slate-700/50 transition-colors">
                         <span className={`text-sm ${isToday ? 'bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto' : 'text-slate-200'}`}>{dayNumber}</span>

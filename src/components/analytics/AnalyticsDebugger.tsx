@@ -60,19 +60,19 @@ export default function AnalyticsDebugger() {
     try {
       const { data: tasks, error } = await supabase
         .from('tasks')
-        .select('task_id, status, scheduled_date, effort_units')
+        .select('task_id, task_status, scheduled_date, effort_units')
         .eq('user_id', user.id)
         .limit(5);
 
       if (error) throw error;
-      
+
       diagnostics.push({
         test: 'Tasks Table Access',
         status: 'success',
         message: `Found ${tasks?.length || 0} tasks`,
-        details: { 
+        details: {
           totalTasks: tasks?.length || 0,
-          completedTasks: tasks?.filter(t => t.status === 'Completed').length || 0,
+          completedTasks: tasks?.filter(t => t.task_status === 'completed').length || 0,
           sampleTask: tasks?.[0] || null
         }
       });
@@ -94,12 +94,12 @@ export default function AnalyticsDebugger() {
         .limit(5);
 
       if (error) throw error;
-      
+
       diagnostics.push({
         test: 'Subjects Table Access',
         status: 'success',
         message: `Found ${subjects?.length || 0} subjects`,
-        details: { 
+        details: {
           totalSubjects: subjects?.length || 0,
           sampleSubject: subjects?.[0] || null
         }
@@ -127,12 +127,12 @@ export default function AnalyticsDebugger() {
         .limit(5);
 
       if (error) throw error;
-      
+
       diagnostics.push({
         test: 'Chapters Table Access',
         status: 'success',
         message: `Found ${chapters?.length || 0} chapters`,
-        details: { 
+        details: {
           totalChapters: chapters?.length || 0,
           completedChapters: chapters?.filter(c => c.completed).length || 0,
           sampleChapter: chapters?.[0] || null
@@ -154,12 +154,12 @@ export default function AnalyticsDebugger() {
         const stats = JSON.parse(sessionData);
         const today = new Date().toISOString().split('T')[0];
         const todayTime = stats[today] || 0;
-        
+
         diagnostics.push({
           test: 'Focus Session Data',
           status: 'success',
           message: `Focus data available. Today: ${todayTime} minutes`,
-          details: { 
+          details: {
             todayFocusTime: todayTime,
             totalDays: Object.keys(stats).length,
             sampleData: Object.entries(stats).slice(0, 3)
@@ -185,21 +185,21 @@ export default function AnalyticsDebugger() {
       const today = new Date().toISOString().split('T')[0];
       const { data: todayTasks, error } = await supabase
         .from('tasks')
-        .select('task_id, status, effort_units')
+        .select('task_id, task_status, effort_units')
         .eq('user_id', user.id)
         .eq('scheduled_date', today);
 
       if (error) throw error;
-      
-      const completed = todayTasks?.filter(t => t.status === 'Completed').length || 0;
+
+      const completed = todayTasks?.filter(t => t.task_status === 'completed').length || 0;
       const total = todayTasks?.length || 0;
       const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-      
+
       diagnostics.push({
         test: 'Today\'s Tasks',
         status: 'success',
         message: `Today: ${completed}/${total} tasks completed (${progress}%)`,
-        details: { 
+        details: {
           todayTasks: total,
           completedToday: completed,
           progress: progress

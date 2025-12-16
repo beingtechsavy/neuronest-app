@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getUserPlanInfo, canCreateSubject, canUseAIBreakdown } from '@/lib/subscriptionLimits';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -29,22 +30,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = getSupabaseClient();
-
-    // Get user's plan info
-    const { data: planData, error: planError } = await client.rpc('get_user_plan_info', {
-      user_uuid: userId
-    });
-
-    if (planError) {
-      console.error('Error fetching plan info:', planError);
-      return NextResponse.json(
-        { error: 'Failed to fetch plan information' },
-        { status: 500 }
-      );
-    }
-
-    const planInfo = Array.isArray(planData) ? planData[0] : planData;
+    // Get user's plan info with proper subscription validation
+    const planInfo = await getUserPlanInfo(userId);
     if (!planInfo) {
       return NextResponse.json(
         { error: 'Plan information not found' },
@@ -59,24 +46,29 @@ export async function POST(req: NextRequest) {
 
     switch (limitType) {
       case 'subjects':
-        canUse = planInfo.can_create_subjects;
+        canUse = await canCreateSubject(userId);
         used = planInfo.subjects_count;
         limit = planInfo.subjects_limit;
-        message = canUse ? 'Can create more subjects' : 'Subject limit reached';
+        message = canUse ? 'Can create more subjects' : 
+          planInfo.subscription_active ? 'Subject limit reached' : 'Subscription expired - upgrade to create more subjects';
         break;
       
       case 'ai':
-        canUse = planInfo.can_use_ai;
-        used = planInfo.breakdowns_used;
-        limit = planInfo.breakdowns_limit;
-        message = canUse ? 'Can use AI breakdown' : 'AI breakdown limit reached for today';
+        const aiCheck = await canUseAIBreakdown(userId);
+        canUse = aiCheck.allowed;
+        used = aiCheck.used;
+        limit = aiCheck.limit;
+        message = canUse ? 'Can use AI breakdown' : 
+          planInfo.subscription_active ? 'AI breakdown limit reached for today' : 'Subscription expired - upgrade to use AI features';
         break;
       
       case 'flashcards':
-        canUse = planInfo.flashcards_limit > 0 && planInfo.flashcards_used < planInfo.flashcards_limit;
+        canUse = planInfo.subscription_active && planInfo.flashcards_limit > 0 && planInfo.flashcards_used < planInfo.flashcards_limit;
         used = planInfo.flashcards_used;
         limit = planInfo.flashcards_limit;
-        message = canUse ? 'Can use AI flashcards' : 'AI flashcards not available or limit reached';
+        message = canUse ? 'Can use AI flashcards' : 
+          !planInfo.subscription_active ? 'Subscription expired - upgrade to use AI flashcards' :
+          planInfo.flashcards_limit === 0 ? 'AI flashcards not available in your plan' : 'AI flashcards limit reached';
         break;
       
       default:
@@ -93,6 +85,8 @@ export async function POST(req: NextRequest) {
       limit,
       message,
       planType: planInfo.plan_type,
+      subscriptionActive: planInfo.subscription_active,
+      subscriptionExpired: planInfo.subscription_expired,
       planInfo
     });
 

@@ -28,7 +28,7 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
         setIsLoadingTasks(true)
         const { data, error } = await supabase
           .from('tasks')
-          .select('task_id, title, status, is_stressful')
+          .select('task_id, title, task_status, is_stressful, status, scheduled_date')
           .eq('chapter_id', chapter.chapter_id)
           .order('created_at', { ascending: true })
 
@@ -53,16 +53,16 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
       return;
     }
     const newStatus: 'pending' | 'completed' = taskToToggle.status === 'completed' ? 'pending' : 'completed';
-    const newTaskStatus = newStatus === 'completed' ? 'completed' : 
-                         (taskToToggle.scheduled_date ? 'scheduled' : 'inbox');
+    const newTaskStatus: 'completed' | 'scheduled' | 'inbox' | 'breakdown' = newStatus === 'completed' ? 'completed' :
+      (taskToToggle.scheduled_date ? 'scheduled' : 'inbox');
 
     const updatedTasks = tasks.map(t => t.task_id === taskId ? { ...t, status: newStatus } : t);
     setTasks(updatedTasks);
-    
+
     try {
-      const { error } = await supabase.from('tasks').update({ 
+      const { error } = await supabase.from('tasks').update({
         status: newStatus,
-        task_status: newTaskStatus 
+        task_status: newTaskStatus
       }).eq('task_id', taskId);
       if (error) {
         console.error('Error updating task status:', error);
@@ -161,10 +161,10 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
                     {task.status === 'completed' ? <span style={styles.subTaskTick}>✓</span> : ''}
                   </div>
                   {task.is_stressful && (
-  <span title="Task is stressful">
-    <AlertTriangle size={14} style={{ color: '#fbbf24', marginRight: 3 }} />
-  </span>
-)}
+                    <span title="Task is stressful">
+                      <AlertTriangle size={14} style={{ color: '#fbbf24', marginRight: 3 }} />
+                    </span>
+                  )}
                   <span
                     style={{
                       ...styles.subTaskName,

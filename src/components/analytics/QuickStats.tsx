@@ -25,12 +25,12 @@ export default function QuickStats() {
         // Single optimized query for basic stats
         const { data: tasks } = await supabase
           .from('tasks')
-          .select('status, scheduled_date')
+          .select('task_status, scheduled_date')
           .eq('user_id', user.id);
 
         if (tasks) {
           const totalTasks = tasks.length;
-          const completedTasks = tasks.filter(t => t.status === 'Completed').length;
+          const completedTasks = tasks.filter(t => t.task_status === 'completed').length;
           const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
           
           // Count tasks from last 7 days
