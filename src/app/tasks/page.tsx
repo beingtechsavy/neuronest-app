@@ -86,6 +86,7 @@ export default function TasksPage() {
         <EditTaskModal
           isOpen={!!taskToEdit}
           onClose={() => setTaskToEdit(null)}
+          taskId={taskToEdit.task_id}
           onSave={async (updates) => {
             await supabase.from('tasks').update(updates).eq('task_id', taskToEdit.task_id);
             await fetchTasks();
@@ -93,7 +94,10 @@ export default function TasksPage() {
           }}
           currentTitle={taskToEdit.title}
           currentEffort={taskToEdit.effort_units}
-          currentDate={taskToEdit.deadline || ''}
+          currentDate={taskToEdit.scheduled_date || taskToEdit.deadline || ''}
+          currentStartTime={taskToEdit.start_time}
+          currentEndTime={taskToEdit.end_time}
+          currentIsCritical={taskToEdit.is_critical}
         />
       )}
       {taskToDelete && (

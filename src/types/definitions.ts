@@ -25,4 +25,7 @@ export interface Task {
   ai_generated?: boolean;
   deadline?: string | null;
   effort_units?: number;
+  start_time?: string | null; // New: HH:MM:SS format
+  end_time?: string | null;   // New: HH:MM:SS format
+  is_critical?: boolean;       // New: Critical task flag for ADHD users
 }

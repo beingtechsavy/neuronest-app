@@ -5,15 +5,8 @@ import { useRouter } from 'next/navigation';
 import { X, Sparkles, Clock, CheckCircle, AlertCircle, Loader2, Heart } from 'lucide-react';
 import { canUseAIBreakdown, getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits';
 import UsageLimitModal from './UsageLimitModal';
-
-interface TaskBreakdownStep {
-  step: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-  estimatedMinutes: number;
-  order: number;
-  completionCriteria: string;
-  encouragement?: string;
-}
+import type { TaskBreakdownStep } from '@/types/aiBreakdown';
+import { useToast } from '@/hooks/useToast';
 
 interface Subject {
   subject_id: number;
@@ -44,6 +37,7 @@ export default function AIBreakdownModal({
   onBreakdownComplete
 }: AIBreakdownModalProps) {
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useToast();
 
   // Load user's subjects and plan info when modal opens
   useEffect(() => {
@@ -86,12 +80,14 @@ export default function AIBreakdownModal({
   };
   const [breakdown, setBreakdown] = useState<TaskBreakdownStep[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [animateSteps, setAnimateSteps] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState('');
   const [breakingDownStep, setBreakingDownStep] = useState<TaskBreakdownStep | null>(null);
+  const [breakdownGenerated, setBreakdownGenerated] = useState(false);
 
   // New state for subject selection and task input
   const [inputTaskTitle, setInputTaskTitle] = useState(taskTitle || '');
@@ -109,6 +105,22 @@ export default function AIBreakdownModal({
   const [loadingPlanInfo, setLoadingPlanInfo] = useState(false);
 
   const generateBreakdown = async () => {
+    // Validate inputs before proceeding
+    if (!inputTaskTitle.trim()) {
+      setError('Please enter a task title');
+      return;
+    }
+
+    if (!selectedSubject && !createNewSubject) {
+      setError('Please select or create a subject');
+      return;
+    }
+
+    if (createNewSubject && !newSubjectName.trim()) {
+      setError('Please enter a subject name');
+      return;
+    }
+
     // Check usage limits before proceeding
     const usageCheck = await canUseAIBreakdown(userId);
     if (!usageCheck.allowed) {
@@ -118,8 +130,10 @@ export default function AIBreakdownModal({
 
     setLoading(true);
     setError(null);
+    setBreakdownGenerated(false);
 
     try {
+      console.log('Sending breakdown request...');
       const response = await fetch('/api/ai/breakdown-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -134,19 +148,25 @@ export default function AIBreakdownModal({
         })
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         if (response.status === 429) {
           setShowUsageLimitModal(true);
         } else {
-          setError(data.error || 'Failed to generate breakdown');
+          const errorMsg = data.error || 'Failed to generate breakdown';
+          console.error('API error:', errorMsg);
+          setError(errorMsg);
         }
         return;
       }
 
+      // Immediately display breakdown results
       setBreakdown(data.breakdown);
       setUsage(data.usage);
+      setBreakdownGenerated(true);
 
       // Refresh plan info to show updated usage
       await loadPlanInfo();
@@ -159,9 +179,10 @@ export default function AIBreakdownModal({
       // Animate steps appearing
       setAnimateSteps(true);
 
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      const errorMsg = err.message || 'Something went wrong. Please try again.';
       console.error('Breakdown generation error:', err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -294,7 +315,8 @@ export default function AIBreakdownModal({
   };
 
   const handleAddAllSteps = async () => {
-    setLoading(true);
+    setSaving(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/ai/save-breakdown', {
@@ -314,10 +336,16 @@ export default function AIBreakdownModal({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to save breakdown');
+        // Handle error response
+        const errorMessage = data.error || 'Failed to save breakdown';
+        setError(errorMessage);
+        showError(errorMessage);
         return;
       }
 
+      // Show success toast notification
+      showSuccess(`🎉 Breakdown saved with ${breakdown.length} tasks! Check your dashboard.`);
+      
       // Show success animation
       setShowConfetti(true);
       setCelebrationMessage(`🎉 Breakdown saved with ${breakdown.length} tasks! Check your dashboard.`);
@@ -336,6 +364,7 @@ export default function AIBreakdownModal({
         setNewSubjectName('');
         setCreateNewSubject(false);
         setCelebrationMessage('');
+        setBreakdownGenerated(false);
         
         // Close modal and redirect to dashboard
         onClose();
@@ -343,10 +372,12 @@ export default function AIBreakdownModal({
       }, 1500);
       
     } catch (err) {
-      setError('Failed to save breakdown. Please try again.');
+      const errorMessage = 'Failed to save breakdown. Please try again.';
+      setError(errorMessage);
+      showError(errorMessage);
       console.error('Save breakdown error:', err);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -649,10 +680,10 @@ export default function AIBreakdownModal({
                     </button>
                     <button
                       onClick={handleAddAllSteps}
-                      disabled={loading}
-                      className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 text-sm shadow-lg"
+                      disabled={saving || !breakdownGenerated || breakdown.length === 0}
+                      className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 text-sm shadow-lg"
                     >
-                      {loading ? (
+                      {saving ? (
                         <>
                           <Loader2 className="animate-spin" size={16} />
                           Saving...

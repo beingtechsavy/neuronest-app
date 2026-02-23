@@ -91,6 +91,8 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
 
   try {
     const client = getAzureOpenAIClient();
+    console.log('Azure OpenAI client initialized, making API call...');
+    
     const response = await client.chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME!,
       messages: [
@@ -102,19 +104,26 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
       response_format: { type: 'json_object' }
     });
 
+    console.log('Azure OpenAI response received');
+    
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      console.error('No content in Azure OpenAI response');
       throw new Error('No response from Azure OpenAI');
     }
 
+    console.log('Parsing AI response...');
     const parsed = JSON.parse(content);
     
     // Ensure we have a steps array
     const steps = parsed.steps || parsed.breakdown || parsed;
     
     if (!Array.isArray(steps)) {
+      console.error('Invalid response format:', parsed);
       throw new Error('Invalid response format from AI');
     }
+
+    console.log('Successfully parsed', steps.length, 'steps');
 
     // Validate and format the response
     return steps.map((step: any, index: number) => ({
@@ -126,9 +135,14 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
       encouragement: step.encouragement || ''
     }));
 
-  } catch (error) {
-    console.error('Azure OpenAI API error:', error);
-    throw new Error('Failed to generate task breakdown');
+  } catch (error: any) {
+    console.error('Azure OpenAI API error details:', {
+      message: error.message,
+      status: error.status,
+      type: error.type,
+      code: error.code
+    });
+    throw new Error(`Failed to generate task breakdown: ${error.message || 'Unknown error'}`);
   }
 }
 

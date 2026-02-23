@@ -248,32 +248,17 @@ export async function canUseAIBreakdown(userId: string): Promise<UsageCheckResul
     const effectivePlanType = planInfo.subscription_active ? planInfo.plan_type : 'free';
     const effectiveLimits = getPlanLimits(effectivePlanType);
 
-    const { data, error } = await supabase.rpc('can_use_ai_breakdown', {
-      user_uuid: userId
-    });
+    // Use plan info directly instead of RPC call (more reliable)
+    const used = planInfo.breakdowns_used || 0;
+    const limit = effectiveLimits.aiBreakdowns;
+    const allowed = used < limit;
 
-    if (error) {
-      console.error('Error checking AI breakdown usage:', error);
-      // Fallback to plan info data with subscription validation
-      return {
-        allowed: planInfo.breakdowns_used < effectiveLimits.aiBreakdowns,
-        used: planInfo.breakdowns_used,
-        limit: effectiveLimits.aiBreakdowns,
-        plan_type: effectivePlanType
-      };
-    }
-
-    const result = data?.[0];
-    
-    // Override limits if subscription is invalid
-    const finalLimit = planInfo.subscription_active ? 
-      (result?.limit_val || effectiveLimits.aiBreakdowns) : 
-      effectiveLimits.aiBreakdowns;
+    console.log('AI Breakdown Check:', { used, limit, allowed, effectivePlanType });
 
     return {
-      allowed: (result?.used || 0) < finalLimit,
-      used: result?.used || 0,
-      limit: finalLimit,
+      allowed,
+      used,
+      limit,
       plan_type: effectivePlanType
     };
   } catch (error) {

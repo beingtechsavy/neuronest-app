@@ -9,6 +9,8 @@ import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
 import FocusSessionWidget from '@/components/FocusSessionWidget';
 import FloatingHint from '@/components/FloatingHint';
+import RecentAIChatSection from '@/components/dashboard/RecentAIChatSection';
+import TodayTasksSection from '@/components/dashboard/TodayTasksSection';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { useConfirm } from '@/hooks/useConfirm';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -36,7 +38,7 @@ export default function Dashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  
+
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
@@ -77,11 +79,11 @@ export default function Dashboard() {
       }
       setProfile({ username: profileData.username || null });
       setSubjects(subjectsRes.data || []);
-      
+
       // Check if user has breakdown tasks and show hint
       const hasBreakdown = (breakdownTasksRes.data?.length || 0) > 0;
       setHasBreakdownTasks(hasBreakdown);
-      
+
       // Show hint for first-time users with breakdown tasks
       if (hasBreakdown && !localStorage.getItem('breakdown-hint-dismissed')) {
         setShowBreakdownHint(true);
@@ -106,7 +108,7 @@ export default function Dashboard() {
     if (!user) return;
 
     const subjectData = { title, color, is_stressful, user_id: user.id };
-    
+
     if (editingSubject) {
       await supabase.from('subjects').update(subjectData).eq('subject_id', editingSubject.subject_id);
     } else {
@@ -132,9 +134,9 @@ export default function Dashboard() {
         const { data, error } = await supabase.rpc('delete_subject_cascade', {
           subject_id_param: subjectId
         });
-        
+
         if (error) throw error;
-        
+
         if (data) {
           await fetchDashboardData();
           success('Subject and all related data deleted successfully');
@@ -172,19 +174,19 @@ export default function Dashboard() {
 
   return (
     <>
-      <SetUsernameModal 
+      <SetUsernameModal
         isOpen={isUsernameModalOpen}
         onClose={() => setIsUsernameModalOpen(false)}
         onSaveSuccess={handleSaveUsernameSuccess}
       />
-      <SubjectModal 
+      <SubjectModal
         isOpen={isSubjectModalOpen}
         onClose={() => setIsSubjectModalOpen(false)}
         onSave={handleSaveSubject}
         subjectToEdit={editingSubject}
         userId={user?.id}
       />
-      
+
       {/* Main content area */}
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
@@ -207,27 +209,13 @@ export default function Dashboard() {
             <div className="lg:col-span-1">
               <FocusSessionWidget />
             </div>
-            
+
             {/* Quick Stats */}
             <div className="lg:col-span-2">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold mb-4">Quick Overview</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{subjects.length}</div>
-                    <div className="text-sm opacity-80">Subjects</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {subjects.filter(s => s.is_stressful).length}
-                    </div>
-                    <div className="text-sm opacity-80">High Priority</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">5</div>
-                    <div className="text-sm opacity-80">Focus Sessions</div>
-                  </div>
-                </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/5 space-y-6">
+                <RecentAIChatSection />
+                <div className="h-px bg-white/10 w-full rounded-full"></div>
+                <TodayTasksSection />
               </div>
             </div>
           </div>

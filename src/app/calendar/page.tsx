@@ -14,9 +14,9 @@ import {
 } from '@dnd-kit/core';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@supabase/auth-helpers-react';
-import { 
-  timeStringToMinutes, 
-  minutesToTimeString, 
+import {
+  timeStringToMinutes,
+  minutesToTimeString,
   getLocalDateString,
   parsePreferenceTime,
   mergeTimeSlots,
@@ -58,6 +58,7 @@ export interface CalendarTask {
   estimated_minutes?: number;
   ai_step_order?: number;
   ai_breakdown_id?: number;
+  is_critical: boolean; // New: Critical task flag for ADHD users
 }
 
 export interface TimeBlock {
@@ -104,7 +105,7 @@ export default function CalendarPage() {
   const user = useUser();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
-  
+
   // CRASH PREVENTION: Track user changes to clear state
   const previousUserIdRef = useRef<string | null>(null);
   const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>({});
@@ -123,7 +124,7 @@ export default function CalendarPage() {
     targetDate: string;
     targetTime: number;
   } | null>(null);
-  
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'up' | 'down' | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -146,13 +147,13 @@ export default function CalendarPage() {
   const fetchData = useCallback(async (isNavigation = false) => {
     if (!currentDate) return;
     if (isNavigation) { setIsNavigating(true); } else { setLoading(true); }
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      
+
       // SAFE: Use local dates, no UTC conversion
-      const firstDay = view === 'week' ? 
+      const firstDay = view === 'week' ?
         (() => {
           // Calculate proper week start (Sunday) to match WeeklyView logic
           const startOfWeek = new Date(currentDate);
@@ -160,15 +161,15 @@ export default function CalendarPage() {
           return startOfWeek;
         })() :
         new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        
-      const lastDay = view === 'week' ? 
-        (() => { 
-          const d = new Date(firstDay); 
-          d.setDate(d.getDate() + 6); 
-          return d; 
-        })() : 
+
+      const lastDay = view === 'week' ?
+        (() => {
+          const d = new Date(firstDay);
+          d.setDate(d.getDate() + 6);
+          return d;
+        })() :
         new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      
+
       // DEBUG: Log date range for week view
       if (view === 'week') {
         console.log('🔍 DEBUG Calendar - Week date range:', {
@@ -204,13 +205,13 @@ export default function CalendarPage() {
           .select('*')
           .eq('user_id', user.id)
       ]);
-      
+
       const groupedTasks = (tasksRes.data ?? []).reduce<Record<string, CalendarTask[]>>((acc, task) => {
         if (!acc[task.scheduled_date]) acc[task.scheduled_date] = [];
         acc[task.scheduled_date].push(task as CalendarTask);
         return acc;
       }, {});
-      
+
       // DEBUG: Log fetched tasks
       if (view === 'week') {
         console.log('🔍 DEBUG Calendar - Fetched tasks:', {
@@ -219,72 +220,72 @@ export default function CalendarPage() {
           todayTasks: groupedTasks['2025-12-15'] || 'No tasks for today'
         });
       }
-      
+
       setTasks(groupedTasks);
       setUnscheduledTasks(unscheduledRes.data ?? []);
       setTimeBlocks(blocksRes.data ?? []);
       setPreferences(prefsRes.data ?? null);
-      
-    } catch (error) { 
+
+    } catch (error) {
       console.error('Error fetching calendar data:', error);
       // Reset to safe state on error
       setTasks({});
       setUnscheduledTasks([]);
       setTimeBlocks([]);
       setPreferences(null);
-    } 
-    finally { 
-      setLoading(false); 
-      setIsNavigating(false); 
+    }
+    finally {
+      setLoading(false);
+      setIsNavigating(false);
     }
   }, [currentDate, view]);
 
   // --- EFFECTS ---
-  
+
   // CRASH PREVENTION: Clear state when switching accounts
   useEffect(() => {
     if (user?.id && user.id !== previousUserIdRef.current) {
       console.log('Account switched - clearing calendar state to prevent crashes');
-      
+
       // Clear all time-related state
       setTasks({});
       setUnscheduledTasks([]);
       setTimeBlocks([]);
       setPreferences(null);
       setLoading(true);
-      
+
       // Reset to current date in new user's local context
       const now = new Date();
       setCurrentDate(now);
-      
+
       // Update reference
       previousUserIdRef.current = user.id;
     }
   }, [user?.id]);
-  
-  useEffect(() => { 
+
+  useEffect(() => {
     if (!currentDate) {
-      const now = new Date(); 
-      setCurrentDate(now); 
+      const now = new Date();
+      setCurrentDate(now);
     }
   }, []);
-  
-  useEffect(() => { 
-    if (currentDate && user?.id) { 
-      const isNav = !loading; 
-      fetchData(isNav); 
-    } 
+
+  useEffect(() => {
+    if (currentDate && user?.id) {
+      const isNav = !loading;
+      fetchData(isNav);
+    }
   }, [currentDate, view, fetchData, loading, user?.id]);
 
   // Handle pending task moves after navigation
   useEffect(() => {
     if (pendingTaskMove && !loading && !isNavigating) {
       console.log('🎯 PENDING MOVE - Executing pending task move:', pendingTaskMove);
-      
+
       const executePendingMove = async () => {
         const { task, targetDate, targetTime } = pendingTaskMove;
         const duration = task.effort_units || preferences?.session_length || 60;
-        
+
         try {
           const { error } = await supabase.from('tasks').update({
             scheduled_date: targetDate,
@@ -292,7 +293,7 @@ export default function CalendarPage() {
             end_time: minutesToTimeString(targetTime + duration),
             task_status: 'scheduled',
           }).eq('task_id', task.task_id);
-          
+
           if (error) {
             console.error('❌ PENDING MOVE - Database update failed:', error);
           } else {
@@ -303,13 +304,13 @@ export default function CalendarPage() {
         } catch (error) {
           console.error('❌ PENDING MOVE - Exception:', error);
         }
-        
+
         // Clear pending move
         setPendingTaskMove(null);
         setDraggedTask(null);
         setDraggedTaskBackup(null);
       };
-      
+
       executePendingMove();
     }
   }, [pendingTaskMove, loading, isNavigating, preferences, fetchData]);
@@ -320,28 +321,28 @@ export default function CalendarPage() {
         event.preventDefault();
         const direction = isOverNavEdge.current === 'right' ? 'next' : 'prev';
         navigatedInDragRef.current = true;
-        
+
         console.log('🔄 NAVIGATION - Right-click navigation triggered:', direction);
-        
+
         // Calculate target date for the pending move
         if (!currentDate) return;
         const targetDate = new Date(currentDate);
         targetDate.setDate(targetDate.getDate() + (direction === 'next' ? 7 : -7));
         const targetDateString = getLocalDateString(targetDate);
-        
+
         // Store pending move information
         setPendingTaskMove({
           task: draggedTaskBackup || draggedTask,
           targetDate: targetDateString,
           targetTime: timeStringToMinutes(draggedTask.start_time || '09:00:00')
         });
-        
+
         console.log('📝 NAVIGATION - Pending move created:', {
           taskTitle: draggedTask.title,
           targetDate: targetDateString,
           targetTime: timeStringToMinutes(draggedTask.start_time || '09:00:00')
         });
-        
+
         // Navigate to new week
         setCurrentDate(prevDate => {
           if (!prevDate) return null;
@@ -349,7 +350,7 @@ export default function CalendarPage() {
           newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
           return newDate;
         });
-        
+
         // Force immediate data refresh for the new week
         setTimeout(() => {
           fetchData(true); // true = isNavigation
@@ -363,17 +364,17 @@ export default function CalendarPage() {
   // --- CORE LOGIC & HANDLERS ---
   const scheduleTasks = async () => {
     if (!preferences) {
-        setScheduleMessage('User preferences not loaded.');
-        return;
+      setScheduleMessage('User preferences not loaded.');
+      return;
     }
     if (unscheduledTasks.length === 0) {
       setScheduleMessage('No unscheduled tasks to schedule.');
       return;
     }
-    
+
     setIsScheduling(true);
     setScheduleMessage('Analyzing schedule...');
-    
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setScheduleMessage('User not authenticated.');
@@ -384,23 +385,23 @@ export default function CalendarPage() {
     let queue = [...unscheduledTasks];
     const updates: Partial<CalendarTask>[] = [];
     const baseDate = new Date();
-    baseDate.setUTCHours(0, 0, 0, 0);
+    baseDate.setHours(0, 0, 0, 0);
     const maxWeeks = 5;
 
     for (let w = 0; w < maxWeeks && queue.length > 0; w++) {
       for (let d = 0; d < 7 && queue.length > 0; d++) {
         const day = new Date(baseDate);
-        day.setUTCDate(baseDate.getUTCDate() + w * 7 + d);
+        day.setDate(baseDate.getDate() + w * 7 + d);
         const dateKey = getLocalDateString(day);
 
         let busySlots: { start: number; end: number }[] = [];
-        
+
         const sleepStart = parsePreferenceTime(preferences.sleep_start);
         const sleepEnd = parsePreferenceTime(preferences.sleep_end);
         if (sleepStart > sleepEnd) {
-            busySlots.push({ start: sleepStart, end: 1440 }, { start: 0, end: sleepEnd });
+          busySlots.push({ start: sleepStart, end: 1440 }, { start: 0, end: sleepEnd });
         } else {
-            busySlots.push({ start: sleepStart, end: sleepEnd });
+          busySlots.push({ start: sleepStart, end: sleepEnd });
         }
 
         for (const meal of preferences.meal_start_times) {
@@ -408,18 +409,18 @@ export default function CalendarPage() {
           busySlots.push({ start: m, end: m + preferences.meal_duration });
         }
 
-        for (const block of timeBlocks.filter(b => 
+        for (const block of timeBlocks.filter(b =>
           // Use safe fields if available, fallback to legacy timestamp
-          (b.block_date === dateKey) || 
+          (b.block_date === dateKey) ||
           (b.start_time && b.start_time.startsWith(dateKey))
         )) {
           // Use safe time fields if available, otherwise parse timestamp
           const startTime = block.safe_start_time || (block.start_time ? block.start_time.split('T')[1]?.split('.')[0] : '00:00:00');
           const endTime = block.safe_end_time || (block.end_time ? block.end_time.split('T')[1]?.split('.')[0] : '00:00:00');
-          
-          busySlots.push({ 
-            start: timeStringToMinutes(startTime), 
-            end: timeStringToMinutes(endTime) 
+
+          busySlots.push({
+            start: timeStringToMinutes(startTime),
+            end: timeStringToMinutes(endTime)
           });
         }
 
@@ -464,7 +465,7 @@ export default function CalendarPage() {
             });
 
             queue.shift();
-            
+
             busySlots.push({ start: startMinute, end: startMinute + duration });
             busySlots = mergeTimeSlots(busySlots);
             lastEnd = startMinute + duration;
@@ -494,8 +495,8 @@ export default function CalendarPage() {
 
   const scrollLoop = useCallback(() => {
     if (scrollDirectionRef.current && scrollContainerRef.current) {
-        if (scrollDirectionRef.current === 'down') { scrollContainerRef.current.scrollTop += SCROLL_SPEED; } 
-        else if (scrollDirectionRef.current === 'up') { scrollContainerRef.current.scrollTop -= SCROLL_SPEED; }
+      if (scrollDirectionRef.current === 'down') { scrollContainerRef.current.scrollTop += SCROLL_SPEED; }
+      else if (scrollDirectionRef.current === 'up') { scrollContainerRef.current.scrollTop -= SCROLL_SPEED; }
     }
     animationFrameRef.current = requestAnimationFrame(scrollLoop);
   }, []);
@@ -524,27 +525,27 @@ export default function CalendarPage() {
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
-      if (!scrollContainerRef.current) return;
-      const { clientY } = event.activatorEvent as MouseEvent;
-      const { top, bottom } = scrollContainerRef.current.getBoundingClientRect();
-      
-      if (clientY < top + SCROLL_THRESHOLD) { scrollDirectionRef.current = 'up'; } 
-      else if (clientY > bottom - SCROLL_THRESHOLD) { scrollDirectionRef.current = 'down'; } 
-      else { scrollDirectionRef.current = null; }
+    if (!scrollContainerRef.current) return;
+    const { clientY } = event.activatorEvent as MouseEvent;
+    const { top, bottom } = scrollContainerRef.current.getBoundingClientRect();
+
+    if (clientY < top + SCROLL_THRESHOLD) { scrollDirectionRef.current = 'up'; }
+    else if (clientY > bottom - SCROLL_THRESHOLD) { scrollDirectionRef.current = 'down'; }
+    else { scrollDirectionRef.current = null; }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     console.log('🎯 DRAG END - Starting drag end handler');
-    
+
     setDraggedTask(null);
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); }
     scrollDirectionRef.current = null;
     isOverNavEdge.current = null;
-    
+
     // Store navigation state before resetting
     const wasCrossWeekDrop = navigatedInDragRef.current;
     console.log('🔍 DRAG END - Cross-week drop detected:', wasCrossWeekDrop);
-    
+
     // If this was a cross-week drop, the pending move system will handle it
     if (wasCrossWeekDrop) {
       console.log('🔄 DRAG END - Cross-week drop detected, pending move system will handle it');
@@ -554,39 +555,39 @@ export default function CalendarPage() {
       }, 100);
       return;
     }
-    
+
     // Clear any pending moves since this is a normal drop
     setPendingTaskMove(null);
     setDraggedTaskBackup(null);
-    
+
     // Reset navigation flag after drag completes
     setTimeout(() => {
       navigatedInDragRef.current = false;
     }, 100);
 
     const { active, over, delta } = event;
-    console.log('🔍 DRAG END - Event details:', { 
-      activeId: active.id, 
-      overId: over?.id, 
+    console.log('🔍 DRAG END - Event details:', {
+      activeId: active.id,
+      overId: over?.id,
       hasTask: !!active.data.current?.task,
       hasPreferences: !!preferences
     });
-    
+
     if (!over) {
       console.log('❌ DRAG END - No drop target (over is null)');
       return;
     }
-    
+
     if (!active.data.current?.task) {
       console.log('❌ DRAG END - No task data in active.data.current');
       return;
     }
-    
+
     if (!preferences) {
       console.log('❌ DRAG END - No user preferences loaded');
       return;
     }
-    
+
     if (String(over.id).startsWith('navigate-')) {
       console.log('🔄 DRAG END - Dropped on navigation edge, ignoring');
       return;
@@ -604,7 +605,7 @@ export default function CalendarPage() {
     const newStartMinutes = Math.max(0, Math.min(1440, originalStartMinutes + minutesOffset));
     const duration = task.effort_units ?? preferences.session_length ?? 60;
     const newEndMinutes = newStartMinutes + duration;
-    
+
     // Get target date - handle both string and Date objects
     let dateKey: string;
     if (typeof over.id === 'string' && over.id.includes('-')) {
@@ -617,76 +618,76 @@ export default function CalendarPage() {
       dateKey = getLocalDateString(targetDate);
       console.log('🔍 DRAG END - Converted to date string:', { overId: over.id, dateKey });
     }
-    
+
     console.log('🎯 DRAG END - Target date key:', dateKey);
     console.log('🔍 DRAG END - Original task date:', task.scheduled_date);
     console.log('🔍 DRAG END - Is cross-date move:', task.scheduled_date !== dateKey);
-    
+
     // Simple busy slots calculation
-    let busySlots: {start:number, end:number}[] = [];
-    
+    let busySlots: { start: number, end: number }[] = [];
+
     // Add sleep time
     const sleepStart = parsePreferenceTime(preferences.sleep_start);
     const sleepEnd = parsePreferenceTime(preferences.sleep_end);
-    if(sleepStart > sleepEnd) { 
-      busySlots.push({start:sleepStart, end:1440}, {start:0,end:sleepEnd}); 
-    } else { 
-      busySlots.push({start:sleepStart, end:sleepEnd}); 
+    if (sleepStart > sleepEnd) {
+      busySlots.push({ start: sleepStart, end: 1440 }, { start: 0, end: sleepEnd });
+    } else {
+      busySlots.push({ start: sleepStart, end: sleepEnd });
     }
-    
+
     // Add meal times
-    preferences.meal_start_times.forEach(mealTime => { 
-      const start = parsePreferenceTime(mealTime); 
-      busySlots.push({start, end: start + preferences.meal_duration}); 
+    preferences.meal_start_times.forEach(mealTime => {
+      const start = parsePreferenceTime(mealTime);
+      busySlots.push({ start, end: start + preferences.meal_duration });
     });
-    
+
     // Add existing tasks for this day (except the one being dragged)
     // For cross-week drops, we might not have the target week's data loaded yet
     const existingTasksForDay = tasks[dateKey] ?? [];
-    existingTasksForDay.forEach(t => { 
-      if(t.task_id !== task.task_id && t.start_time && t.end_time) { 
+    existingTasksForDay.forEach(t => {
+      if (t.task_id !== task.task_id && t.start_time && t.end_time) {
         busySlots.push({
-          start: timeStringToMinutes(t.start_time), 
+          start: timeStringToMinutes(t.start_time),
           end: timeStringToMinutes(t.end_time)
-        }); 
-      } 
+        });
+      }
     });
-    
+
     // Determine if this is a cross-week or cross-date drop
     const isCrossWeekDrop = wasCrossWeekDrop;
     const isCrossDateDrop = task.scheduled_date !== dateKey;
-    
+
     console.log('🔍 DRAG END - Drop analysis:', {
       isCrossWeekDrop,
       isCrossDateDrop,
       originalDate: task.scheduled_date,
       targetDate: dateKey
     });
-    
+
     busySlots = mergeTimeSlots(busySlots);
-    
+
     // Check for collisions using simple minutes
     const hasCollision = busySlots.some(slot => !(newEndMinutes <= slot.start || newStartMinutes >= slot.end));
-    
+
     console.log('🔍 DRAG END - Collision check:', {
       hasCollision,
       newStartMinutes,
       newEndMinutes,
       busySlots: busySlots.length
     });
-    
+
     // For cross-date drops (including cross-week), be more permissive
     if (hasCollision && !isCrossDateDrop) {
       console.log('❌ Same-day collision - task will snap back');
       return;
     }
-    
+
     if (hasCollision && isCrossDateDrop) {
       console.log('⚠️ Cross-date drop has collision - trying to place anyway');
       // For cross-date drops, we'll try to place it and let the database/UI handle conflicts
       // This is more user-friendly than rejecting the drop
     }
-    
+
     // Update task in database
     console.log('💾 DRAG END - Updating task in database:', {
       taskId: task.task_id,
@@ -694,21 +695,21 @@ export default function CalendarPage() {
       newStartTime: minutesToTimeString(newStartMinutes),
       newEndTime: minutesToTimeString(newEndMinutes)
     });
-    
+
     const { error } = await supabase.from('tasks').update({
       scheduled_date: dateKey,
       start_time: minutesToTimeString(newStartMinutes),
       end_time: minutesToTimeString(newEndMinutes),
       task_status: 'scheduled',
     }).eq('task_id', task.task_id);
-    
+
     if (error) {
       console.error('❌ DRAG END - Database update failed:', error);
       return;
     }
-    
+
     console.log('✅ DRAG END - Database update successful');
-    
+
     if (isCrossDateDrop) {
       // For any cross-date drops, do a full data refresh to ensure consistency
       console.log('🔄 DRAG END - Refreshing data after cross-date drop');
@@ -718,13 +719,13 @@ export default function CalendarPage() {
       console.log('⚡ DRAG END - Updating local state for same-day drop');
       setTasks(prevTasks => {
         const newTasks = { ...prevTasks };
-        
+
         // Remove task from old date
         Object.keys(newTasks).forEach(date => {
           newTasks[date] = newTasks[date].filter(t => t.task_id !== task.task_id);
           if (newTasks[date].length === 0) delete newTasks[date];
         });
-        
+
         // Add task to new date with updated times
         if (!newTasks[dateKey]) newTasks[dateKey] = [];
         newTasks[dateKey].push({
@@ -734,16 +735,16 @@ export default function CalendarPage() {
           end_time: minutesToTimeString(newEndMinutes),
           task_status: 'scheduled'
         });
-        
+
         return newTasks;
       });
     }
-    
+
     console.log('🎉 DRAG END - Task move completed successfully');
   };
 
   // --- RENDER LOGIC ---
-  if (loading) return ( <div className="min-h-screen flex justify-center items-center bg-slate-950"><div className="w-10 h-10 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div> );
+  if (loading) return (<div className="min-h-screen flex justify-center items-center bg-slate-950"><div className="w-10 h-10 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div>);
 
   return (
     <>
@@ -774,7 +775,7 @@ export default function CalendarPage() {
           const startMinutes = timeStringToMinutes(startTime);
           const endMinutes = timeStringToMinutes(endTime);
           const dateString = getLocalDateString(selectedDateTime);
-          
+
           await supabase.from('time_blocks').insert({
             title,
             user_id: user.id,
@@ -816,6 +817,7 @@ export default function CalendarPage() {
       <EditTaskModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
+        taskId={editTask?.task_id || 0}
         onSave={async updates => {
           if (!editTask) return;
           const updatePayload: Partial<CalendarTask> = {};
@@ -828,14 +830,17 @@ export default function CalendarPage() {
           if (updates.scheduled_date && updates.scheduled_date !== editTask.scheduled_date) {
             updatePayload.scheduled_date = updates.scheduled_date;
             updatePayload.task_status = 'scheduled'; // Update status when scheduling
-            if (editTask.start_time) {
-              // Keep the same time, just update the date
-              const startMinutes = timeStringToMinutes(editTask.start_time);
-              const newEffort = updates.effort_units || editTask.effort_units || 50;
-              const endMinutes = startMinutes + newEffort;
-              updatePayload.start_time = minutesToTimeString(startMinutes);
-              updatePayload.end_time = minutesToTimeString(endMinutes);
-            }
+          }
+          // Handle time updates
+          if (updates.start_time !== undefined) {
+            updatePayload.start_time = updates.start_time;
+          }
+          if (updates.end_time !== undefined) {
+            updatePayload.end_time = updates.end_time;
+          }
+          // Handle critical flag
+          if (updates.is_critical !== undefined) {
+            updatePayload.is_critical = updates.is_critical;
           }
           if (Object.keys(updatePayload).length > 0) {
             await supabase.from('tasks').update(updatePayload).eq('task_id', editTask.task_id);
@@ -844,9 +849,24 @@ export default function CalendarPage() {
           setIsEditOpen(false);
           setEditTask(null);
         }}
+        onUnschedule={async (taskId) => {
+          await supabase
+            .from('tasks')
+            .update({
+              scheduled_date: null,
+              start_time: null,
+              end_time: null,
+              task_status: 'inbox'
+            })
+            .eq('task_id', taskId);
+          await fetchData();
+        }}
         currentTitle={editTask?.title || ''}
         currentEffort={editTask?.effort_units || 50}
         currentDate={editTask?.scheduled_date || ''}
+        currentStartTime={editTask?.start_time}
+        currentEndTime={editTask?.end_time}
+        currentIsCritical={editTask?.is_critical}
       />
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove} onDragOver={handleDragOver}>
@@ -876,7 +896,7 @@ export default function CalendarPage() {
               </div>
             </div>
             <div ref={scrollContainerRef} className="relative flex-grow bg-slate-800/50 border border-slate-700 rounded-2xl p-4 overflow-auto">
-              {isNavigating && ( <div className="absolute inset-0 bg-slate-900/50 z-30 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div> )}
+              {isNavigating && (<div className="absolute inset-0 bg-slate-900/50 z-30 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div></div>)}
               {currentDate && (view === 'month' ? (
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {daysOfWeek.map(day => <div key={day} className="text-xs font-bold text-slate-400 uppercase pb-2">{day}</div>)}

@@ -4,21 +4,22 @@ import { useState } from 'react';
 import { useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
 import AIBreakdownModal from '@/components/AIBreakdownModal';
+import BreakdownListView from '@/components/BreakdownListView';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 
 export default function AIBreakdownPage() {
   const user = useUser();
   const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBreakdownComplete = () => {
-    // Redirect to dashboard after successful breakdown
-    router.push('/dashboard');
+    // Close modal and stay on page to see the updated list
+    setIsModalOpen(false);
   };
 
   const handleClose = () => {
-    // Go back to dashboard when modal is closed
-    router.push('/dashboard');
+    // Just close the modal, stay on the page
+    setIsModalOpen(false);
   };
 
   if (!user) {
@@ -60,59 +61,39 @@ export default function AIBreakdownPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Turn Overwhelming Tasks into Easy Steps
-          </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Our AI understands ADHD brains and breaks down any task into manageable, 
-            momentum-building micro-steps that actually get done.
-          </p>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🟢</span>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Prominent CTA Section */}
+        <div className="mb-12">
+          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-3xl p-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Sparkles className="text-white" size={32} />
             </div>
-            <h3 className="font-semibold text-white mb-2">Start Easy</h3>
-            <p className="text-slate-400 text-sm">
-              Always begins with simple 5-10 minute tasks to overcome executive dysfunction
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Get AI Assistance NOW
+            </h2>
+            <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-8">
+              Turn overwhelming tasks into manageable steps designed for ADHD brains. 
+              Our AI breaks down any task into momentum-building micro-steps.
             </p>
-          </div>
-
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="text-purple-400" size={24} />
-            </div>
-            <h3 className="font-semibold text-white mb-2">ADHD-Optimized</h3>
-            <p className="text-slate-400 text-sm">
-              Designed specifically for how ADHD brains work - no overwhelm, just progress
-            </p>
-          </div>
-
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">📋</span>
-            </div>
-            <h3 className="font-semibold text-white mb-2">Auto-Organized</h3>
-            <p className="text-slate-400 text-sm">
-              Automatically saves to your subjects and creates trackable tasks
-            </p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-10 py-5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold text-lg rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] inline-flex items-center gap-3 shadow-2xl"
+            >
+              <Sparkles size={28} />
+              <span>Break Down a Task</span>
+            </button>
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-3 mx-auto shadow-xl"
-          >
-            <Sparkles size={24} />
-            <span className="text-lg">Start Breaking Down Tasks</span>
-          </button>
+        {/* Breakdown List Section */}
+        <div>
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold text-white mb-2">Your AI Breakdowns</h3>
+            <p className="text-slate-400">
+              View and manage all your previous task breakdowns
+            </p>
+          </div>
+          <BreakdownListView userId={user.id} />
         </div>
       </div>
 

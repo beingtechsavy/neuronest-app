@@ -1,13 +1,34 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import GoogleSignInButton from '@/components/GoogleSignInButton'
-
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.replace('/dashboard');
+      } else {
+        setLoading(false);
+      }
+    };
+    checkAuthStatus();
+  }, [router]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">Loading...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center px-6">
-      
+
       {/* MASSIVE BRAIN ICON */}
       <div className="text-[8rem] sm:text-[10rem] md:text-[12rem] lg:text-[14rem] leading-none mb-4 select-none">
         🧠
@@ -29,10 +50,10 @@ export default function LandingPage() {
         >
           See How It Works
         </Link>
-        
+
         {/* Secondary CTA - Sign Up */}
         <GoogleSignInButton mode="signup" className="!bg-white !hover:bg-gray-50 !text-gray-900 !border-gray-300" />
-        
+
         {/* Tertiary CTAs */}
         <div className="flex flex-col sm:flex-row gap-3 text-sm">
           <Link

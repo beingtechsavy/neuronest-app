@@ -8,6 +8,9 @@ export interface Task {
   scheduled_date?: string | null;
   is_stressful?: boolean;
   ai_generated?: boolean;
+  start_time?: string | null; // New: HH:MM:SS format
+  end_time?: string | null;   // New: HH:MM:SS format
+  is_critical?: boolean;       // New: Critical task flag for ADHD users
   chapters: {
     title: string;
     subjects: {

@@ -10,7 +10,7 @@ function getSupabaseClient() {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Supabase configuration is missing. Please check your environment variables.');
     }
-    
+
     supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { 
-      userId, 
-      breakdown, 
-      taskTitle, 
-      selectedSubjectId, 
+    const {
+      userId,
+      breakdown,
+      taskTitle,
+      selectedSubjectId,
       newSubjectName,
       createNewSubject,
       saveTasksToInbox = false
@@ -58,12 +58,24 @@ export async function POST(req: NextRequest) {
     const client = getSupabaseClient();
 
     // Validate subscription status before allowing save
-    const planInfo = await getUserPlanInfo(userId);
+    let planInfo = await getUserPlanInfo(userId);
     if (!planInfo) {
-      return NextResponse.json(
-        { error: 'Unable to verify subscription status' },
-        { status: 403 }
-      );
+      console.warn('Unable to verify subscription status, falling back to free plan');
+      planInfo = {
+        plan_type: 'free',
+        status: 'active',
+        breakdowns_used: 0,
+        breakdowns_limit: 3,
+        subjects_count: 0,
+        subjects_limit: 3,
+        flashcards_used: 0,
+        flashcards_limit: 0,
+        current_period_end: null,
+        can_create_subjects: true,
+        can_use_ai: true,
+        subscription_active: true,
+        subscription_expired: false
+      };
     }
 
     // Check if user can create subjects (if creating new subject)
@@ -71,9 +83,9 @@ export async function POST(req: NextRequest) {
       const canCreate = await canCreateSubject(userId);
       if (!canCreate) {
         return NextResponse.json(
-          { 
-            error: planInfo.subscription_active 
-              ? 'Subject limit reached for your plan' 
+          {
+            error: planInfo.subscription_active
+              ? 'Subject limit reached for your plan'
               : 'Subscription expired - upgrade to create more subjects',
             planType: planInfo.plan_type,
             subscriptionActive: planInfo.subscription_active

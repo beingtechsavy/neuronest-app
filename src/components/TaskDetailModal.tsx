@@ -228,6 +228,7 @@ interface CalendarTask {
   estimated_minutes?: number;
   ai_step_order?: number;
   ai_breakdown_id?: number;
+  is_critical: boolean;
 }
 
 type DetailedTask = CalendarTask & { startTime: Date; endTime: Date; };
