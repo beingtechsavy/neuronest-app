@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, Pause, RotateCcw, Timer } from 'lucide-react';
-import { trackFocusSessionTime } from '@/utils/focusSessionTracker';
+import { saveFocusSessionTime as trackFocusSessionTime } from '@/utils/focusSessionTracker';
 
 const DURATIONS = [
   { label: '25 min', value: 25 },

@@ -45,7 +45,7 @@ export default function RecentAIChatSection() {
         if (user) {
             fetchRecentBreakdown();
         }
-    }, [user]);
+    }, [user, supabase]);
 
     if (loading) {
         return (

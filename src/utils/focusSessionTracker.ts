@@ -20,6 +20,8 @@ export function saveFocusSessionTime(minutes: number, date?: string) {
   }
 }
 
+export const trackFocusSessionTime = saveFocusSessionTime;
+
 export function getFocusSessionTime(date?: string): number {
   const targetDate = date || new Date().toISOString().split('T')[0];
   

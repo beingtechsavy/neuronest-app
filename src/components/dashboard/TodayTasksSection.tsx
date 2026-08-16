@@ -48,7 +48,7 @@ export default function TodayTasksSection() {
         if (user) {
             fetchTodayTask();
         }
-    }, [user]);
+    }, [user, supabase]);
 
     if (loading) {
         return (
