@@ -7,6 +7,7 @@ import { canUseAIBreakdown, getUserPlanInfo, UserPlanInfo } from '@/lib/subscrip
 import UsageLimitModal from './UsageLimitModal';
 import type { TaskBreakdownStep } from '@/types/aiBreakdown';
 import { useToast } from '@/hooks/useToast';
+import { supabase } from '@/lib/supabaseClient';
 
 interface Subject {
   subject_id: number;
