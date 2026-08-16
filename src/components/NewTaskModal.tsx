@@ -291,6 +291,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
         </form>
       </div>
     </div>
+    </>
   );
 }
 

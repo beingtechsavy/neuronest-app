@@ -90,8 +90,6 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const client = getSupabaseClient();
-
     // Build update object with only provided fields
     const updateData: {
       start_time?: string | null;
