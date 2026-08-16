@@ -1,4 +1,4 @@
-// ADHD-friendly email templates with clear structure and visual hierarchy
+// Email templates with clear structure and visual hierarchy
 
 interface EmailTemplate {
   subject: string;
@@ -94,7 +94,7 @@ const emailWrapper = (content: string) => `
       </div>
       ${content}
       <div class="footer">
-        <p>NeuroNest - Your ADHD-friendly productivity companion</p>
+        <p>NeuroNest - AI-powered productivity for professionals</p>
         <p>
           <a href="https://www.neuronest.work" style="color: #6366f1; text-decoration: none;">Visit Dashboard</a> • 
           <a href="https://www.neuronest.work/contact" style="color: #6366f1; text-decoration: none;">Contact Support</a>
@@ -115,13 +115,13 @@ export const welcomeEmail = (username: string): EmailTemplate => ({
     <div class="content">
       <h1><span class="emoji">👋</span>Hey ${username}, welcome aboard!</h1>
       
-      <p>We're so excited to have you here! NeuroNest is designed specifically for ADHD brains like yours.</p>
+      <p>We're excited to have you here! NeuroNest helps professionals break down complex work and stay focused.</p>
       
       <div class="highlight">
         <p style="margin: 0;"><strong>🚀 Quick Start (3 steps):</strong></p>
         <ol style="margin: 8px 0 0 0;">
-          <li>Add your first task or subject</li>
-          <li>Try the AI breakdown feature (it's magic ✨)</li>
+          <li>Add your first project</li>
+          <li>Try the AI breakdown feature</li>
           <li>Schedule your tasks in the calendar</li>
         </ol>
       </div>
@@ -133,14 +133,14 @@ export const welcomeEmail = (username: string): EmailTemplate => ({
       <h2>What makes NeuroNest different?</h2>
       <ul>
         <li><strong>AI Task Breakdown:</strong> Turn overwhelming projects into bite-sized steps</li>
-        <li><strong>Visual Progress:</strong> See your wins (dopamine boost!)</li>
-        <li><strong>ADHD-Friendly Design:</strong> No clutter, just what you need</li>
+        <li><strong>Visual Progress:</strong> Track your wins across all projects</li>
+        <li><strong>Clean Design:</strong> No clutter, just what you need</li>
         <li><strong>Smart Scheduling:</strong> Plan around your energy levels</li>
       </ul>
       
       <p>Need help? Just reply to this email or visit our <a href="https://www.neuronest.work/contact" style="color: #6366f1;">support page</a>.</p>
       
-      <p style="margin-top: 24px;">Let's make productivity fun! 🎯</p>
+      <p style="margin-top: 24px;">Let's get things done. 🎯</p>
       
       <p style="color: #6b7280; font-style: italic;">
         — The NeuroNest Team
@@ -149,24 +149,24 @@ export const welcomeEmail = (username: string): EmailTemplate => ({
   `),
   text: `Hey ${username}, welcome aboard!
 
-We're so excited to have you here! NeuroNest is designed specifically for ADHD brains like yours.
+We're excited to have you here! NeuroNest helps professionals break down complex work and stay focused.
 
 🚀 Quick Start (3 steps):
-1. Add your first task or subject
-2. Try the AI breakdown feature (it's magic ✨)
+1. Add your first project
+2. Try the AI breakdown feature
 3. Schedule your tasks in the calendar
 
 Visit your dashboard: https://www.neuronest.work/dashboard
 
 What makes NeuroNest different?
 • AI Task Breakdown: Turn overwhelming projects into bite-sized steps
-• Visual Progress: See your wins (dopamine boost!)
-• ADHD-Friendly Design: No clutter, just what you need
+• Visual Progress: Track your wins across all projects
+• Clean Design: No clutter, just what you need
 • Smart Scheduling: Plan around your energy levels
 
 Need help? Just reply to this email or visit: https://www.neuronest.work/contact
 
-Let's make productivity fun! 🎯
+Let's get things done. 🎯
 
 — The NeuroNest Team`
 });

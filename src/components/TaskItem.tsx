@@ -38,7 +38,7 @@ const StatusBadge = ({ taskStatus }: { taskStatus: 'breakdown' | 'inbox' | 'sche
 export default function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
   const subject = task.chapters?.[0]?.subjects?.[0];
   const subjectColor = subject?.color || '#6366f1';
-  const subjectTitle = subject?.title || 'No Subject';
+  const subjectTitle = subject?.title || 'No Project';
   const isOverdue = task.deadline ? new Date(task.deadline) < new Date() : false;
 
   return (

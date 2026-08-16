@@ -7,7 +7,6 @@ import { useUser } from '@supabase/auth-helpers-react';
 import TaskBox from '@/components/TaskBox';
 import SubjectModal from '@/components/SubjectModal';
 import SetUsernameModal from '@/components/SetUsernameModal';
-import FocusSessionWidget from '@/components/FocusSessionWidget';
 import FloatingHint from '@/components/FloatingHint';
 import RecentAIChatSection from '@/components/dashboard/RecentAIChatSection';
 import TodayTasksSection from '@/components/dashboard/TodayTasksSection';
@@ -96,7 +95,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [router, user]);
+  }, [router]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -199,25 +198,15 @@ export default function Dashboard() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-colors"
             >
               <PlusCircle size={20} />
-              <span>Add Subject</span>
+              <span>Add Project</span>
             </button>
           </div>
 
-          {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Focus Session Widget */}
-            <div className="lg:col-span-1">
-              <FocusSessionWidget />
-            </div>
-
-            {/* Quick Stats */}
-            <div className="lg:col-span-2">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/5 space-y-6">
-                <RecentAIChatSection />
-                <div className="h-px bg-white/10 w-full rounded-full"></div>
-                <TodayTasksSection />
-              </div>
-            </div>
+          {/* Dashboard Content */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/5 space-y-6 mb-8">
+            <RecentAIChatSection />
+            <div className="h-px bg-white/10 w-full rounded-full"></div>
+            <TodayTasksSection />
           </div>
 
           {/* Subjects Grid */}

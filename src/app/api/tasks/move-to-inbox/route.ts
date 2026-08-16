@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -28,16 +29,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { userId, taskIds } = await req.json();
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!userId || !taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+    const { taskIds } = await req.json();
+
+    if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
       return NextResponse.json(
-        { error: 'User ID and task IDs are required' },
+        { error: 'Task IDs are required' },
         { status: 400 }
       );
     }
 
     const client = getSupabaseClient();
+    const userId = authUser.id;
+
+    // Verify task ownership for all provided task IDs
+    const { data: targetTasks, error: checkErr } = await client
+      .from('tasks')
+      .select('task_id, user_id')
+      .in('task_id', taskIds);
+
+    if (checkErr || !targetTasks || targetTasks.length === 0) {
+      return NextResponse.json({ error: 'Tasks not found' }, { status: 404 });
+    }
+
+    const hasUnauthorizedTask = targetTasks.some((t) => t.user_id !== userId);
+    if (hasUnauthorizedTask) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Update tasks from 'breakdown' status to 'inbox' status
     const { data, error } = await client
@@ -45,7 +67,7 @@ export async function POST(req: NextRequest) {
       .update({ task_status: 'inbox' })
       .eq('user_id', userId)
       .in('task_id', taskIds)
-      .eq('task_status', 'breakdown') // Only move tasks that are currently in breakdown status
+      .eq('task_status', 'breakdown')
       .select('task_id, title');
 
     if (error) {
@@ -58,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      movedTasks: data?.length || 0,
+      movedCount: data?.length || 0,
       tasks: data || []
     });
 

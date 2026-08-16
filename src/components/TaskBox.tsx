@@ -261,8 +261,8 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
       <AIBreakdownModal
         isOpen={isAIBreakdownOpen}
         onClose={() => setIsAIBreakdownOpen(false)}
-        taskTitle={`Study ${subject.title}`}
-        taskDescription={`Break down studying for ${subject.title} into manageable steps`}
+        taskTitle={`Work on ${subject.title}`}
+        taskDescription={`Break down ${subject.title} into manageable steps`}
         taskSubject={subject.title}
         userId={user?.id || ''}
         onBreakdownComplete={handleAIBreakdownComplete}
@@ -302,7 +302,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
           <div style={styles.cardHeader}>
             <div style={styles.titleGroup}>
               {subject.is_stressful && (
-                <span title="This subject may be stressful">
+                <span title="High-priority project">
                   <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
                 </span>
               )}
@@ -331,7 +331,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
           {/* Space between progress/bar and expand button */}
           <div style={{ marginTop: 18 }} />
           <button style={styles.expandButton} onClick={() => setExpanded(!expanded)}>
-            <span>{expanded ? 'Collapse' : 'View Chapters'}</span>
+            <span>{expanded ? 'Collapse' : 'View Areas'}</span>
             <ChevronDown
               size={16}
               style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
@@ -357,7 +357,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                 <button 
                   style={styles.aiBreakdownButton} 
                   onClick={() => setIsAIBreakdownOpen(true)}
-                  title="Break down this subject with AI magic! ✨"
+                  title="Break down this project with AI"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.05)';
                     e.currentTarget.style.boxShadow = '0 4px 16px rgba(124, 58, 237, 0.5)';
@@ -370,10 +370,10 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                   }}
                 >
                   <Sparkles size={14} style={{ animation: 'pulse 2s infinite' }} />
-                  ✨ AI Magic
+                  AI Breakdown
                 </button>
                 <button style={styles.addChapterButton} onClick={() => setIsAddChapterModalOpen(true)}>
-                  + Add Chapter
+                  + Add Area
                 </button>
               </div>
               <div style={styles.taskList}>
@@ -412,7 +412,7 @@ export default function TaskBox({ subject, className = '', onEdit, onDelete }: T
                         ))
                     ) : (
                       <div style={styles.emptyState}>
-                        <span style={styles.emptyText}>No chapters yet. Add one to get started!</span>
+                        <span style={styles.emptyText}>No areas yet. Add one to get started!</span>
                       </div>
                     )}
                   </>

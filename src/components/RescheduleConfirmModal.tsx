@@ -49,8 +49,6 @@ export default function RescheduleConfirmModal({ isOpen, onClose, onConfirm, det
   }, [details]);
 
   if (!isOpen || !details) return null;
-  
-  console.log('RescheduleConfirmModal is rendering with:', { isOpen, details });
 
   // When the user clicks confirm, validate the inputs and send data to the parent
   const handleConfirmClick = () => {

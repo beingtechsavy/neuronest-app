@@ -36,62 +36,51 @@ export interface TaskBreakdownRequest {
   title: string;
   description?: string;
   deadline?: string;
-  subject?: string;
-  userContext?: string; // ADHD-specific context
+  subject?: string; // kept as 'subject' internally — maps to DB column
+  userContext?: string;
 }
 
 export async function generateTaskBreakdown(
   request: TaskBreakdownRequest
 ): Promise<TaskBreakdownStep[]> {
-  const systemPrompt = `You are an ADHD-specialized task breakdown expert and supportive friend. Your job is to break down overwhelming tasks into tiny, manageable micro-steps that work specifically for ADHD brains, while being warm, encouraging, and understanding.
+  const systemPrompt = `You are a productivity expert who helps professionals break down complex tasks into clear, actionable steps. Your job is to transform overwhelming work into a structured execution plan.
 
-ADHD-Specific Principles:
-1. Start with VERY easy steps (5-10 min) to overcome executive dysfunction
-2. Build momentum gradually - easy steps first, harder ones later
-3. Include strategic breaks and dopamine rewards
-4. Make each step specific and concrete (no vague instructions)
-5. Add clear completion criteria for each step
-6. Consider energy levels and attention spans
+Core Principles:
+1. Start with quick-win steps (5-15 min) to build momentum
+2. Progress from setup/research → execution → review
+3. Make each step specific and concrete — no vague instructions
+4. Include clear completion criteria ("done when...")
+5. Consider dependencies between steps
+6. Estimate time realistically
 
 Difficulty Ratings:
-- EASY (🟢): 5-15 minutes, low mental energy, clear completion
-- MEDIUM (🟡): 15-30 minutes, moderate focus required
-- HARD (🔴): 30+ minutes, high focus, complex thinking
-
-EMOTIONAL INTELLIGENCE RULES:
-- Use warm, encouraging language like a supportive friend
-- Add motivational phrases: "you've got this!", "almost there!", "great job!"
-- Include permission to be imperfect: "just write badly", "rough draft is fine"
-- Add ADHD-specific encouragement: "your brain works differently and that's okay"
-- Use emojis sparingly but meaningfully
-- Acknowledge the struggle: "this part might feel hard, but..."
-- Celebrate small wins: "completing this will feel amazing!"
+- EASY: 5-15 minutes, low cognitive load, clear outcome
+- MEDIUM: 15-30 minutes, moderate focus required
+- HARD: 30+ minutes, deep work, complex thinking
 
 Return a JSON array with 6-10 steps, each having:
 {
-  "step": "Warm, encouraging action with supportive language",
+  "step": "Clear action statement",
   "difficulty": "EASY|MEDIUM|HARD", 
   "estimatedMinutes": number,
   "order": number,
-  "completionCriteria": "Encouraging completion criteria",
-  "encouragement": "Extra motivational message for this step"
+  "completionCriteria": "Specific done-when criteria"
 }
 
-IMPORTANT: Always start with 2-3 EASY steps to build momentum! Make every step feel achievable and supported.`;
+IMPORTANT: Always start with 2-3 EASY steps. Make every step feel achievable.`;
 
-  const userPrompt = `Break down this task for someone with ADHD:
+  const userPrompt = `Break down this task into actionable steps:
 
 Task: "${request.title}"
 ${request.description ? `Description: ${request.description}` : ''}
 ${request.deadline ? `Deadline: ${request.deadline}` : ''}
-${request.subject ? `Subject: ${request.subject}` : ''}
+${request.subject ? `Project: ${request.subject}` : ''}
 ${request.userContext ? `Additional context: ${request.userContext}` : ''}
 
-Create 6-10 micro-steps that will help overcome task paralysis and build momentum. Remember: start easy, build up gradually, be specific.`;
+Create 6-10 concrete steps. Start easy, build up gradually, be specific.`;
 
   try {
     const client = getAzureOpenAIClient();
-    console.log('Azure OpenAI client initialized, making API call...');
     
     const response = await client.chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME!,
@@ -104,15 +93,12 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
       response_format: { type: 'json_object' }
     });
 
-    console.log('Azure OpenAI response received');
-    
     const content = response.choices[0]?.message?.content;
     if (!content) {
       console.error('No content in Azure OpenAI response');
       throw new Error('No response from Azure OpenAI');
     }
 
-    console.log('Parsing AI response...');
     const parsed = JSON.parse(content);
     
     // Ensure we have a steps array
@@ -122,8 +108,6 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
       console.error('Invalid response format:', parsed);
       throw new Error('Invalid response format from AI');
     }
-
-    console.log('Successfully parsed', steps.length, 'steps');
 
     // Validate and format the response
     return steps.map((step: any, index: number) => ({
@@ -150,13 +134,12 @@ Create 6-10 micro-steps that will help overcome task paralysis and build momentu
 export async function testAzureOpenAI() {
   try {
     const testBreakdown = await generateTaskBreakdown({
-      title: "Write a 5-page research paper on climate change",
-      description: "Need to research, outline, and write a paper for environmental science class",
+      title: "Prepare quarterly business review presentation",
+      description: "Need to compile Q2 metrics, create slides, and prepare talking points for leadership team",
       deadline: "Next Friday",
-      subject: "Environmental Science"
+      subject: "Business Operations"
     });
     
-    console.log('Test breakdown:', testBreakdown);
     return testBreakdown;
   } catch (error) {
     console.error('Test failed:', error);

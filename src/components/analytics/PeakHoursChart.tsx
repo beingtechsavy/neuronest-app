@@ -45,7 +45,7 @@ export default function PeakHoursChart({ peakHours }: PeakHoursChartProps) {
     <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
         <Clock className="text-blue-400" size={20} />
-        Peak Study Hours
+        Peak Productivity Hours
       </h3>
 
       {/* Chart */}

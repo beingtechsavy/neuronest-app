@@ -132,7 +132,7 @@ export default function UsageDashboard() {
                 <BookOpen size={16} className="text-blue-400" />
               </div>
               <div>
-                <h3 className="text-white font-medium">Subjects</h3>
+                <h3 className="text-white font-medium">Projects</h3>
                 <p className="text-slate-400 text-xs">Total created</p>
               </div>
             </div>
@@ -159,7 +159,7 @@ export default function UsageDashboard() {
           )}
           
           {planInfo.subjects_limit === 999999 && (
-            <p className="text-green-400 text-xs">Unlimited subjects</p>
+            <p className="text-green-400 text-xs">Unlimited projects</p>
           )}
         </div>
 
@@ -225,7 +225,7 @@ export default function UsageDashboard() {
               <p className="text-slate-300 text-sm">
                 {planInfo.plan_type === 'free' 
                   ? 'Get more AI breakdowns, subjects, and premium features'
-                  : 'Upgrade to Warrior for unlimited subjects and advanced features'
+                  : 'Upgrade to Pro for unlimited projects and advanced features'
                 }
               </p>
             </div>

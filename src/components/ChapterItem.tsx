@@ -44,7 +44,7 @@ export default function ChapterItem({ chapter, onToggleComplete, onEdit, onDelet
       }
     }
     fetchTasks()
-  }, [isExpanded, chapter.chapter_id])
+  }, [isExpanded, chapter.chapter_id, chapter.title, showError])
 
   const handleToggleTask = async (taskId: number) => {
     const taskToToggle = tasks.find(t => t.task_id === taskId);

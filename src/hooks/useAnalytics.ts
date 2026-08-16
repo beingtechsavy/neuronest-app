@@ -258,13 +258,7 @@ export function useAnalytics() {
                 });
             }
         } catch (e) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('No focus session data available for streak calculation');
-            }
-        }
-
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Daily focus time for streak calculation:', dailyFocusTime);
+            // Focus session data unavailable
         }
 
         // Find dates with 30+ minutes of focus (streak days)
@@ -441,10 +435,6 @@ export function useAnalytics() {
         setError(null);
 
         try {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🚀 Starting analytics fetch for user:', user.id);
-            }
-
             // Initialize focus session data if needed (for demo purposes)
             const initializeFocusData = () => {
                 try {
@@ -468,31 +458,16 @@ export function useAnalytics() {
                         }
 
                         localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-                        if (process.env.NODE_ENV === 'development') {
-                            console.log('✅ Auto-initialized focus session data for analytics');
-                        }
-                    } else {
-                        if (process.env.NODE_ENV === 'development') {
-                            console.log('✅ Focus session data already exists');
-                        }
                     }
                 } catch (error) {
-                    if (process.env.NODE_ENV === 'development') {
-                        console.log('⚠️ Could not initialize focus session data:', error);
-                    }
+                    // Ignore localStorage errors
                 }
             };
 
             initializeFocusData();
 
             // Phase 1: Load critical stats first for immediate display
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📊 Phase 1: Loading task stats...');
-            }
             const taskStats = await calculateTaskStats();
-            if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Task stats loaded:', taskStats);
-            }
 
             // Show basic analytics immediately
             setAnalytics(prev => ({
@@ -503,14 +478,8 @@ export function useAnalytics() {
                 productivityHeatmap: prev?.productivityHeatmap || [],
                 peakHours: prev?.peakHours || []
             }));
-            if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Phase 1 complete - basic analytics set');
-            }
 
             // Phase 2: Load remaining data in parallel
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📊 Phase 2: Loading detailed analytics...');
-            }
             const [
                 subjectStats,
                 studyStreak,
@@ -522,14 +491,6 @@ export function useAnalytics() {
                 calculateWeeklyProgress(),
                 calculateProductivityHeatmap()
             ]);
-            if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Phase 2 complete:', { 
-                    subjectCount: subjectStats.length, 
-                    currentStreak: studyStreak.currentStreak,
-                    weekCount: weeklyProgress.length,
-                    heatmapDays: productivityHeatmap.length
-                });
-            }
 
             // Calculate peak hours from productivity data
             const hourlyProductivity: { [hour: number]: number[] } = {};
@@ -559,9 +520,6 @@ export function useAnalytics() {
                 productivityHeatmap,
                 peakHours
             });
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🎉 Analytics fully loaded successfully!');
-            }
         } catch (err) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('❌ Analytics fetch error:', err);

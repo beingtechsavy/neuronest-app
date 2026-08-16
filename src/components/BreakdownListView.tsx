@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowUpDown, Sparkles, Calendar, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface BreakdownListItem {
   id: number;
@@ -27,22 +28,17 @@ export default function BreakdownListView({ userId }: BreakdownListViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (userId) {
-      fetchBreakdowns();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    filterAndSortBreakdowns();
-  }, [breakdowns, searchQuery, sortBy, sortOrder]);
-
-  const fetchBreakdowns = async () => {
+  const fetchBreakdowns = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/ai/breakdowns/list?userId=${userId}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/ai/breakdowns/list?userId=${userId}`, {
+        headers: {
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        }
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -56,9 +52,9 @@ export default function BreakdownListView({ userId }: BreakdownListViewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
-  const filterAndSortBreakdowns = () => {
+  const filterAndSortBreakdowns = useCallback(() => {
     let filtered = [...breakdowns];
 
     // Apply search filter
@@ -90,7 +86,19 @@ export default function BreakdownListView({ userId }: BreakdownListViewProps) {
     });
 
     setFilteredBreakdowns(filtered);
-  };
+  }, [breakdowns, searchQuery, sortBy, sortOrder]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchBreakdowns();
+    }
+  }, [userId, fetchBreakdowns]);
+
+  useEffect(() => {
+    filterAndSortBreakdowns();
+  }, [filterAndSortBreakdowns]);
+
+
 
   const handleBreakdownClick = (breakdownId: number) => {
     // Navigate to breakdown details or AI breakdown page

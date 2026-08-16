@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -28,15 +29,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { userId } = await req.json();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = authUser.id;
     const client = getSupabaseClient();
 
     // Get user's subjects
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Subjects list API error:', error);
+    console.error('List subjects API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

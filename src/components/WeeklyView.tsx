@@ -305,23 +305,9 @@ function DayColumn({ day, preferences, timeBlocks, tasks, onTaskClick, onTimeBlo
   const { setNodeRef, isOver } = useDroppable({ id: dateKey });
   const dayColumnStyle = { backgroundColor: isOver ? 'rgba(79, 70, 229, 0.13)' : 'transparent', transition: 'background-color 0.2s ease-in-out', };
 
-  // DEBUG: Log task data for today
+  // Task data for today
   const tasksForDay = tasks[dateKey] || [];
   const filteredTasks = tasksForDay.filter(t => t.start_time && t.end_time);
-
-  if (dateKey === '2025-12-15') { // Today's date
-    console.log('🔍 DEBUG WeeklyView - Today:', {
-      dateKey,
-      tasksForDay: tasksForDay.length,
-      filteredTasks: filteredTasks.length,
-      tasks: filteredTasks.map(t => ({
-        title: t.title,
-        start_time: t.start_time,
-        end_time: t.end_time,
-        scheduled_date: t.scheduled_date
-      }))
-    });
-  }
 
   return (
     <div ref={setNodeRef} key={dateKey} className="relative border-l border-slate-700 grid" style={{ ...dayColumnStyle, gridTemplateRows: 'repeat(96, 1fr)' }}>
@@ -443,13 +429,6 @@ export default function WeeklyView({
   onTaskClick,
   onTimeBlockClick,
 }: WeeklyViewProps) {
-  // DEBUG: Log tasks prop
-  console.log('🔍 DEBUG WeeklyView - Tasks prop:', {
-    totalTaskDates: Object.keys(tasks).length,
-    taskDates: Object.keys(tasks),
-    todayTasks: tasks['2025-12-15'] || 'No tasks for today'
-  });
-
   // FIXED: Show proper week containing the current date
   // Calculate the start of the week (Sunday) for the given currentDate
   const startOfWeek = new Date(currentDate);

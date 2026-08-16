@@ -79,7 +79,7 @@ export default function WeeklyProgressChart({ weeklyProgress }: WeeklyProgressCh
 
         {/* Time Spent Chart */}
         <div>
-          <h4 className="text-sm font-medium text-slate-300 mb-3">Study Time (minutes)</h4>
+          <h4 className="text-sm font-medium text-slate-300 mb-3">Focus Time (minutes)</h4>
           <div className="flex items-end gap-2 h-32">
             {weeklyProgress.map((week, index) => (
               <div key={`time-${week.weekStart}`} className="flex-1 flex flex-col items-center">

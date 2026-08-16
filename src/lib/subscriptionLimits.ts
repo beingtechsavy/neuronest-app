@@ -83,7 +83,6 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
       data = result.data;
       error = result.error;
     } catch (newFunctionError) {
-      console.log('New function not available, trying old function name');
       // Fallback to old function name if it exists
       const result = await supabase.rpc('get_user_plan_info', {
         user_uuid: userId
@@ -253,8 +252,6 @@ export async function canUseAIBreakdown(userId: string): Promise<UsageCheckResul
     const limit = effectiveLimits.aiBreakdowns;
     const allowed = used < limit;
 
-    console.log('AI Breakdown Check:', { used, limit, allowed, effectivePlanType });
-
     return {
       allowed,
       used,
@@ -351,10 +348,10 @@ export function getPlanLimits(planType: 'free' | 'master' | 'warrior') {
       aiBreakdowns: 3,
       flashcards: 0,
       features: [
-        '3 subjects',
-        '3 AI breakdowns per day',
+        '3 projects',
+        '2 AI breakdowns per day',
         'Basic focus timer',
-        'Basic analytics'
+        'Basic insights'
       ]
     },
     master: {
@@ -362,11 +359,10 @@ export function getPlanLimits(planType: 'free' | 'master' | 'warrior') {
       aiBreakdowns: 10,
       flashcards: 20,
       features: [
-        '15 subjects',
+        '15 projects',
         '10 AI breakdowns per day',
-        '20 AI flashcards per day',
-        'AI study buddy',
-        'Full analytics',
+        'Smart Daily Planner',
+        'Full insights',
         'Priority support'
       ]
     },
@@ -375,12 +371,11 @@ export function getPlanLimits(planType: 'free' | 'master' | 'warrior') {
       aiBreakdowns: 25,
       flashcards: 50,
       features: [
-        'Unlimited subjects',
-        '25 AI breakdowns per day',
-        '50 AI flashcards per day',
-        'Advanced AI features',
-        'Predictive analytics',
-        'API access'
+        'Unlimited projects',
+        'Unlimited AI breakdowns',
+        'Smart Daily Planner',
+        'Full insights',
+        'Priority support'
       ]
     }
   };
@@ -396,9 +391,8 @@ export function formatPlanName(planType: string): string {
     case 'free':
       return 'Free';
     case 'master':
-      return 'Master';
     case 'warrior':
-      return 'Warrior';
+      return 'Pro';
     default:
       return 'Free';
   }
@@ -410,19 +404,19 @@ export function formatPlanName(planType: string): string {
 export function getUpgradeMessage(planType: string, feature: 'subjects' | 'ai' | 'flashcards'): string {
   const messages = {
     subjects: {
-      free: 'Upgrade to Master for 15 subjects or Warrior for unlimited subjects',
-      master: 'Upgrade to Warrior for unlimited subjects',
-      warrior: 'You have unlimited subjects!'
+      free: 'Upgrade to Pro for unlimited projects',
+      master: 'You have Pro — unlimited projects!',
+      warrior: 'You have unlimited projects!'
     },
     ai: {
-      free: 'Upgrade to Master for 10 AI breakdowns per day or Warrior for 25 per day',
-      master: 'Upgrade to Warrior for 25 AI breakdowns per day',
+      free: 'Upgrade to Pro for unlimited AI breakdowns',
+      master: 'You have Pro — maximum AI breakdowns!',
       warrior: 'You have the maximum AI breakdowns!'
     },
     flashcards: {
-      free: 'Upgrade to Master for 20 AI flashcards per day or Warrior for 50 per day',
-      master: 'Upgrade to Warrior for 50 AI flashcards per day',
-      warrior: 'You have the maximum AI flashcards!'
+      free: 'Upgrade to Pro for full features',
+      master: 'You have Pro — full features!',
+      warrior: 'You have full features!'
     }
   };
 

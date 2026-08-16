@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - NeuroNest',
-  description: 'Terms of Service for NeuroNest AI-powered study assistant',
+  description: 'Terms of Service for NeuroNest AI productivity platform',
 };
 
 export default function TermsOfService() {
@@ -19,21 +19,21 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
               <p className="text-slate-300 mb-4">
-                By accessing and using NeuroNest ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                By accessing and using NeuroNest (&quot;the Service&quot;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">2. Description of Service</h2>
               <p className="text-slate-300 mb-4">
-                NeuroNest is an AI-powered study assistant that helps students organize their learning materials, break down complex tasks, and track their academic progress. The service includes:
+                NeuroNest is an AI-powered productivity platform that helps professionals organize their work, break down complex tasks, and track their progress. The service includes:
               </p>
               <ul className="text-slate-300 mb-4 list-disc list-inside">
-                <li>AI-powered task breakdown and organization</li>
-                <li>Subject and chapter management</li>
-                <li>Progress tracking and analytics</li>
-                <li>Study scheduling and reminders</li>
-                <li>Focus session management</li>
+                <li>AI-powered task breakdown and planning</li>
+                <li>Project and area management</li>
+                <li>Progress tracking and weekly insights</li>
+                <li>Smart daily planning</li>
+                <li>Focus timer</li>
               </ul>
             </section>
 
@@ -57,8 +57,7 @@ export default function TermsOfService() {
               </p>
               <ul className="text-slate-300 mb-4 list-disc list-inside">
                 <li><strong>Free Plan:</strong> Limited features with usage restrictions</li>
-                <li><strong>Master Plan:</strong> Enhanced features and increased usage limits</li>
-                <li><strong>Warrior Plan:</strong> Full access to all features and unlimited usage</li>
+                <li><strong>Pro Plan ($9/month or $79/year):</strong> Full access to all features</li>
               </ul>
               <p className="text-slate-300 mb-4">
                 Subscription fees are billed monthly in advance. You may cancel your subscription at any time through your account settings.
@@ -68,7 +67,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">5. Payment Terms</h2>
               <p className="text-slate-300 mb-4">
-                By subscribing to a paid plan, you agree to pay all applicable fees. Payments are processed securely through our payment processor, Paddle. All fees are non-refundable except as required by law or as specified in our refund policy.
+                By subscribing to a paid plan, you agree to pay all applicable fees. Payments are processed securely through our payment processor. All fees are non-refundable except as required by law or as specified in our refund policy.
               </p>
             </section>
 
@@ -134,8 +133,8 @@ export default function TermsOfService() {
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
               <p className="text-slate-300">
-                Email: support@neuronest.com<br />
-                Website: https://neuronest.com/contact
+                Email: support@neuronest.work<br />
+                Website: https://neuronest.work
               </p>
             </section>
           </div>

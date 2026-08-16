@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -28,6 +29,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { task_id } = await req.json();
 
     if (!task_id) {
@@ -38,6 +44,21 @@ export async function POST(req: NextRequest) {
     }
 
     const client = getSupabaseClient();
+
+    // Verify task ownership
+    const { data: existingTask, error: fetchErr } = await client
+      .from('tasks')
+      .select('user_id')
+      .eq('task_id', task_id)
+      .single();
+
+    if (fetchErr || !existingTask) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    if (existingTask.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Unschedule task by removing scheduled_date, start_time, end_time
     // and setting task_status to 'inbox'
@@ -62,21 +83,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!data) {
-      return NextResponse.json(
-        { error: 'Task not found' },
-        { status: 404 }
-      );
-    }
-
     return NextResponse.json({
       success: true,
-      message: 'Task unscheduled successfully',
       task: data
     });
 
   } catch (error) {
-    console.error('Unschedule API error:', error);
+    console.error('Unschedule task API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

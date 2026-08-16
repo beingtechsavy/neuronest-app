@@ -5,48 +5,35 @@ import { ReactNode } from 'react';
 import { SupabaseProvider } from '@/components/SupabaseProvider';
 import { ToastProvider } from '@/components/ToastProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { FocusSessionProvider } from '@/contexts/FocusSessionContext';
-import { AmbientSoundProvider } from '@/contexts/AmbientSoundContext';
-import { FloatingFocusWidget } from '@/components/FloatingFocusWidget';
-import CelebrationOverlay from '@/components/CelebrationOverlay';
 import Sidebar from '@/components/SideBar'; 
-import Topbar from '@/components/TopBar'; // Corrected the casing from 'Topbar' to 'TopBar'
+import Topbar from '@/components/TopBar';
 
 export default function RootLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isAppPage = !['/', '/login', '/signup', '/features'].includes(pathname);
+  const isAppPage = !['/', '/login', '/signup', '/features', '/pricing', '/terms', '/privacy', '/refund', '/contact', '/rescue', '/sessions'].includes(pathname);
 
   return (
     <ErrorBoundary>
       <SupabaseProvider>
         <ToastProvider>
-          <FocusSessionProvider>
-            <AmbientSoundProvider>
-            {isAppPage ? (
-              // --- App Layout (with Sidebar AND Topbar) ---
-              <>
-                <Sidebar />
-                <div className="lg:ml-60">
-                  <Topbar />
-                  <main>
-                    {children}
-                  </main>
-                </div>
-                <FloatingFocusWidget />
-                <CelebrationOverlay />
-              </>
-            ) : (
-              // --- Public Layout (No Topbar) ---
-              <>
+          {isAppPage ? (
+            // --- App Layout (with Sidebar AND Topbar) ---
+            <>
+              <Sidebar />
+              <div className="lg:ml-60">
+                <Topbar />
                 <main>
                   {children}
                 </main>
-                <CelebrationOverlay />
-              </>
-            )}
-              </AmbientSoundProvider>
-            </FocusSessionProvider>
-          </ToastProvider>
+              </div>
+            </>
+          ) : (
+            // --- Public Layout (No Sidebar) ---
+            <main>
+              {children}
+            </main>
+          )}
+        </ToastProvider>
       </SupabaseProvider>
     </ErrorBoundary>
   );

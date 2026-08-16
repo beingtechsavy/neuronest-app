@@ -9,11 +9,6 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get('error')
   const errorDescription = requestUrl.searchParams.get('error_description')
 
-  console.log('🔥 OAuth Callback - Route Handler')
-  console.log('Timestamp:', new Date().toISOString())
-  console.log('Code present:', !!code)
-  console.log('Error:', error)
-
   // Handle OAuth errors from provider
   if (error) {
     console.error('❌ OAuth provider error:', error, errorDescription)
@@ -60,8 +55,6 @@ export async function GET(request: NextRequest) {
       }
     )
     
-    console.log('🔄 Exchanging code for session...')
-    
     // Exchange the code for a session with timeout
     const exchangePromise = supabase.auth.exchangeCodeForSession(code)
     const timeoutPromise = new Promise((_, reject) => 
@@ -99,8 +92,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('✅ Session created for:', data.user.email)
-    
     // Ensure profile exists with retry logic (handles race conditions)
     try {
       const { ensureProfileExists } = await import('@/lib/profileInitializer');
@@ -110,9 +101,7 @@ export async function GET(request: NextRequest) {
         createIfMissing: true,
       });
       
-      if (profile) {
-        console.log('✅ Profile verified and ready');
-      } else {
+      if (!profile) {
         console.warn('⚠️  Profile initialization incomplete, but continuing');
       }
     } catch (profileError) {
@@ -121,7 +110,6 @@ export async function GET(request: NextRequest) {
     }
     
     // Redirect to dashboard
-    console.log('✅ Redirecting to dashboard')
     return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
     
   } catch (error) {

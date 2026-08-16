@@ -72,7 +72,7 @@ export default function AIBreakdownPage() {
               Get AI Assistance NOW
             </h2>
             <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-8">
-              Turn overwhelming tasks into manageable steps designed for ADHD brains. 
+              Turn overwhelming tasks into clear, actionable steps. 
               Our AI breaks down any task into momentum-building micro-steps.
             </p>
             <button

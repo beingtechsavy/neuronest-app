@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
                 Forgot Password?
               </h1>
               <p className="mb-6 text-sm text-gray-400">
-                No worries! Enter your email and we'll send you a reset link.
+                No worries! Enter your email and we&apos;ll send you a reset link.
               </p>
 
               <form onSubmit={handleResetRequest} className="space-y-4">
@@ -128,7 +128,7 @@ export default function ForgotPasswordPage() {
                   <strong>⏰ Link expires in 1 hour</strong>
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Didn't receive it? Check your spam folder or try again.
+                  Didn&apos;t receive it? Check your spam folder or try again.
                 </p>
               </div>
 

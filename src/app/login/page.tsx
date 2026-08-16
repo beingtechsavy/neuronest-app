@@ -41,10 +41,8 @@ function LoginForm() {
 
     if (error) {
       setError(error.message)
-    } else if (!data.user?.email_confirmed_at) {
-      setError('Please confirm your email before logging in.')
     } else {
-      router.push('/calendar')
+      router.push('/dashboard')
     }
 
     setLoading(false)

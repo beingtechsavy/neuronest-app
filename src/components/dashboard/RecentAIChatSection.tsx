@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 
 interface BreakdownListItem {
     id: number;
@@ -17,6 +17,7 @@ interface BreakdownListItem {
 export default function RecentAIChatSection() {
     const router = useRouter();
     const user = useUser();
+    const supabase = useSupabaseClient();
     const [recentBreakdown, setRecentBreakdown] = useState<BreakdownListItem | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -24,7 +25,12 @@ export default function RecentAIChatSection() {
         const fetchRecentBreakdown = async () => {
             if (!user) return; // Wait for user to load
             try {
-                const response = await fetch(`/api/ai/breakdowns/recent?userId=${user.id}`);
+                const { data: { session } } = await supabase.auth.getSession();
+                const response = await fetch(`/api/ai/breakdowns/recent?userId=${user.id}`, {
+                    headers: {
+                        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+                    }
+                });
                 if (response.ok) {
                     const data = await response.json();
                     setRecentBreakdown(data.breakdown);

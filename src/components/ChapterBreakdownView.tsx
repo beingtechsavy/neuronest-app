@@ -6,6 +6,7 @@ import { ChevronDown, Sparkles, ArrowRight, CheckCircle } from 'lucide-react';
 import BreakdownTaskItem from './BreakdownTaskItem';
 import { useToastContext } from './ToastProvider';
 import { useUser } from '@supabase/auth-helpers-react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface BreakdownTask {
   task_id: number;
@@ -52,9 +53,13 @@ export default function ChapterBreakdownView({
     setLoadingTasks(prev => new Set(prev).add(taskId));
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/tasks/move-to-inbox', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
           userId: user.id,
           taskIds: [taskId]
@@ -92,9 +97,13 @@ export default function ChapterBreakdownView({
     setLoadingTasks(new Set(taskIds));
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/tasks/move-to-inbox', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
           userId: user.id,
           taskIds

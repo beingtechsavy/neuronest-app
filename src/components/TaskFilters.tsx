@@ -63,7 +63,7 @@ export default function TaskFilters({
             >
                 <option value="deadline">Sort by Deadline</option>
                 <option value="created_at">Sort by Newest</option>
-                <option value="subject">Sort by Subject</option>
+                <option value="subject">Sort by Project</option>
             </select>
         </div>
       </div>

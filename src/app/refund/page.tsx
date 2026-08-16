@@ -37,7 +37,7 @@ export default function RefundPolicy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">3. What's Covered</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">3. What&apos;s Covered</h2>
               <p className="text-slate-300 mb-4">
                 Our refund policy covers:
               </p>
@@ -49,7 +49,7 @@ export default function RefundPolicy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">4. What's Not Covered</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">4. What&apos;s Not Covered</h2>
               <p className="text-slate-300 mb-4">
                 The following are not eligible for refunds:
               </p>
@@ -87,7 +87,7 @@ export default function RefundPolicy() {
                 <li><strong>Processing time:</strong> 2-3 business days for approval</li>
                 <li><strong>Refund method:</strong> Original payment method used for purchase</li>
                 <li><strong>Timeline:</strong> 5-10 business days to appear in your account</li>
-                <li><strong>Confirmation:</strong> You'll receive an email confirmation when processed</li>
+                <li><strong>Confirmation:</strong> You&apos;ll receive an email confirmation when processed</li>
               </ul>
             </section>
 
@@ -101,7 +101,7 @@ export default function RefundPolicy() {
                 <li><strong>Cancellation:</strong> Stop future billing but keep current access until period ends</li>
               </ul>
               <p className="text-slate-300 mb-4">
-                You can cancel your subscription at any time through your account settings. Cancellation stops future billing but doesn't automatically trigger a refund.
+                You can cancel your subscription at any time through your account settings. Cancellation stops future billing but doesn&apos;t automatically trigger a refund.
               </p>
             </section>
 
@@ -123,7 +123,7 @@ export default function RefundPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">9. Chargebacks and Disputes</h2>
               <p className="text-slate-300 mb-4">
-                Before initiating a chargeback with your bank or credit card company, please contact us directly. We're committed to resolving any issues and will work with you to find a satisfactory solution. Chargebacks may result in account suspension and additional fees.
+                Before initiating a chargeback with your bank or credit card company, please contact us directly. We&apos;re committed to resolving any issues and will work with you to find a satisfactory solution. Chargebacks may result in account suspension and additional fees.
               </p>
             </section>
 

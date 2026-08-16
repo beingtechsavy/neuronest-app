@@ -20,43 +20,85 @@ export interface UsageCheckResult {
 }
 
 /**
- * Get plan limits based on plan type
+ * Helper to get current YYYY-MM-DD date string in Indian Standard Time (Asia/Kolkata, UTC+5:30)
  */
-function getPlanLimits(planType: 'free' | 'master' | 'warrior') {
-  const limits = {
-    free: { aiBreakdowns: 3 },
-    master: { aiBreakdowns: 10 },
-    warrior: { aiBreakdowns: 25 }
-  };
-  return limits[planType];
+function getISTDateString(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 }
 
 /**
- * Check if user can use AI breakdown (server-side)
+ * Check if user can use AI breakdown (server-side with fail-closed & IST daily reset)
  */
 export async function canUseAIBreakdownServer(userId: string): Promise<UsageCheckResult> {
   try {
     const supabase = getServerSupabaseClient();
+    const todayIST = getISTDateString();
     
     // Get usage limits directly from database
     const { data: usageLimits, error } = await supabase
       .from('usage_limits')
-      .select('breakdowns_used, breakdowns_limit, plan_type')
+      .select('breakdowns_used, breakdowns_limit, plan_type, reset_date')
       .eq('user_id', userId)
       .single();
 
-    if (error || !usageLimits) {
-      console.error('Error fetching usage limits:', error);
-      // Default to free plan if no record exists
+    // FAIL CLOSED: If DB query errors out, block request by default
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching usage limits (failing closed):', error);
       return {
-        allowed: true, // Allow first use
+        allowed: false,
         used: 0,
         limit: 3,
         plan_type: 'free'
       };
     }
 
-    const used = usageLimits.breakdowns_used || 0;
+    if (!usageLimits) {
+      // Create initial record for user with IST reset date
+      const { error: insertError } = await supabase
+        .from('usage_limits')
+        .insert({
+          user_id: userId,
+          plan_type: 'free',
+          breakdowns_used: 0,
+          breakdowns_limit: 3,
+          reset_date: todayIST,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error('Error creating initial usage limits (failing closed):', insertError);
+        return {
+          allowed: false,
+          used: 0,
+          limit: 3,
+          plan_type: 'free'
+        };
+      }
+
+      return {
+        allowed: true,
+        used: 0,
+        limit: 3,
+        plan_type: 'free'
+      };
+    }
+
+    let used = usageLimits.breakdowns_used || 0;
+
+    // Daily reset check across day boundary in IST (Asia/Kolkata)
+    if (usageLimits.reset_date !== todayIST) {
+      used = 0;
+      await supabase
+        .from('usage_limits')
+        .update({
+          breakdowns_used: 0,
+          reset_date: todayIST,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+    }
+
     const limit = usageLimits.breakdowns_limit || 3;
     const planType = usageLimits.plan_type || 'free';
 
@@ -67,7 +109,7 @@ export async function canUseAIBreakdownServer(userId: string): Promise<UsageChec
       plan_type: planType
     };
   } catch (error) {
-    console.error('Error in canUseAIBreakdownServer:', error);
+    console.error('Error in canUseAIBreakdownServer (failing closed):', error);
     return {
       allowed: false,
       used: 0,
@@ -78,18 +120,24 @@ export async function canUseAIBreakdownServer(userId: string): Promise<UsageChec
 }
 
 /**
- * Increment AI usage count (server-side)
+ * Increment AI usage count (server-side with IST daily reset tracking)
  */
 export async function incrementAIUsageServer(userId: string): Promise<boolean> {
   try {
     const supabase = getServerSupabaseClient();
+    const todayIST = getISTDateString();
     
     // First, ensure user has a usage_limits record
-    const { data: existing } = await supabase
+    const { data: existing, error: fetchError } = await supabase
       .from('usage_limits')
-      .select('breakdowns_used, user_id')
+      .select('breakdowns_used, user_id, reset_date')
       .eq('user_id', userId)
       .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching usage_limits in increment (failing closed):', fetchError);
+      return false;
+    }
 
     if (!existing) {
       // Create initial record
@@ -100,6 +148,7 @@ export async function incrementAIUsageServer(userId: string): Promise<boolean> {
           plan_type: 'free',
           breakdowns_used: 1,
           breakdowns_limit: 3,
+          reset_date: todayIST,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -111,11 +160,15 @@ export async function incrementAIUsageServer(userId: string): Promise<boolean> {
       return true;
     }
 
-    // Increment existing record
+    const isNewDay = existing.reset_date !== todayIST;
+    const newUsed = isNewDay ? 1 : (existing.breakdowns_used || 0) + 1;
+
+    // Increment or reset & increment record
     const { error: updateError } = await supabase
       .from('usage_limits')
       .update({
-        breakdowns_used: (existing.breakdowns_used || 0) + 1,
+        breakdowns_used: newUsed,
+        reset_date: todayIST,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);

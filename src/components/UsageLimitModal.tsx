@@ -8,7 +8,7 @@ interface UsageLimitModalProps {
   isOpen: boolean;
   onClose: () => void;
   planInfo: UserPlanInfo;
-  limitType: 'subjects' | 'ai' | 'flashcards';
+  limitType: 'subjects' | 'ai' | 'flashcards'; // internal key stays 'subjects' for DB compat
   onUpgrade?: () => void;
 }
 
@@ -37,7 +37,7 @@ export default function UsageLimitModal({
   const getTitle = () => {
     switch (limitType) {
       case 'subjects':
-        return 'Subject Limit Reached';
+        return 'Project Limit Reached';
       case 'ai':
         return 'AI Breakdown Limit Reached';
       case 'flashcards':
@@ -50,7 +50,7 @@ export default function UsageLimitModal({
   const getCurrentUsage = () => {
     switch (limitType) {
       case 'subjects':
-        return `${planInfo.subjects_count}/${planInfo.subjects_limit} subjects used`;
+        return `${planInfo.subjects_count}/${planInfo.subjects_limit} projects used`;
       case 'ai':
         return `${planInfo.breakdowns_used}/${planInfo.breakdowns_limit} AI breakdowns used today`;
       case 'flashcards':
@@ -63,7 +63,7 @@ export default function UsageLimitModal({
   const getDescription = () => {
     switch (limitType) {
       case 'subjects':
-        return `You've reached your ${formatPlanName(planInfo.plan_type)} plan limit of ${planInfo.subjects_limit} subjects. Upgrade to create more subjects and organize your studies better.`;
+        return `You've reached your ${formatPlanName(planInfo.plan_type)} plan limit of ${planInfo.subjects_limit} projects. Upgrade to create more projects and organize your work better.`;
       case 'ai':
         return `You've used all ${planInfo.breakdowns_limit} AI breakdowns for today on your ${formatPlanName(planInfo.plan_type)} plan. Your limit will reset tomorrow, or upgrade for more daily breakdowns.`;
       case 'flashcards':
@@ -86,7 +86,7 @@ export default function UsageLimitModal({
       options.push({
         name: 'Master',
         price: '$6.99/month',
-        benefits: limitType === 'subjects' ? '15 subjects' : 
+        benefits: limitType === 'subjects' ? '15 projects' : 
                  limitType === 'ai' ? '10 AI breakdowns/day' : 
                  '20 AI flashcards/day',
         popular: true
@@ -96,7 +96,7 @@ export default function UsageLimitModal({
     options.push({
       name: 'Warrior',
       price: '$9.99/month',
-      benefits: limitType === 'subjects' ? 'Unlimited subjects' : 
+      benefits: limitType === 'subjects' ? 'Unlimited projects' : 
                limitType === 'ai' ? '25 AI breakdowns/day' : 
                '50 AI flashcards/day',
       popular: currentPlan === 'master'
@@ -143,7 +143,7 @@ export default function UsageLimitModal({
             </div>
             <div className="text-right">
               <p className="text-white font-semibold">
-                {limitType === 'subjects' && `${planInfo.subjects_limit} subjects`}
+                {limitType === 'subjects' && `${planInfo.subjects_limit} projects`}
                 {limitType === 'ai' && `${planInfo.breakdowns_limit}/day AI breakdowns`}
                 {limitType === 'flashcards' && `${planInfo.flashcards_limit}/day flashcards`}
               </p>

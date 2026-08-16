@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getUserPlanInfo, canCreateSubject } from '@/lib/subscriptionLimits';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -38,8 +39,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const {
-      userId,
       breakdown,
       taskTitle,
       selectedSubjectId,
@@ -48,7 +53,9 @@ export async function POST(req: NextRequest) {
       saveTasksToInbox = false
     } = await req.json();
 
-    if (!userId || !breakdown || !Array.isArray(breakdown)) {
+    const userId = authUser.id;
+
+    if (!breakdown || !Array.isArray(breakdown)) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -28,18 +29,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get userId from query parameters
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    // Validate required fields
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = authUser.id;
     const client = getSupabaseClient();
 
     // Fetch all breakdowns for the user

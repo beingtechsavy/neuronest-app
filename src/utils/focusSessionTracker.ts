@@ -15,8 +15,6 @@ export function saveFocusSessionTime(minutes: number, date?: string) {
     stats[targetDate] = (stats[targetDate] || 0) + minutes;
     
     localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-    
-    console.log(`Added ${minutes} minutes of focus time for ${targetDate}`);
   } catch (error) {
     console.error('Failed to save focus session time:', error);
   }
@@ -84,15 +82,9 @@ export function simulateFocusSessionData() {
   }
   
   localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-  console.log('Simulated focus session data:', stats);
-  
-  // Also log what this should create for streaks
-  const streakDays = Object.entries(stats).filter(([date, minutes]) => minutes >= 30);
-  console.log('Days with 30+ minutes (streak days):', streakDays);
 }
 
 // Clear all focus session data
 export function clearFocusSessionData() {
   localStorage.removeItem('focusSessionStats');
-  console.log('Cleared all focus session data');
 }

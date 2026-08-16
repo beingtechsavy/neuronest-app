@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar as CalendarIcon, ArrowRight, Clock, Plus } from 'lucide-react';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 
 interface Task {
     task_id: number;
@@ -16,6 +16,7 @@ interface Task {
 export default function TodayTasksSection() {
     const router = useRouter();
     const user = useUser();
+    const supabase = useSupabaseClient();
     const [todayTask, setTodayTask] = useState<Task | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -23,7 +24,12 @@ export default function TodayTasksSection() {
         const fetchTodayTask = async () => {
             if (!user) return; // Wait for user info
             try {
-                const response = await fetch(`/api/tasks/today?userId=${user.id}`);
+                const { data: { session } } = await supabase.auth.getSession();
+                const response = await fetch(`/api/tasks/today?userId=${user.id}`, {
+                    headers: {
+                        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+                    }
+                });
                 if (response.ok) {
                     const data = await response.json();
                     // Find the first uncompleted task

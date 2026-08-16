@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getUserPlanInfo, canCreateSubject, canUseAIBreakdown } from '@/lib/subscriptionLimits';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -21,14 +22,21 @@ function getSupabaseClient() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, limitType } = await req.json();
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!userId || !limitType) {
+    const { limitType } = await req.json();
+
+    if (!limitType) {
       return NextResponse.json(
-        { error: 'User ID and limit type are required' },
+        { error: 'Limit type is required' },
         { status: 400 }
       );
     }
+
+    const userId = authUser.id;
 
     // Get user's plan info with proper subscription validation
     const planInfo = await getUserPlanInfo(userId);

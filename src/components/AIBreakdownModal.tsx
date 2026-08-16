@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Sparkles, Clock, CheckCircle, AlertCircle, Loader2, Heart } from 'lucide-react';
 import { canUseAIBreakdown, getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits';
@@ -39,20 +39,16 @@ export default function AIBreakdownModal({
   const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
 
-  // Load user's subjects and plan info when modal opens
-  useEffect(() => {
-    if (isOpen && userId) {
-      loadUserSubjects();
-      loadPlanInfo();
-    }
-  }, [isOpen, userId]);
-
-  const loadUserSubjects = async () => {
+  const loadUserSubjects = useCallback(async () => {
     setLoadingSubjects(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/subjects/list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({ userId })
       });
       
@@ -65,9 +61,9 @@ export default function AIBreakdownModal({
     } finally {
       setLoadingSubjects(false);
     }
-  };
+  }, [userId]);
 
-  const loadPlanInfo = async () => {
+  const loadPlanInfo = useCallback(async () => {
     setLoadingPlanInfo(true);
     try {
       const info = await getUserPlanInfo(userId);
@@ -77,7 +73,15 @@ export default function AIBreakdownModal({
     } finally {
       setLoadingPlanInfo(false);
     }
-  };
+  }, [userId]);
+
+  // Load user's subjects and plan info when modal opens
+  useEffect(() => {
+    if (isOpen && userId) {
+      loadUserSubjects();
+      loadPlanInfo();
+    }
+  }, [isOpen, userId, loadUserSubjects, loadPlanInfo]);
   const [breakdown, setBreakdown] = useState<TaskBreakdownStep[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -133,10 +137,13 @@ export default function AIBreakdownModal({
     setBreakdownGenerated(false);
 
     try {
-      console.log('Sending breakdown request...');
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/ai/breakdown-task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
           taskData: {
             title: inputTaskTitle,
@@ -148,9 +155,7 @@ export default function AIBreakdownModal({
         })
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -208,14 +213,11 @@ export default function AIBreakdownModal({
 
   const getRandomCelebration = () => {
     const celebrations = [
-      "🎉 Your brain is amazing! Look at this breakdown!",
-      "✨ This is going to be so much easier now!",
-      "🚀 You've got this! One step at a time!",
-      "💪 Your ADHD brain just got a superpower!",
-      "🌟 Breaking it down like a champion!",
-      "🎯 Perfect! Now you know exactly what to do!",
-      "🔥 This breakdown is *chef's kiss* perfect for you!",
-      "💎 Look at you, turning overwhelm into action!"
+      "Breakdown ready — here's your action plan.",
+      "Clear steps generated. You know exactly what to do.",
+      "Task broken down into manageable pieces.",
+      "Your execution plan is ready.",
+      "Structured breakdown complete — time to execute."
     ];
     return celebrations[Math.floor(Math.random() * celebrations.length)];
   };
@@ -223,25 +225,19 @@ export default function AIBreakdownModal({
   const getRandomEncouragement = (difficulty: string) => {
     const encouragements = {
       EASY: [
-        "Perfect starter step! 🌱",
-        "This one's a breeze! 💨",
-        "Easy win coming up! ⭐",
-        "Your confidence builder! 💪",
-        "Momentum starter! 🚀"
+        "Quick win",
+        "Momentum builder",
+        "Simple start"
       ],
       MEDIUM: [
-        "You can totally handle this! 💪",
-        "This is your sweet spot! 🎯",
-        "Steady progress ahead! 📈",
-        "You've got the skills for this! ⚡",
-        "Right in your wheelhouse! 🏠"
+        "Solid progress",
+        "Core work",
+        "Steady execution"
       ],
       HARD: [
-        "The big challenge - but you're ready! 🏔️",
-        "This is where you shine! ✨",
-        "Deep work time - you've got this! 🧠",
-        "The final boss - and you're the hero! 🦸",
-        "Your moment to level up! 🆙"
+        "Deep work",
+        "High-impact step",
+        "Key deliverable"
       ]
     };
     const options = encouragements[difficulty as keyof typeof encouragements] || encouragements.MEDIUM;
@@ -261,9 +257,13 @@ export default function AIBreakdownModal({
     setError(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/ai/breakdown-task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
           taskData: {
             title: step.step,
@@ -319,9 +319,13 @@ export default function AIBreakdownModal({
     setError(null);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/ai/save-breakdown', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({
           userId,
           breakdown,
@@ -514,7 +518,7 @@ export default function AIBreakdownModal({
                     type="text"
                     value={inputTaskTitle}
                     onChange={(e) => setInputTaskTitle(e.target.value)}
-                    placeholder="e.g., Write research paper, Study for exam, Plan birthday party"
+                    placeholder="e.g., Plan product launch, Prepare client proposal, Organize quarterly review"
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none transition-colors"
                   />
                 </div>
@@ -552,9 +556,9 @@ export default function AIBreakdownModal({
                           disabled={loadingSubjects}
                         >
                           <option value="">
-                            {loadingSubjects ? 'Loading subjects...' : 
-                             subjects.length === 0 ? 'No subjects found' : 
-                             'Select existing subject...'}
+                            {loadingSubjects ? 'Loading projects...' : 
+                             subjects.length === 0 ? 'No projects found' : 
+                             'Select existing project...'}
                           </option>
                           {subjects.map(subject => (
                             <option key={subject.subject_id} value={subject.subject_id}>
@@ -564,7 +568,7 @@ export default function AIBreakdownModal({
                         </select>
                         {subjects.length === 0 && !loadingSubjects && (
                           <p className="text-slate-400 text-xs mt-1">
-                            No subjects found. Create a new subject or add subjects from your dashboard first.
+                            No projects found. Create a new project or add projects from your dashboard first.
                           </p>
                         )}
                       </div>
@@ -790,7 +794,7 @@ export default function AIBreakdownModal({
                     <p>• Start with green steps for quick wins</p>
                     <p>• Take breaks between steps</p>
                     <p>• Celebrate each completion</p>
-                    <p>• Use "Break Down" for complex steps</p>
+                    <p>• Use &quot;Break Down&quot; for complex steps</p>
                   </div>
                 </div>
               </div>

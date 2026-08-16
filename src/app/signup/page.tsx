@@ -53,16 +53,13 @@ export default function SignupPage() {
         }
       } else if (data.session && data.user) {
         // User signed up successfully - ensure profile is initialized
-        console.log('✅ User created:', data.user.email)
         
         // Initialize profile with retry logic
         try {
           const { initializeUserData } = await import('@/lib/profileInitializer');
           const result = await initializeUserData(supabase, data.user.id);
           
-          if (result.success) {
-            console.log('✅ User data initialized successfully');
-          } else {
+          if (!result.success) {
             console.warn('⚠️  Profile initialization incomplete');
           }
         } catch (initError) {

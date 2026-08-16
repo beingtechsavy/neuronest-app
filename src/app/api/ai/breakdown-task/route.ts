@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateTaskBreakdown, TaskBreakdownRequest } from '@/lib/azureOpenAI';
 import { canUseAIBreakdownServer, incrementAIUsageServer } from '@/lib/subscriptionLimitsServer';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 
 
@@ -39,23 +40,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { taskData, userId } = await req.json();
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { taskData } = await req.json();
+    const userId = user.id;
 
     // Validate required fields
-    if (!taskData?.title || !userId) {
+    if (!taskData?.title) {
       return NextResponse.json(
-        { error: 'Task title and user ID are required' },
+        { error: 'Task title is required' },
         { status: 400 }
       );
     }
 
     // Check user's subscription and usage limits
-    console.log('Checking usage limits for user:', userId);
     const usageCheck = await canUseAIBreakdownServer(userId);
-    console.log('Usage check result:', usageCheck);
     
     if (!usageCheck.allowed) {
-      console.log('Usage check FAILED - blocking request');
       return NextResponse.json(
         { 
           error: 'Daily limit reached or subscription expired',
@@ -66,8 +70,6 @@ export async function POST(req: NextRequest) {
         { status: 429 }
       );
     }
-    
-    console.log('Usage check PASSED - proceeding with breakdown generation');
 
     // Prepare the breakdown request
     const breakdownRequest: TaskBreakdownRequest = {
@@ -79,11 +81,9 @@ export async function POST(req: NextRequest) {
     };
 
     // Generate the breakdown using Azure OpenAI
-    console.log('Calling Azure OpenAI for breakdown...');
     let breakdown;
     try {
       breakdown = await generateTaskBreakdown(breakdownRequest);
-      console.log('Breakdown generated successfully:', breakdown.length, 'steps');
     } catch (aiError: any) {
       console.error('Azure OpenAI error:', aiError);
       return NextResponse.json(
@@ -93,14 +93,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Track the usage
-    console.log('Incrementing AI usage for user:', userId);
     const usageIncremented = await incrementAIUsageServer(userId);
     if (!usageIncremented) {
       console.error('Failed to increment AI usage for user:', userId);
       // Don't block - just log the error
       console.warn('Continuing despite usage tracking failure');
-    } else {
-      console.log('Usage incremented successfully');
     }
 
     // Track detailed usage for analytics
@@ -147,7 +144,6 @@ async function trackDetailedUsage(userId: string, featureType: string, tokensUse
       });
     } catch (aiUsageError) {
       // ai_usage table might not exist, continue silently
-      console.log('ai_usage table not available, skipping detailed tracking');
     }
   } catch (error) {
     console.error('Detailed usage tracking error:', error);

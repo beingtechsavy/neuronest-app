@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { canCreateSubject, getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits'
 import UsageLimitModal from './UsageLimitModal'
 
@@ -35,6 +35,16 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, u
   const [planInfo, setPlanInfo] = useState<UserPlanInfo | null>(null)
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(false)
 
+  const loadPlanInfo = useCallback(async () => {
+    if (!userId) return
+    try {
+      const info = await getUserPlanInfo(userId)
+      setPlanInfo(info)
+    } catch (err) {
+      console.error('Failed to load plan info:', err)
+    }
+  }, [userId])
+
   useEffect(() => {
     if (isOpen) {
       if (subjectToEdit) {
@@ -52,17 +62,7 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, u
         loadPlanInfo()
       }
     }
-  }, [isOpen, subjectToEdit, userId])
-
-  const loadPlanInfo = async () => {
-    if (!userId) return
-    try {
-      const info = await getUserPlanInfo(userId)
-      setPlanInfo(info)
-    } catch (err) {
-      console.error('Failed to load plan info:', err)
-    }
-  }
+  }, [isOpen, subjectToEdit, userId, loadPlanInfo])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,8 +78,17 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, u
     }
     
     setLoading(true)
-    await onSave({ title, color, is_stressful: isStressful })
-    setLoading(false)
+    try {
+      await onSave({ title, color, is_stressful: isStressful })
+    } catch (err: any) {
+      if (err?.message?.includes('SUBJECT_LIMIT_REACHED') || err?.code === 'P0001') {
+        setShowUsageLimitModal(true)
+      } else {
+        console.error('Error saving project:', err)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!isOpen) return null
@@ -101,10 +110,10 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, u
       
       <div style={styles.overlay} onClick={onClose}>
         <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.header}>{subjectToEdit ? 'Edit Subject' : 'Add New Subject'}</h2>
+        <h2 style={styles.header}>{subjectToEdit ? 'Edit Project' : 'Add New Project'}</h2>
         <form onSubmit={handleSubmit}>
           <div style={styles.inputGroup}>
-            <label htmlFor="subjectTitle" style={styles.label}>Subject Title</label>
+            <label htmlFor="subjectTitle" style={styles.label}>Project Name</label>
             <input id="subjectTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={styles.input} required autoFocus />
           </div>
           <div style={styles.inputGroup}>
@@ -129,7 +138,7 @@ export default function SubjectModal({ isOpen, onClose, onSave, subjectToEdit, u
                 onChange={(e) => setIsStressful(e.target.checked)}
                 style={styles.checkbox}
               />
-              <span style={styles.checkboxText}>Mark as a potentially stressful subject</span>
+              <span style={styles.checkboxText}>Mark as high-priority</span>
             </label>
           </div>
           <div style={styles.buttonGroup}>

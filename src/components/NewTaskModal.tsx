@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useToastContext } from '@/components/ToastProvider';
+import UsageLimitModal from '@/components/UsageLimitModal';
+import { getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits';
 
 interface Subject {
   subject_id: number;
@@ -34,6 +36,8 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(false);
+  const [planInfo, setPlanInfo] = useState<UserPlanInfo | null>(null);
 
   // Fetch subjects and chapters when modal opens
   useEffect(() => {
@@ -46,6 +50,9 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
         setLoadingSubjects(false);
         return;
       }
+
+      const info = await getUserPlanInfo(user.id);
+      setPlanInfo(info);
 
       const { data, error: fetchError } = await supabase
         .from('subjects')
@@ -72,7 +79,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
     setSelectedSubjectId('');
     setSelectedChapterId('');
     setChapters([]);
-  }, [isOpen]);
+  }, [isOpen, error]);
 
   // Update chapters list when selected subject changes
   useEffect(() => {
@@ -116,14 +123,20 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
       chapter_id: selectedChapterId ? parseInt(selectedChapterId) : null,
       user_id: user.id,
       status: 'pending',
-      task_status: 'inbox', // Manually created tasks go directly to inbox
+      task_status: 'inbox',
     };
 
     const { error: insertError } = await supabase.from('tasks').insert(insertPayload);
 
     if (insertError) {
       console.error('Error creating task:', insertError);
-      error('Failed to create task. Please try again.');
+      if (insertError.message?.includes('TASK_LIMIT_REACHED') || insertError.code === 'P0001') {
+        const info = await getUserPlanInfo(user.id);
+        setPlanInfo(info);
+        setShowUsageLimitModal(true);
+      } else {
+        error('Failed to create task. Please try again.');
+      }
     } else {
       success('Task created successfully!');
       onTaskAdded();
@@ -135,7 +148,19 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
   if (!isOpen) return null;
 
   return (
-    <div style={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <>
+      {showUsageLimitModal && planInfo && (
+        <UsageLimitModal
+          isOpen={showUsageLimitModal}
+          onClose={() => setShowUsageLimitModal(false)}
+          planInfo={planInfo}
+          limitType="subjects"
+          onUpgrade={() => {
+            window.location.href = '/pricing';
+          }}
+        />
+      )}
+      <div style={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div
         style={styles.modal}
         onClick={e => e.stopPropagation()}
@@ -160,7 +185,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
 
           <div style={styles.gridGroup}>
             <div style={styles.inputGroup}>
-              <label htmlFor="subject" style={styles.label}>Subject</label>
+              <label htmlFor="subject" style={styles.label}>Project</label>
               <select
                 id="subject"
                 value={selectedSubjectId}
@@ -168,7 +193,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
                 style={styles.input}
                 disabled={loadingSubjects}
               >
-                <option value="">{loadingSubjects ? 'Loading subjects...' : 'No Subject'}</option>
+                <option value="">{loadingSubjects ? 'Loading projects...' : 'No Project'}</option>
                 {subjects.map(subject => (
                   <option key={subject.subject_id} value={subject.subject_id}>{subject.title}</option>
                 ))}
@@ -176,7 +201,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
             </div>
 
             <div style={styles.inputGroup}>
-              <label htmlFor="chapter" style={styles.label}>Chapter</label>
+              <label htmlFor="chapter" style={styles.label}>Area</label>
               <select
                 id="chapter"
                 value={selectedChapterId}
@@ -184,7 +209,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
                 style={styles.input}
                 disabled={!selectedSubjectId}
               >
-                <option value="">No Chapter</option>
+                <option value="">No Area</option>
                 {chapters.map(chapter => (
                   <option key={chapter.chapter_id} value={chapter.chapter_id}>{chapter.title}</option>
                 ))}
@@ -242,7 +267,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskAdded }: NewTaskMo
               onChange={e => setIsStressful(e.target.checked)}
               style={styles.checkbox}
             />
-            Mark as stressful task
+            Mark as high-priority
           </label>
 
           <div style={styles.buttonGroup}>

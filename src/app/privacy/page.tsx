@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
               <p className="text-slate-300 mb-4">
-                NeuroNest ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered study assistant service.
+                NeuroNest (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered study assistant service.
               </p>
             </section>
 
@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul className="text-slate-300 mb-4 list-disc list-inside">
                 <li><strong>Service Providers:</strong> We share information with trusted third-party service providers who assist us in operating our service</li>
-                <li><strong>Payment Processing:</strong> Payment information is shared with our payment processor (Paddle) to process transactions</li>
+                <li><strong>Payment Processing:</strong> Payment information is shared with our payment processor to process transactions</li>
                 <li><strong>Legal Requirements:</strong> We may disclose information if required by law or to protect our rights</li>
                 <li><strong>Business Transfers:</strong> Information may be transferred in connection with a merger, acquisition, or sale of assets</li>
               </ul>
@@ -131,7 +131,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">10. Children's Privacy</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">10. Children&apos;s Privacy</h2>
               <p className="text-slate-300 mb-4">
                 Our service is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that we have collected personal information from a child under 13, we will take steps to delete such information.
               </p>
@@ -147,7 +147,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">12. Changes to This Privacy Policy</h2>
               <p className="text-slate-300 mb-4">
-                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
+                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.
               </p>
             </section>
 

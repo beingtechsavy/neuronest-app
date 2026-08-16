@@ -27,5 +27,5 @@ export interface Task {
   effort_units?: number;
   start_time?: string | null; // New: HH:MM:SS format
   end_time?: string | null;   // New: HH:MM:SS format
-  is_critical?: boolean;       // New: Critical task flag for ADHD users
+  is_critical?: boolean;       // Critical task flag
 }

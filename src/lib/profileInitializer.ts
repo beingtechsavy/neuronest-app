@@ -43,16 +43,14 @@ export async function ensureProfileExists(
         .single();
 
       if (profile) {
-        console.log(`✅ Profile found for user ${userId} (attempt ${attempt + 1})`);
         return profile;
       }
 
       // Profile doesn't exist yet
       if (error?.code === 'PGRST116') {
-        console.log(`⏳ Profile not found yet (attempt ${attempt + 1}/${maxRetries})`);
         
-        // On first attempt, try to create it manually if allowed
-        if (attempt === 0 && createIfMissing) {
+        // Try to create profile manually if missing (retries on transient errors across attempts)
+        if (createIfMissing) {
           const created = await createProfileManually(supabase, userId);
           if (created) {
             return created;
@@ -96,8 +94,6 @@ async function createProfileManually(
   userId: string
 ): Promise<ProfileData | null> {
   try {
-    console.log(`🔧 Attempting manual profile creation for ${userId}`);
-
     // Get user metadata
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -122,7 +118,6 @@ async function createProfileManually(
     if (insertError) {
       // Check if it's a duplicate (trigger created it meanwhile)
       if (insertError.code === '23505') {
-        console.log('✅ Profile already exists (created by trigger)');
         // Fetch the existing profile
         const { data: existing } = await supabase
           .from('profiles')
@@ -136,7 +131,6 @@ async function createProfileManually(
       return null;
     }
 
-    console.log('✅ Profile created manually');
     return profile;
 
   } catch (err) {
@@ -163,6 +157,13 @@ export async function initializeUserData(
     // Initialize usage limits if missing (non-blocking)
     initializeUsageLimits(supabase, userId).catch(err => {
       console.error('Failed to initialize usage limits:', err);
+    });
+
+    // Attach any anonymous rescue sessions to new account (non-blocking)
+    import('@/lib/rescue/anonymousSession').then(({ attachAnonymousSessionsToUser }) => {
+      attachAnonymousSessionsToUser(supabase, userId).catch(err => {
+        console.error('Failed to attach anonymous rescue sessions:', err);
+      });
     });
 
     return { success: true, profile };
@@ -202,8 +203,6 @@ async function initializeUsageLimits(
       subjects_limit: 3,
       reset_date: new Date().toISOString().split('T')[0],
     });
-
-    console.log('✅ Usage limits initialized');
   } catch (err) {
     console.error('Usage limits initialization error:', err);
   }
