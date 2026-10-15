@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, CheckCircle, PauseCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getSessions } from '@/lib/rescue/anonymousSession';
+import { supabase } from '@/lib/supabaseClient';
 import type { RescueSessionData } from '@/types/rescue';
 
 function formatDate(iso: string): string {
@@ -25,7 +26,17 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<RescueSessionData[]>([]);
 
   useEffect(() => {
-    setSessions(getSessions());
+    async function load() {
+      const local = getSessions();
+      setSessions(local);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const response = await fetch('/api/rescue/sessions', { headers: { Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}` } });
+      if (!response.ok) return;
+      const data = await response.json() as { sessions?: Array<{ id: string; task_text: string | null; status: RescueSessionData['status']; started_at: string; friction_type: RescueSessionData['friction']; initial_action: RescueSessionData['initialAction']; adaptations: RescueSessionData['adaptations']; completed_at?: string }> };
+      if (data.sessions) setSessions(data.sessions.map((item) => ({ id: item.id, taskText: item.task_text || 'Private Rescue task', friction: item.friction_type, initialAction: item.initial_action, adaptations: item.adaptations || [], startedAt: item.started_at, completedAt: item.completed_at, status: item.status })));
+    }
+    void load();
   }, []);
 
   return (

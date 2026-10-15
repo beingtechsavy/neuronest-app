@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, Crown, Zap, Sparkles, ArrowRight } from 'lucide-react';
-import { UserPlanInfo, formatPlanName, getUpgradeMessage } from '@/lib/subscriptionLimits';
+import { UserPlanInfo, formatPlanName } from '@/lib/subscriptionLimits';
 
 interface UsageLimitModalProps {
   isOpen: boolean;
@@ -67,7 +67,7 @@ export default function UsageLimitModal({
       case 'ai':
         return `You've used all ${planInfo.breakdowns_limit} AI breakdowns for today on your ${formatPlanName(planInfo.plan_type)} plan. Your limit will reset tomorrow, or upgrade for more daily breakdowns.`;
       case 'flashcards':
-        return `AI flashcard generation is not available on the ${formatPlanName(planInfo.plan_type)} plan. Upgrade to Master or Warrior to unlock this powerful study feature.`;
+        return `AI flashcard generation is not currently available on the ${formatPlanName(planInfo.plan_type)} plan.`;
       default:
         return '';
     }
@@ -76,30 +76,19 @@ export default function UsageLimitModal({
   const getUpgradeOptions = () => {
     const currentPlan = planInfo.plan_type;
     
-    if (currentPlan === 'warrior') {
+    if (currentPlan === 'pro') {
       return null; // Already on highest plan
     }
 
     const options = [];
     
-    if (currentPlan === 'free') {
-      options.push({
-        name: 'Master',
-        price: '$6.99/month',
-        benefits: limitType === 'subjects' ? '15 projects' : 
-                 limitType === 'ai' ? '10 AI breakdowns/day' : 
-                 '20 AI flashcards/day',
-        popular: true
-      });
-    }
-    
     options.push({
-      name: 'Warrior',
-      price: '$9.99/month',
-      benefits: limitType === 'subjects' ? 'Unlimited projects' : 
-               limitType === 'ai' ? '25 AI breakdowns/day' : 
-               '50 AI flashcards/day',
-      popular: currentPlan === 'master'
+      name: 'Pro',
+      price: '₹299/month',
+      benefits: limitType === 'subjects' ? 'Unlimited projects' :
+               limitType === 'ai' ? '20 AI breakdowns/day' :
+               'Cloud Rescue history',
+      popular: true
     });
 
     return options;
@@ -108,8 +97,8 @@ export default function UsageLimitModal({
   const upgradeOptions = getUpgradeOptions();
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-700 bg-slate-800 p-5 sm:p-8">
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">
@@ -120,8 +109,10 @@ export default function UsageLimitModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+            aria-label="Close usage limit dialog"
           >
             <X size={24} />
           </button>
@@ -191,10 +182,10 @@ export default function UsageLimitModal({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+            className="min-h-11 flex-1 rounded-lg bg-slate-700 px-4 py-3 text-white transition-colors hover:bg-slate-600"
           >
             {limitType === 'ai' ? 'Try Tomorrow' : 'Maybe Later'}
           </button>
@@ -204,7 +195,7 @@ export default function UsageLimitModal({
                 onUpgrade?.();
                 onClose();
               }}
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-semibold"
+              className="min-h-11 flex-1 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-3 font-semibold text-white transition-all hover:from-purple-700 hover:to-blue-700"
             >
               Upgrade Now
             </button>

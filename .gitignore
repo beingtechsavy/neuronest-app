@@ -52,7 +52,14 @@ next-env.d.ts
 *.md
 !README.md
 !SECURITY.md
+!neuronest-progress-log.md
+!neuronest-inputs-needed.md
+!docs/marketing/
+!docs/marketing/*.md
+!docs/brand/
+!docs/brand/*.md
 *.sql
+!docs/migrations/20261012_launch_safety.sql
 ENVIRONMENT_VARIABLES.md
 QUICK_SETUP_CHECKLIST.md
 AI_BREAKDOWN_DATABASE_SCHEMA.sql

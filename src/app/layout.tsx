@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import Script from 'next/script'
 import { Analytics } from '@vercel/analytics/react';
 import { Inter, Outfit } from 'next/font/google'
 import RootLayoutInner from './RootLayoutInner'
@@ -24,25 +23,37 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'NeuroNest — Overcome Procrastination & Break Down Heavy Work',
-  description: 'AI-powered rescue engine and productivity system designed for neurodivergent professionals and students to overcome overwhelm, break down tasks, and start working.',
+  metadataBase: new URL('https://www.neuronest.work'),
+  title: 'NeuroNest — Start the task you are resisting',
+  description: 'NeuroNest gives you one small, realistic next action when you know what to do but cannot begin.',
   keywords: ['productivity', 'ADHD productivity', 'task breakdown', 'overcome procrastination', 'focus timer', 'neurodivergent tools'],
   authors: [{ name: 'NeuroNest Team' }],
+  applicationName: 'NeuroNest',
+  category: 'productivity',
+  alternates: { canonical: 'https://www.neuronest.work' },
   openGraph: {
-    title: 'NeuroNest — Overcome Procrastination & Break Down Heavy Work',
-    description: 'Stop staring at a blank screen. Get instant, frictionless 2-minute first steps tailored to your exact mental block.',
-    url: 'https://neuronest.app',
+    title: 'NeuroNest — Start the task you are resisting',
+    description: 'Get one small, realistic next action and begin without an account.',
+    url: 'https://www.neuronest.work',
     siteName: 'NeuroNest',
     locale: 'en_US',
     type: 'website',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'NeuroNest — One small next action. Then begin.' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NeuroNest — Overcome Procrastination',
-    description: 'Get instant, frictionless 2-minute first steps tailored to your exact mental block.',
+    title: 'NeuroNest — Start the task you are resisting',
+    description: 'Get one small, realistic next action and begin without an account.',
+    images: ['/opengraph-image'],
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/neuronest-mark.svg',
+    shortcut: '/neuronest-mark.svg',
+    apple: '/neuronest-mark.svg',
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } : undefined,
   },
 };
 
@@ -53,15 +64,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-      <head>
-        {/* Google AdSense Verification */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2334920508693800"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-      </head>
       <body className="font-sans antialiased bg-slate-950 text-white">
         <RootLayoutInner>{children}</RootLayoutInner>
         <Analytics />

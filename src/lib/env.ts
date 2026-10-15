@@ -11,7 +11,11 @@ const requiredEnvVars = {
 
 // Optional environment variables with defaults
 const optionalEnvVars = {
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'https://www.neuronest.work',
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@neuronest.work',
+  NEXT_PUBLIC_PRIVACY_EMAIL: process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'privacy@neuronest.work',
+  NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  NEXT_PUBLIC_BING_SITE_VERIFICATION: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION,
   NODE_ENV: process.env.NODE_ENV || 'development',
 } as const;
 
@@ -46,6 +50,7 @@ export const env = {
   AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
   AZURE_OPENAI_DEPLOYMENT_NAME: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
 } as const;
 
 // Type-safe environment variable access

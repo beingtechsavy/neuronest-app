@@ -36,8 +36,15 @@ const emailWrapper = (content: string) => `
       text-align: center;
     }
     .logo {
-      font-size: 48px;
-      margin-bottom: 8px;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 8px;
+    }
+    .logo img {
+      display: block;
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
     }
     .brand {
       color: #ffffff;
@@ -89,14 +96,16 @@ const emailWrapper = (content: string) => `
   <div style="padding: 24px;">
     <div class="container">
       <div class="header">
-        <div class="logo">🧠</div>
+        <div class="logo">
+          <img src="https://www.neuronest.work/neuronest-mark.svg" alt="NeuroNest" width="64" height="64">
+        </div>
         <h1 class="brand">NeuroNest</h1>
       </div>
       ${content}
       <div class="footer">
-        <p>NeuroNest - AI-powered productivity for professionals</p>
+        <p>NeuroNest — one small next action when starting feels hard.</p>
         <p>
-          <a href="https://www.neuronest.work" style="color: #6366f1; text-decoration: none;">Visit Dashboard</a> • 
+          <a href="https://www.neuronest.work/rescue" style="color: #6366f1; text-decoration: none;">Try Rescue</a> •
           <a href="https://www.neuronest.work/contact" style="color: #6366f1; text-decoration: none;">Contact Support</a>
         </p>
         <p style="font-size: 12px; color: #9ca3af; margin-top: 16px;">
@@ -115,7 +124,7 @@ export const welcomeEmail = (username: string): EmailTemplate => ({
     <div class="content">
       <h1><span class="emoji">👋</span>Hey ${username}, welcome aboard!</h1>
       
-      <p>We're excited to have you here! NeuroNest helps professionals break down complex work and stay focused.</p>
+      <p>We're excited to have you here! NeuroNest helps you begin the task you are resisting with one small, realistic next action.</p>
       
       <div class="highlight">
         <p style="margin: 0;"><strong>🚀 Quick Start (3 steps):</strong></p>
@@ -149,7 +158,7 @@ export const welcomeEmail = (username: string): EmailTemplate => ({
   `),
   text: `Hey ${username}, welcome aboard!
 
-We're excited to have you here! NeuroNest helps professionals break down complex work and stay focused.
+We're excited to have you here! NeuroNest helps you begin the task you are resisting with one small, realistic next action.
 
 🚀 Quick Start (3 steps):
 1. Add your first project

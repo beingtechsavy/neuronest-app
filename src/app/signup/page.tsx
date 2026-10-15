@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { Eye, EyeOff } from 'lucide-react'
 import { useTimeouts } from '@/hooks/useTimeout'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
+import NeuroNestMark from '@/components/NeuroNestMark'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -67,18 +68,8 @@ export default function SignupPage() {
           // Continue anyway - dashboard will handle it
         }
         
-        // Send welcome email (non-blocking)
-        fetch('/api/email/send-welcome', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: data.user.email,
-            username: email.split('@')[0],
-          }),
-        }).catch(err => console.error('Failed to send welcome email:', err));
-        
         setMessage('🎉 Account created! Redirecting...')
-        addTimeout(() => router.push('/dashboard'), 1000)
+        addTimeout(() => router.push('/rescue?resume=pending'), 1000)
       } else if (data.user && !data.session) {
         // This shouldn't happen with email confirmation disabled, but handle it
         setMessage('🎉 Account created! Please check your email to confirm.')
@@ -99,7 +90,7 @@ export default function SignupPage() {
       <div className="absolute -bottom-20 -right-12 w-72 h-72 bg-indigo-600 opacity-20 rounded-full filter blur-3xl"></div>
 
       <div className="relative z-10 text-center space-y-6 max-w-md w-full">
-        <div className="text-8xl select-none">🧠</div>
+        <NeuroNestMark size={96} className="mx-auto" />
         <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
           <h1 className="mb-5 text-3xl font-extrabold text-purple-300">
             Create your NeuroNest account

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { ArrowRight, Clock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,8 +18,6 @@ interface BreakdownTaskItemProps {
 }
 
 export default function BreakdownTaskItem({ task, onAddToInbox, isLoading }: BreakdownTaskItemProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const getDifficultyColor = (difficulty?: string) => {
     switch (difficulty) {
       case 'EASY': return 'bg-green-400/20 text-green-300 border-green-400/30';
@@ -42,8 +39,6 @@ export default function BreakdownTaskItem({ task, onAddToInbox, isLoading }: Bre
   return (
     <motion.div
       className="group relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       whileHover={{ scale: 1.01 }}
       transition={{ duration: 0.2 }}
     >
@@ -85,7 +80,7 @@ export default function BreakdownTaskItem({ task, onAddToInbox, isLoading }: Bre
 
           {/* The Jobs Magic - Contextual Action */}
           <AnimatePresence>
-            {isHovered && task.task_status === 'breakdown' && (
+            {task.task_status === 'breakdown' && (
               <motion.button
                 initial={{ opacity: 0, x: 10, scale: 0.8 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -93,8 +88,8 @@ export default function BreakdownTaskItem({ task, onAddToInbox, isLoading }: Bre
                 transition={{ duration: 0.15, ease: "easeOut" }}
                 onClick={() => onAddToInbox(task.task_id)}
                 disabled={isLoading}
-                className="
-                  flex items-center gap-1.5 px-3 py-1.5 
+                 className="
+                   flex min-h-11 shrink-0 items-center gap-1.5 px-3 py-1.5
                   bg-gradient-to-r from-purple-500 to-pink-500 
                   hover:from-purple-600 hover:to-pink-600
                   text-white text-xs font-medium rounded-lg

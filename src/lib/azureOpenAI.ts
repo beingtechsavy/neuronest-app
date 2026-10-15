@@ -110,14 +110,21 @@ Create 6-10 concrete steps. Start easy, build up gradually, be specific.`;
     }
 
     // Validate and format the response
-    return steps.map((step: any, index: number) => ({
-      step: step.step || step.title || step.description,
-      difficulty: step.difficulty || 'MEDIUM',
-      estimatedMinutes: step.estimatedMinutes || step.minutes || 15,
-      order: step.order || index + 1,
-      completionCriteria: step.completionCriteria || step.completion || 'Task completed',
-      encouragement: step.encouragement || ''
-    }));
+    const normalized = steps.slice(0, 10).map((step: any, index: number) => {
+      const text = String(step.step || step.title || step.description || '').trim().slice(0, 500);
+      const difficulty = ['EASY', 'MEDIUM', 'HARD'].includes(step.difficulty) ? step.difficulty : 'MEDIUM';
+      const estimatedMinutes = Math.min(480, Math.max(1, Number(step.estimatedMinutes || step.minutes || 15)));
+      return {
+        step: text,
+        difficulty,
+        estimatedMinutes,
+        order: index + 1,
+        completionCriteria: String(step.completionCriteria || step.completion || 'The step is complete').trim().slice(0, 500),
+        encouragement: String(step.encouragement || '').trim().slice(0, 180),
+      } as TaskBreakdownStep;
+    }).filter((step: TaskBreakdownStep) => step.step.length > 0);
+    if (normalized.length < 1) throw new Error('AI returned no usable steps');
+    return normalized;
 
   } catch (error: any) {
     console.error('Azure OpenAI API error details:', {

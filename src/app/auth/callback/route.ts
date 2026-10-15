@@ -109,8 +109,8 @@ export async function GET(request: NextRequest) {
       // Don't block login - dashboard will handle it
     }
     
-    // Redirect to dashboard
-    return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
+    // Give browser-local Rescue context a chance to be imported or skipped.
+    return NextResponse.redirect(`${requestUrl.origin}/rescue?resume=pending`)
     
   } catch (error) {
     console.error('💥 Callback exception:', error)

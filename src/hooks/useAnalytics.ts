@@ -54,6 +54,12 @@ export interface AnalyticsData {
     weeklyProgress: WeeklyProgress[];
     productivityHeatmap: ProductivityData[];
     peakHours: { hour: number; productivity: number }[];
+    dataQuality: {
+        hasTaskData: boolean;
+        hasFocusData: boolean;
+        hasEnoughPeakHourData: boolean;
+        peakHourDataPoints: number;
+    };
 }
 
 export function useAnalytics() {
@@ -243,24 +249,6 @@ export function useAnalytics() {
             dailyFocusTime[date] += task.effort_units || 0;
         });
 
-        // Add focus session data from localStorage (primary source for focus time)
-        const today = new Date().toISOString().split('T')[0];
-        try {
-            const sessionData = localStorage.getItem('focusSessionStats');
-            if (sessionData) {
-                const stats = JSON.parse(sessionData);
-                // Add all focus session data to daily focus time
-                Object.entries(stats).forEach(([date, minutes]) => {
-                    if (typeof minutes === 'number') {
-                        // Use focus session data if available, otherwise keep task data
-                        dailyFocusTime[date] = Math.max(dailyFocusTime[date] || 0, minutes);
-                    }
-                });
-            }
-        } catch (e) {
-            // Focus session data unavailable
-        }
-
         // Find dates with 30+ minutes of focus (streak days)
         const streakDates = Object.entries(dailyFocusTime)
             .filter(([date, minutes]) => minutes >= 30)
@@ -374,10 +362,64 @@ export function useAnalytics() {
             });
         }
 
-            return weeks;
+            const hasRealData = weeks.some((week) =>
+                week.tasksCompleted > 0 || week.chaptersCompleted > 0 || week.timeSpent > 0,
+            );
+            return hasRealData ? weeks : [];
         } catch (error) {
             console.warn('Error calculating weekly progress:', error);
             return [];
+        }
+    }, [user]);
+
+    const calculatePeakHours = useCallback(async (): Promise<{
+        hours: { hour: number; productivity: number }[];
+        dataPoints: number;
+    }> => {
+        if (!user) throw new Error('User not authenticated');
+
+        try {
+            const { data: tasks, error } = await supabase
+                .from('tasks')
+                .select('end_time, effort_units, task_status')
+                .eq('user_id', user.id)
+                .eq('task_status', 'completed')
+                .not('end_time', 'is', null)
+                .order('end_time', { ascending: false })
+                .limit(500);
+
+            if (error) {
+                console.warn('Peak hours error:', error);
+                return { hours: [], dataPoints: 0 };
+            }
+
+            const completedTasks = (tasks || []).filter((task) => Boolean(task.end_time));
+            if (completedTasks.length < 3) return { hours: [], dataPoints: completedTasks.length };
+
+            const byHour = new Map<number, { count: number; minutes: number }>();
+            for (const task of completedTasks) {
+                const rawEndTime = String(task.end_time);
+                const timeMatch = /^(\d{1,2}):/.exec(rawEndTime);
+                const hour = timeMatch ? Number(timeMatch[1]) : new Date(rawEndTime).getHours();
+                if (!Number.isInteger(hour) || hour < 0 || hour > 23) continue;
+                const current = byHour.get(hour) || { count: 0, minutes: 0 };
+                current.count += 1;
+                current.minutes += Number(task.effort_units || 0) * 15;
+                byHour.set(hour, current);
+            }
+
+            return {
+                hours: Array.from(byHour.entries())
+                    .map(([hour, data]) => ({
+                        hour,
+                        productivity: data.count + data.minutes / 60,
+                    }))
+                    .sort((a, b) => a.hour - b.hour),
+                dataPoints: completedTasks.length,
+            };
+        } catch (error) {
+            console.warn('Error calculating peak hours:', error);
+            return { hours: [], dataPoints: 0 };
         }
     }, [user]);
 
@@ -412,7 +454,7 @@ export function useAnalytics() {
             }
 
             dailyData[date].tasksCompleted++;
-            dailyData[date].timeSpent += task.effort_units || 0;
+                dailyData[date].timeSpent += (task.effort_units || 0) * 15;
         });
 
         // Calculate focus score based on tasks completed and time spent
@@ -435,37 +477,6 @@ export function useAnalytics() {
         setError(null);
 
         try {
-            // Initialize focus session data if needed (for demo purposes)
-            const initializeFocusData = () => {
-                try {
-                    const existingData = localStorage.getItem('focusSessionStats');
-                    if (!existingData) {
-                        const today = new Date();
-                        const stats: { [date: string]: number } = {};
-
-                        for (let i = 0; i < 7; i++) {
-                            const date = new Date(today);
-                            date.setDate(date.getDate() - i);
-                            const dateStr = date.toISOString().split('T')[0];
-
-                            if (i === 0) stats[dateStr] = 125; // Today: 2h 5m
-                            else if (i === 1) stats[dateStr] = 45; // Yesterday: 45m
-                            else if (i === 2) stats[dateStr] = 90; // 2 days ago: 1h 30m
-                            else if (i === 3) stats[dateStr] = 30; // 3 days ago: 30m
-                            else if (i === 4) stats[dateStr] = 60; // 4 days ago: 1h
-                            else if (i === 5) stats[dateStr] = 35; // 5 days ago: 35m
-                            else if (i === 6) stats[dateStr] = 50; // 6 days ago: 50m
-                        }
-
-                        localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-                    }
-                } catch (error) {
-                    // Ignore localStorage errors
-                }
-            };
-
-            initializeFocusData();
-
             // Phase 1: Load critical stats first for immediate display
             const taskStats = await calculateTaskStats();
 
@@ -476,7 +487,13 @@ export function useAnalytics() {
                 studyStreak: prev?.studyStreak || { currentStreak: 0, longestStreak: 0, lastStudyDate: null, streakDates: [] },
                 weeklyProgress: prev?.weeklyProgress || [],
                 productivityHeatmap: prev?.productivityHeatmap || [],
-                peakHours: prev?.peakHours || []
+                peakHours: prev?.peakHours || [],
+                dataQuality: prev?.dataQuality || {
+                    hasTaskData: taskStats.totalTasks > 0,
+                    hasFocusData: false,
+                    hasEnoughPeakHourData: false,
+                    peakHourDataPoints: 0,
+                },
             }));
 
             // Phase 2: Load remaining data in parallel
@@ -484,32 +501,15 @@ export function useAnalytics() {
                 subjectStats,
                 studyStreak,
                 weeklyProgress,
-                productivityHeatmap
+                productivityHeatmap,
+                peakHourData,
             ] = await Promise.all([
                 calculateSubjectStats(),
                 calculateStudyStreak(),
                 calculateWeeklyProgress(),
-                calculateProductivityHeatmap()
+                calculateProductivityHeatmap(),
+                calculatePeakHours(),
             ]);
-
-            // Calculate peak hours from productivity data
-            const hourlyProductivity: { [hour: number]: number[] } = {};
-            productivityHeatmap.forEach(day => {
-                // Simulate hourly distribution based on daily data
-                for (let hour = 6; hour <= 22; hour++) {
-                    if (!hourlyProductivity[hour]) hourlyProductivity[hour] = [];
-                    // Simple distribution - peak around typical study hours
-                    const productivity = day.focusScore * Math.random() * (hour >= 9 && hour <= 17 ? 1.2 : 0.8);
-                    hourlyProductivity[hour].push(productivity);
-                }
-            });
-
-            const peakHours = Object.entries(hourlyProductivity)
-                .map(([hour, scores]) => ({
-                    hour: parseInt(hour),
-                    productivity: scores.reduce((sum, score) => sum + score, 0) / scores.length
-                }))
-                .sort((a, b) => b.productivity - a.productivity);
 
             // Update with complete data
             setAnalytics({
@@ -518,7 +518,13 @@ export function useAnalytics() {
                 studyStreak,
                 weeklyProgress,
                 productivityHeatmap,
-                peakHours
+                peakHours: peakHourData.hours,
+                dataQuality: {
+                    hasTaskData: taskStats.totalTasks > 0,
+                    hasFocusData: productivityHeatmap.length > 0,
+                    hasEnoughPeakHourData: peakHourData.dataPoints >= 3,
+                    peakHourDataPoints: peakHourData.dataPoints,
+                },
             });
         } catch (err) {
             if (process.env.NODE_ENV === 'development') {
@@ -540,12 +546,18 @@ export function useAnalytics() {
                 studyStreak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null, streakDates: [] },
                 weeklyProgress: [],
                 productivityHeatmap: [],
-                peakHours: []
+                peakHours: [],
+                dataQuality: {
+                    hasTaskData: false,
+                    hasFocusData: false,
+                    hasEnoughPeakHourData: false,
+                    peakHourDataPoints: 0,
+                },
             });
         } finally {
             setLoading(false);
         }
-    }, [user, calculateTaskStats, calculateSubjectStats, calculateStudyStreak, calculateWeeklyProgress, calculateProductivityHeatmap]);
+    }, [user, calculateTaskStats, calculateSubjectStats, calculateStudyStreak, calculateWeeklyProgress, calculateProductivityHeatmap, calculatePeakHours]);
 
     useEffect(() => {
         fetchAnalytics();

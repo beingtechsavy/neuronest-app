@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createActionGenerator } from '@/lib/rescue/actionGenerator';
+import { createActionGenerator, getTaskDomain } from '@/lib/rescue/actionGenerator';
 import type { FrictionType } from '@/types/rescue';
 
 const generator = createActionGenerator();
@@ -17,7 +17,8 @@ const FRICTION_TYPES: FrictionType[] = [
 describe('actionGenerator', () => {
   it('generates a single tiny physical initial action', () => {
     const action = generator.generateInitialAction('Finish my essay', 'feels-too-big');
-    expect(action.text).toMatch(/first thing/i);
+    expect(action.text).toMatch(/essay/i);
+    expect(action.text).toMatch(/title|bullet|paragraph|sentence/i);
     expect(action.estimatedMinutes).toBe(2);
   });
 
@@ -29,7 +30,7 @@ describe('actionGenerator', () => {
       const levels: string[] = [];
 
       for (let depth = 0; depth < 5; depth++) {
-        const smaller = generator.generateSmallerAction(initial, friction, depth);
+        const smaller = generator.generateSmallerAction('Clean the kitchen', initial, friction, depth);
         levels.push(smaller.text);
       }
 
@@ -52,6 +53,15 @@ describe('actionGenerator', () => {
     const alternative = generator.generateAlternativeAction('Reply to the email', 'dont-know-where-to-start', [current]);
 
     expect(alternative.text).not.toBe(current.text);
+    expect(alternative.text).toMatch(/email|conversation|message|inbox/i);
     expect(alternative.estimatedMinutes).toBe(2);
+  });
+
+  it('classifies common task language so generated actions stay relevant', () => {
+    expect(getTaskDomain('Reply to my manager')).toBe('communication');
+    expect(getTaskDomain('Study chapter 4 for the exam')).toBe('study');
+    expect(getTaskDomain('Fix the API bug')).toBe('coding');
+    expect(getTaskDomain('Happen to finish something')).toBe('generic');
+    expect(getTaskDomain('Do something')).toBe('generic');
   });
 });

@@ -9,6 +9,20 @@ interface PeakHoursChartProps {
 export default function PeakHoursChart({ peakHours }: PeakHoursChartProps) {
   // Filter to reasonable study hours (6 AM to 11 PM)
   const studyHours = peakHours.filter(h => h.hour >= 6 && h.hour <= 23);
+  if (studyHours.length < 1) {
+    return (
+      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Clock className="text-blue-400" size={20} />
+          Peak Productivity Hours
+        </h3>
+        <div className="text-center py-8">
+          <p className="text-slate-400">Not enough completed activity to identify a pattern yet.</p>
+          <p className="text-slate-500 text-sm mt-2">Complete at least three scheduled tasks with completion times to unlock this view.</p>
+        </div>
+      </div>
+    );
+  }
   const maxProductivity = Math.max(...studyHours.map(h => h.productivity), 1);
 
   const formatHour = (hour: number) => {
@@ -37,7 +51,7 @@ export default function PeakHoursChart({ peakHours }: PeakHoursChartProps) {
   };
 
   // Find top 3 peak hours
-  const topHours = studyHours
+  const topHours = [...studyHours]
     .sort((a, b) => b.productivity - a.productivity)
     .slice(0, 3);
 

@@ -84,8 +84,7 @@ export default function UsageDashboard() {
         
         {/* Current Plan Badge */}
         <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-600">
-          {planInfo.plan_type === 'warrior' && <Crown size={16} className="text-yellow-400" />}
-          {planInfo.plan_type === 'master' && <Zap size={16} className="text-purple-400" />}
+          {planInfo.plan_type === 'pro' && <Crown size={16} className="text-yellow-400" />}
           {planInfo.plan_type === 'free' && <BookOpen size={16} className="text-blue-400" />}
           <span className="text-white font-medium">{formatPlanName(planInfo.plan_type)} Plan</span>
         </div>
@@ -159,7 +158,7 @@ export default function UsageDashboard() {
           )}
           
           {planInfo.subjects_limit === 999999 && (
-            <p className="text-green-400 text-xs">Unlimited projects</p>
+              <p className="text-green-400 text-xs">Unlimited projects</p>
           )}
         </div>
 
@@ -215,7 +214,7 @@ export default function UsageDashboard() {
       </div>
 
       {/* Upgrade Section */}
-      {planInfo.plan_type !== 'warrior' && (
+      {planInfo.plan_type !== 'pro' && (
         <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-6 border border-purple-500/20">
           <div className="flex items-center justify-between">
             <div>
@@ -223,10 +222,7 @@ export default function UsageDashboard() {
                 {planInfo.plan_type === 'free' ? 'Ready to upgrade?' : 'Want more features?'}
               </h3>
               <p className="text-slate-300 text-sm">
-                {planInfo.plan_type === 'free' 
-                  ? 'Get more AI breakdowns, subjects, and premium features'
-                  : 'Upgrade to Pro for unlimited projects and advanced features'
-                }
+                Get cloud history, cross-device resume, and more AI breakdowns with Pro.
               </p>
             </div>
             <a

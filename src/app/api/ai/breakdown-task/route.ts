@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateTaskBreakdown, TaskBreakdownRequest } from '@/lib/azureOpenAI';
-import { canUseAIBreakdownServer, incrementAIUsageServer } from '@/lib/subscriptionLimitsServer';
+import { consumeAIBreakdownServer } from '@/lib/subscriptionLimitsServer';
 import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 
@@ -49,15 +49,23 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
 
     // Validate required fields
-    if (!taskData?.title) {
+    if (!taskData?.title || typeof taskData.title !== 'string') {
       return NextResponse.json(
         { error: 'Task title is required' },
         { status: 400 }
       );
     }
 
+    const title = taskData.title.trim();
+    const description = typeof taskData.description === 'string' ? taskData.description.trim() : undefined;
+    const deadline = typeof taskData.deadline === 'string' ? taskData.deadline.trim() : undefined;
+    const subject = typeof taskData.subject === 'string' ? taskData.subject.trim() : undefined;
+    if (title.length > 240 || description && description.length > 5000 || subject && subject.length > 160 || deadline && deadline.length > 160) {
+      return NextResponse.json({ error: 'Task details are too long' }, { status: 400 });
+    }
+
     // Check user's subscription and usage limits
-    const usageCheck = await canUseAIBreakdownServer(userId);
+    const usageCheck = await consumeAIBreakdownServer(userId);
     
     if (!usageCheck.allowed) {
       return NextResponse.json(
@@ -73,10 +81,10 @@ export async function POST(req: NextRequest) {
 
     // Prepare the breakdown request
     const breakdownRequest: TaskBreakdownRequest = {
-      title: taskData.title,
-      description: taskData.description,
-      deadline: taskData.deadline,
-      subject: taskData.subject,
+      title,
+      description,
+      deadline,
+      subject: subject || undefined,
       userContext: taskData.userContext
     };
 
@@ -92,16 +100,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Track the usage
-    const usageIncremented = await incrementAIUsageServer(userId);
-    if (!usageIncremented) {
-      console.error('Failed to increment AI usage for user:', userId);
-      // Don't block - just log the error
-      console.warn('Continuing despite usage tracking failure');
-    }
-
     // Track detailed usage for analytics
-    await trackDetailedUsage(userId, 'task_breakdown', breakdown.length);
+    await trackDetailedUsage(userId, 'task_breakdown', title.length + (description?.length || 0), breakdown);
 
     // Return the breakdown with updated usage data
     const safeUsed = typeof usageCheck.used === 'number' ? usageCheck.used : 0;
@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
       success: true,
       breakdown,
       usage: {
-        used: safeUsed + 1,
+        used: safeUsed,
         limit: safeLimit,
-        remaining: Math.max(0, safeLimit - safeUsed - 1),
+        remaining: Math.max(0, safeLimit - safeUsed),
         plan_type: usageCheck.plan_type
       }
     });
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Additional usage tracking for analytics (optional)
-async function trackDetailedUsage(userId: string, featureType: string, tokensUsed: number) {
+async function trackDetailedUsage(userId: string, featureType: string, inputCharacters: number, breakdown: unknown[]) {
   try {
     const client = getSupabaseClient();
     
@@ -138,8 +138,9 @@ async function trackDetailedUsage(userId: string, featureType: string, tokensUse
       await client.from('ai_usage').insert({
         user_id: userId,
         feature_type: featureType,
-        tokens_used: tokensUsed,
-        cost: tokensUsed * 0.0001, // Rough estimate
+        input_characters: inputCharacters,
+        output_tokens: Math.ceil(JSON.stringify(breakdown).length / 4),
+        estimated_cost: Math.ceil(JSON.stringify(breakdown).length / 4) * 0.0001,
         created_at: new Date().toISOString()
       });
     } catch (aiUsageError) {

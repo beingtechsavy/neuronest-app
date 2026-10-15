@@ -2,7 +2,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Refund Policy - NeuroNest',
-  description: 'Refund Policy for NeuroNest AI-powered study assistant',
+  description: 'Refund Policy for NeuroNest task-initiation and productivity service',
+  alternates: { canonical: 'https://www.neuronest.work/refund' },
 };
 
 export default function RefundPolicy() {
@@ -42,8 +43,8 @@ export default function RefundPolicy() {
                 Our refund policy covers:
               </p>
               <ul className="text-slate-300 mb-4 list-disc list-inside">
-                <li><strong>Master Plan subscriptions:</strong> Full refund within 30 days</li>
-                <li><strong>Warrior Plan subscriptions:</strong> Full refund within 30 days</li>
+                 <li><strong>Pro monthly subscriptions:</strong> Full refund within 30 days of the initial purchase</li>
+                 <li><strong>Pro annual subscriptions:</strong> Refund eligibility is reviewed under the same initial-purchase guarantee</li>
                 <li><strong>Annual subscriptions:</strong> Pro-rated refund based on unused time</li>
               </ul>
             </section>
@@ -68,7 +69,7 @@ export default function RefundPolicy() {
                 To request a refund, please follow these steps:
               </p>
               <ol className="text-slate-300 mb-4 list-decimal list-inside">
-                <li>Contact our support team at support@neuronest.com</li>
+                 <li>Contact our support team at support@neuronest.work</li>
                 <li>Include your account email address and subscription details</li>
                 <li>Provide a brief reason for the refund request (optional but helpful)</li>
                 <li>Our team will review your request within 2 business days</li>
@@ -141,7 +142,7 @@ export default function RefundPolicy() {
               </p>
               <div className="bg-slate-700 p-4 rounded-lg">
                 <p className="text-slate-300 mb-2">
-                  <strong>Email:</strong> support@neuronest.com
+                   <strong>Email:</strong> support@neuronest.work
                 </p>
                 <p className="text-slate-300 mb-2">
                   <strong>Subject Line:</strong> Refund Request - [Your Email]

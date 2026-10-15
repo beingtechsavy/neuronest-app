@@ -3,6 +3,7 @@
 import React from 'react';
 import { Save, X } from 'lucide-react';
 import type { RescueSessionData } from '@/types/rescue';
+import { setPendingRescueSession } from '@/lib/rescue/anonymousSession';
 
 interface OptionalSaveProps {
   sessionData: RescueSessionData;
@@ -34,7 +35,10 @@ export default function OptionalSave({ sessionData, onSave, onSkip, saving }: Op
 
         <div className="space-y-3 w-full">
           <button
-            onClick={onSave}
+            onClick={() => {
+              setPendingRescueSession(sessionData);
+              onSave();
+            }}
             disabled={saving}
             className="w-full min-h-[48px] py-3.5 px-6 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center"
           >

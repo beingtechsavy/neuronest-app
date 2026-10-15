@@ -53,31 +53,46 @@ export type RescueState =
   | { readonly status: 'task-entry'; readonly taskText: string }
   | { readonly status: 'friction-selection'; readonly taskText: string }
   | { readonly status: 'action-generation'; readonly taskText: string; readonly friction: FrictionType }
-  | { readonly status: 'action-ready'; readonly taskText: string; readonly friction: FrictionType; readonly action: RescueAction; readonly adaptationDepth: number }
-  | { readonly status: 'activation'; readonly taskText: string; readonly friction: FrictionType; readonly action: RescueAction; readonly adaptationDepth: number; readonly timerRunning: boolean; readonly elapsedSeconds: number }
-  | { readonly status: 'adaptation'; readonly taskText: string; readonly friction: FrictionType; readonly currentAction: RescueAction; readonly adaptationDepth: number; readonly reason: 'too-hard' | 'not-right' }
-  | { readonly status: 'completed'; readonly taskText: string; readonly friction: FrictionType; readonly finalAction: RescueAction; readonly completedAction: boolean }
-  | { readonly status: 'stopped'; readonly taskText: string; readonly friction: FrictionType; readonly lastAction: RescueAction }
+  | { readonly status: 'action-ready'; readonly taskText: string; readonly friction: FrictionType; readonly action: RescueAction; readonly actions: readonly RescueAction[]; readonly adaptationDepth: number }
+  | { readonly status: 'activation'; readonly taskText: string; readonly friction: FrictionType; readonly action: RescueAction; readonly actions: readonly RescueAction[]; readonly adaptationDepth: number; readonly timerRunning: boolean; readonly elapsedSeconds: number }
+  | { readonly status: 'adaptation'; readonly taskText: string; readonly friction: FrictionType; readonly previousAction: RescueAction; readonly newAction: RescueAction; readonly actions: readonly RescueAction[]; readonly adaptationDepth: number; readonly reason: 'too-hard' | 'not-right' }
+  | { readonly status: 'completed'; readonly taskText: string; readonly friction: FrictionType; readonly finalAction: RescueAction; readonly actions: readonly RescueAction[]; readonly completedAction: boolean }
+  | { readonly status: 'stopped'; readonly taskText: string; readonly friction: FrictionType; readonly lastAction: RescueAction; readonly actions: readonly RescueAction[] }
+  | { readonly status: 'resume-prompt'; readonly sessionData: RescueSessionData }
   | { readonly status: 'optional-save'; readonly sessionData: RescueSessionData };
 
 // ────────────────────────────────────────────────────
 // Analytics events — privacy-safe (no raw text)
 // ────────────────────────────────────────────────────
 
-export type RescueAnalyticsEvent =
+export type RescueAnalyticsEventBase = {
+  readonly sessionId?: string;
+  readonly utmSource?: string;
+  readonly utmMedium?: string;
+  readonly utmCampaign?: string;
+  readonly referralCode?: string;
+};
+
+export type RescueAnalyticsEvent = RescueAnalyticsEventBase & (
   | { readonly event: 'rescue_viewed' }
   | { readonly event: 'rescue_started' }
+  | { readonly event: 'task_submitted' }
   | { readonly event: 'friction_selected'; readonly friction: FrictionType }
   | { readonly event: 'action_generated'; readonly friction: FrictionType }
   | { readonly event: 'action_started'; readonly friction: FrictionType }
   | { readonly event: 'action_reduced'; readonly friction: FrictionType; readonly adaptationDepth: number }
   | { readonly event: 'action_changed'; readonly friction: FrictionType; readonly adaptationDepth: number }
   | { readonly event: 'still_stuck_selected'; readonly friction: FrictionType; readonly adaptationDepth: number }
+  | { readonly event: 'adaptation_accepted'; readonly friction: FrictionType; readonly adaptationDepth: number }
   | { readonly event: 'action_completed'; readonly friction: FrictionType }
   | { readonly event: 'session_stopped'; readonly friction: FrictionType; readonly adaptationsUsed: number }
-  | { readonly event: 'save_session_offered' }
+  | { readonly event: 'save_offered' }
   | { readonly event: 'account_created_after_rescue' }
-  | { readonly event: 'return_rescue_started'; readonly daysSinceLastSession: number };
+  | { readonly event: 'return_rescue_started'; readonly daysSinceLastSession: number }
+  | { readonly event: 'pricing_viewed' }
+  | { readonly event: 'checkout_started'; readonly plan: 'pro'; readonly billingCycle: 'monthly' | 'yearly' }
+  | { readonly event: 'payment_completed'; readonly plan: 'pro'; readonly billingCycle?: 'monthly' | 'yearly' }
+);
 
 // ────────────────────────────────────────────────────
 // State transition helpers
@@ -85,10 +100,16 @@ export type RescueAnalyticsEvent =
 
 /** Generate a unique action ID. */
 export function generateActionId(): string {
-  return `act_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID().slice(0, 8)
+    : `${Date.now()}_${Math.floor(Math.random() * 1e8).toString(36)}`;
+  return `act_${Date.now()}_${random}`;
 }
 
 /** Generate a unique session ID. */
 export function generateSessionId(): string {
-  return `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID().slice(0, 8)
+    : `${Date.now()}_${Math.floor(Math.random() * 1e8).toString(36)}`;
+  return `session_${Date.now()}_${random}`;
 }

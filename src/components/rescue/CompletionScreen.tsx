@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { RescueAction } from '@/types/rescue';
@@ -21,6 +21,18 @@ export default function CompletionScreen({
   onFinish,
 }: CompletionScreenProps) {
   const shouldReduceMotion = useReducedMotion();
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [helpful, setHelpful] = useState<boolean | null>(null);
+  const [comment, setComment] = useState('');
+
+  async function sendFeedback(value: boolean) {
+    setHelpful(value);
+    setFeedbackSent(true);
+    await fetch('/api/feedback', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ helpful: value, comment: comment || undefined }),
+    }).catch(() => undefined);
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
@@ -46,6 +58,15 @@ export default function CompletionScreen({
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 my-6">
           <p className="text-sm text-slate-400 mb-1">Your step was:</p>
           <p className="text-white font-medium break-words">{action.text}</p>
+        </div>
+
+        <div className="mb-6 text-left">
+          <p className="text-sm text-slate-300 mb-3 text-center">Did this help you begin?</p>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => sendFeedback(true)} className={`flex-1 min-h-[44px] rounded-lg border ${helpful === true ? 'border-green-400 bg-green-400/10 text-green-300' : 'border-slate-700 text-slate-300'} `}>Yes</button>
+            <button type="button" onClick={() => sendFeedback(false)} className={`flex-1 min-h-[44px] rounded-lg border ${helpful === false ? 'border-amber-400 bg-amber-400/10 text-amber-300' : 'border-slate-700 text-slate-300'} `}>Not yet</button>
+          </div>
+          {feedbackSent && <textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength={1000} rows={2} placeholder="Optional: what would have helped?" className="mt-3 w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-500" aria-label="Optional feedback" />}
         </div>
 
         <div className="space-y-3 w-full">

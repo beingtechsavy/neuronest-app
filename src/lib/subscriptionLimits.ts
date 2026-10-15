@@ -1,7 +1,11 @@
 import { supabase } from './supabaseClient';
+import { effectivePlan } from './plans';
+
+export type PlanType = 'free' | 'pro';
+export type LimitFeature = 'subjects' | 'ai' | 'flashcards';
 
 export interface UserPlanInfo {
-  plan_type: 'free' | 'master' | 'warrior';
+  plan_type: PlanType;
   status: string;
   breakdowns_used: number;
   breakdowns_limit: number;
@@ -20,486 +24,192 @@ export interface UsageCheckResult {
   allowed: boolean;
   used: number;
   limit: number;
-  plan_type: string;
+  plan_type: PlanType;
+}
+
+const PLAN_LIMITS: Record<PlanType, {
+  subjects: number;
+  aiBreakdowns: number;
+  flashcards: number;
+  features: string[];
+}> = {
+  free: {
+    subjects: 3,
+    aiBreakdowns: 3,
+    flashcards: 0,
+    features: [
+      'Unlimited Rescue sessions',
+      'Local Rescue history',
+      'Basic adaptation and focus timer',
+      '3 AI breakdowns per day',
+      'Inbox task capture',
+    ],
+  },
+  pro: {
+    subjects: 999999,
+    aiBreakdowns: 20,
+    flashcards: 0,
+    features: [
+      'Everything in Free',
+      'Cloud Rescue history',
+      'Cross-device resume',
+      '20 AI breakdowns per day with fair-use limits',
+      'Personalized preferences and reminders',
+      'Real weekly insights and priority support',
+    ],
+  },
+};
+
+function getPlanType(value: unknown): PlanType {
+  return value === 'pro' ? 'pro' : 'free';
+}
+
+function isSubscriptionValid(status: string | null | undefined, currentPeriodEnd: string | null | undefined): boolean {
+  if (!status || status === 'free') return false;
+  if (!['active', 'trialing'].includes(status)) return false;
+  if (!currentPeriodEnd) return true;
+  return new Date(currentPeriodEnd).getTime() > Date.now();
+}
+
+export function getPlanLimits(planType: PlanType | string) {
+  return PLAN_LIMITS[getPlanType(planType)];
+}
+
+export function formatPlanName(planType: string): string {
+  return getPlanType(planType) === 'pro' ? 'Pro' : 'Free';
+}
+
+export function getUpgradeMessage(planType: string, feature: LimitFeature): string {
+  if (getPlanType(planType) === 'pro') return 'You are on Pro with fair-use access to this feature.';
+  if (feature === 'ai') return 'Upgrade to Pro for more AI breakdowns and cloud continuity.';
+  if (feature === 'subjects') return 'Upgrade to Pro for unlimited projects.';
+  return 'This feature is not currently available on the Free plan.';
+}
+
+function emptyPlanInfo(): UserPlanInfo {
+  const limits = PLAN_LIMITS.free;
+  return {
+    plan_type: 'free',
+    status: 'free',
+    breakdowns_used: 0,
+    breakdowns_limit: limits.aiBreakdowns,
+    subjects_count: 0,
+    subjects_limit: limits.subjects,
+    flashcards_used: 0,
+    flashcards_limit: limits.flashcards,
+    current_period_end: null,
+    can_create_subjects: true,
+    can_use_ai: true,
+    subscription_active: false,
+    subscription_expired: false,
+  };
 }
 
 /**
- * Check if subscription is active and not expired
- */
-function isSubscriptionValid(status: string, currentPeriodEnd: string | null): boolean {
-  // If no subscription exists, treat as free plan (valid)
-  if (!status || !currentPeriodEnd) {
-    return status !== 'canceled' && status !== 'past_due' && status !== 'incomplete';
-  }
-
-  // Check if subscription is in valid status
-  const validStatuses = ['active', 'trialing'];
-  if (!validStatuses.includes(status)) {
-    return false;
-  }
-
-  // Check if subscription hasn't expired
-  const now = new Date();
-  const periodEnd = new Date(currentPeriodEnd);
-  return periodEnd > now;
-}
-
-/**
- * Get effective plan type based on subscription status and expiration
- */
-function getEffectivePlanType(
-  subscriptionPlan: string | null, 
-  usageLimitsPlan: string | null, 
-  subscriptionValid: boolean
-): 'free' | 'master' | 'warrior' {
-  // If subscription is invalid or expired, downgrade to free
-  if (!subscriptionValid) {
-    return 'free';
-  }
-
-  // Use subscription plan if valid, otherwise fallback to usage limits plan
-  const planType = subscriptionPlan || usageLimitsPlan || 'free';
-  
-  // Ensure it's a valid plan type
-  if (['master', 'warrior'].includes(planType)) {
-    return planType as 'master' | 'warrior';
-  }
-  
-  return 'free';
-}
-
-/**
- * Get complete user plan information including usage and limits
+ * Read-only client display data. Server routes use the server-side entitlement
+ * helper and never trust this value for authorization.
  */
 export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | null> {
   try {
-    // Try the new function name first
-    let data, error;
-    
-    try {
-      const result = await supabase.rpc('get_user_subscription_info', {
-        user_uuid: userId
-      });
-      data = result.data;
-      error = result.error;
-    } catch (newFunctionError) {
-      // Fallback to old function name if it exists
-      const result = await supabase.rpc('get_user_plan_info', {
-        user_uuid: userId
-      });
-      data = result.data;
-      error = result.error;
-    }
-
-    if (error) {
-      console.error('Error fetching user plan info:', error);
-      
-      // Enhanced fallback: direct query with subscription validation
-      const { data: directData, error: directError } = await supabase
+    const [{ data: usage }, { data: subscription }, { data: subjects }] = await Promise.all([
+      supabase
         .from('usage_limits')
-        .select(`
-          plan_type,
-          breakdowns_used,
-          breakdowns_limit,
-          subjects_limit,
-          flashcards_used,
-          flashcards_limit
-        `)
+        .select('breakdowns_used, flashcards_used, reset_date')
         .eq('user_id', userId)
-        .single();
-
-      if (directError) {
-        console.error('Direct query also failed:', directError);
-        return null;
-      }
-
-      // Get subscription info separately
-      const { data: subscriptionData } = await supabase
+        .maybeSingle(),
+      supabase
         .from('subscriptions')
-        .select('plan_type, status, current_period_end')
+        .select('plan_type, status, current_period_end, cancel_at_period_end')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(),
+      supabase.from('subjects').select('subject_id').eq('user_id', userId),
+    ]);
 
-      // Get subject count separately
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('subject_id')
-        .eq('user_id', userId);
-
-      const subjectCount = subjectsData?.length || 0;
-      
-      // Validate subscription status and expiration
-      const subscriptionValid = isSubscriptionValid(
-        subscriptionData?.status || 'active',
-        subscriptionData?.current_period_end || null
-      );
-      
-      const effectivePlanType = getEffectivePlanType(
-        subscriptionData?.plan_type,
-        directData.plan_type,
-        subscriptionValid
-      );
-
-      // Get limits based on effective plan type
-      const planLimits = getPlanLimits(effectivePlanType);
-
-      return {
-        plan_type: effectivePlanType,
-        status: subscriptionData?.status || 'active',
-        breakdowns_used: directData.breakdowns_used || 0,
-        breakdowns_limit: planLimits.aiBreakdowns,
-        subjects_count: subjectCount,
-        subjects_limit: planLimits.subjects,
-        flashcards_used: directData.flashcards_used || 0,
-        flashcards_limit: planLimits.flashcards,
-        current_period_end: subscriptionData?.current_period_end || null,
-        subscription_active: subscriptionValid,
-        subscription_expired: !subscriptionValid && !!subscriptionData?.current_period_end,
-        can_create_subjects: subjectCount < planLimits.subjects,
-        can_use_ai: (directData.breakdowns_used || 0) < planLimits.aiBreakdowns
-      };
-    }
-
-    // If RPC function succeeded, validate the returned data
-    const planInfo = data?.[0];
-    if (!planInfo) return null;
-
-    // Validate subscription status from RPC result
-    const subscriptionValid = isSubscriptionValid(
-      planInfo.status,
-      planInfo.current_period_end
-    );
-
-    const effectivePlanType = getEffectivePlanType(
-      planInfo.plan_type,
-      planInfo.plan_type,
-      subscriptionValid
-    );
-
-    // Update limits based on effective plan type if subscription is invalid
-    if (!subscriptionValid && effectivePlanType === 'free') {
-      const freeLimits = getPlanLimits('free');
-      return {
-        ...planInfo,
-        plan_type: 'free',
-        breakdowns_limit: freeLimits.aiBreakdowns,
-        subjects_limit: freeLimits.subjects,
-        flashcards_limit: freeLimits.flashcards,
-        subscription_active: false,
-        subscription_expired: !!planInfo.current_period_end,
-        can_create_subjects: planInfo.subjects_count < freeLimits.subjects,
-        can_use_ai: planInfo.breakdowns_used < freeLimits.aiBreakdowns
-      };
-    }
+    const planType = effectivePlan(subscription);
+    const active = planType === 'pro';
+    const limits = PLAN_LIMITS[planType];
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    const used = usage?.reset_date === today ? Number(usage?.breakdowns_used || 0) : 0;
+    const subjectCount = subjects?.length || 0;
 
     return {
-      ...planInfo,
-      subscription_active: subscriptionValid,
-      subscription_expired: !subscriptionValid && !!planInfo.current_period_end
+      plan_type: planType,
+      status: subscription?.status || 'free',
+      breakdowns_used: used,
+      breakdowns_limit: limits.aiBreakdowns,
+      subjects_count: subjectCount,
+      subjects_limit: limits.subjects,
+      flashcards_used: Number(usage?.flashcards_used || 0),
+      flashcards_limit: limits.flashcards,
+      current_period_end: subscription?.current_period_end || null,
+      can_create_subjects: subjectCount < limits.subjects,
+      can_use_ai: used < limits.aiBreakdowns,
+      subscription_active: active,
+      subscription_expired: planType === 'pro' && !active,
     };
   } catch (error) {
-    console.error('Error in getUserPlanInfo:', error);
+    console.error('Error fetching user plan info:', error);
     return null;
   }
 }
 
-/**
- * Check if user can create more subjects
- */
 export async function canCreateSubject(userId: string): Promise<boolean> {
-  try {
-    // Get user's plan info which includes subject count and limits
-    const planInfo = await getUserPlanInfo(userId);
-    if (!planInfo) {
-      return false; // Fail safe - don't allow if error
-    }
-
-    // If subscription is expired/canceled, enforce free plan limits
-    if (!planInfo.subscription_active) {
-      const freeLimits = getPlanLimits('free');
-      return planInfo.subjects_count < freeLimits.subjects;
-    }
-
-    return planInfo.can_create_subjects;
-  } catch (error) {
-    console.error('Error in canCreateSubject:', error);
-    return false;
-  }
+  const planInfo = await getUserPlanInfo(userId);
+  return Boolean(planInfo?.can_create_subjects);
 }
 
-/**
- * Check if user can use AI breakdown feature
- */
 export async function canUseAIBreakdown(userId: string): Promise<UsageCheckResult> {
-  try {
-    // First get plan info to validate subscription status
-    const planInfo = await getUserPlanInfo(userId);
-    if (!planInfo) {
-      return {
-        allowed: false,
-        used: 0,
-        limit: 3,
-        plan_type: 'free'
-      };
-    }
-
-    // If subscription is expired/canceled, enforce free plan limits
-    const effectivePlanType = planInfo.subscription_active ? planInfo.plan_type : 'free';
-    const effectiveLimits = getPlanLimits(effectivePlanType);
-
-    // Use plan info directly instead of RPC call (more reliable)
-    const used = planInfo.breakdowns_used || 0;
-    const limit = effectiveLimits.aiBreakdowns;
-    const allowed = used < limit;
-
-    return {
-      allowed,
-      used,
-      limit,
-      plan_type: effectivePlanType
-    };
-  } catch (error) {
-    console.error('Error in canUseAIBreakdown:', error);
-    return {
-      allowed: false,
-      used: 0,
-      limit: 3,
-      plan_type: 'free'
-    };
-  }
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) return { allowed: false, used: 0, limit: PLAN_LIMITS.free.aiBreakdowns, plan_type: 'free' };
+  return {
+    allowed: planInfo.can_use_ai,
+    used: planInfo.breakdowns_used,
+    limit: planInfo.breakdowns_limit,
+    plan_type: planInfo.plan_type,
+  };
 }
 
-/**
- * Increment AI breakdown usage count
- */
+/** Kept for older client callers; authoritative usage is reserved server-side. */
 export async function incrementAIUsage(userId: string): Promise<boolean> {
   try {
-    // First validate subscription status before allowing usage increment
-    const planInfo = await getUserPlanInfo(userId);
-    if (!planInfo) {
-      console.error('Cannot increment AI usage: Unable to get plan info');
-      return false;
-    }
-
-    // If subscription is expired/canceled, don't allow usage beyond free limits
-    if (!planInfo.subscription_active) {
-      const freeLimits = getPlanLimits('free');
-      if (planInfo.breakdowns_used >= freeLimits.aiBreakdowns) {
-        console.error('Cannot increment AI usage: Subscription expired and free limit reached');
-        return false;
-      }
-    }
-
-    const { data, error } = await supabase.rpc('increment_ai_usage', {
-      user_uuid: userId
-    });
-
-    if (error) {
-      console.error('Error incrementing AI usage:', error);
-      // Get current usage first
-      const { data: currentLimits } = await supabase
-        .from('usage_limits')
-        .select('breakdowns_used')
-        .eq('user_id', userId)
-        .single();
-      
-      const currentUsed = (currentLimits as any)?.breakdowns_used || 0;
-      
-      // Validate against effective limits before incrementing
-      const effectiveLimits = planInfo.subscription_active ? 
-        getPlanLimits(planInfo.plan_type) : 
-        getPlanLimits('free');
-      
-      if (currentUsed >= effectiveLimits.aiBreakdowns) {
-        console.error('Cannot increment AI usage: Limit reached');
-        return false;
-      }
-      
-      // Try direct update as fallback
-      const { error: updateError } = await supabase
-        .from('usage_limits')
-        .update({ 
-          breakdowns_used: currentUsed + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-      
-      if (updateError) {
-        console.error('Fallback update also failed:', updateError);
-        return false;
-      }
-      return true;
-    }
-
-    return data === true;
-  } catch (error) {
-    console.error('Error in incrementAIUsage:', error);
+    const { data, error } = await supabase.rpc('increment_ai_usage', { user_uuid: userId });
+    return !error && data === true;
+  } catch {
     return false;
   }
 }
 
-/**
- * Get plan limits for display purposes
- */
-export function getPlanLimits(planType: 'free' | 'master' | 'warrior') {
-  const limits = {
-    free: {
-      subjects: 3,
-      aiBreakdowns: 3,
-      flashcards: 0,
-      features: [
-        '3 projects',
-        '2 AI breakdowns per day',
-        'Basic focus timer',
-        'Basic insights'
-      ]
-    },
-    master: {
-      subjects: 15,
-      aiBreakdowns: 10,
-      flashcards: 20,
-      features: [
-        '15 projects',
-        '10 AI breakdowns per day',
-        'Smart Daily Planner',
-        'Full insights',
-        'Priority support'
-      ]
-    },
-    warrior: {
-      subjects: 999999, // Unlimited
-      aiBreakdowns: 25,
-      flashcards: 50,
-      features: [
-        'Unlimited projects',
-        'Unlimited AI breakdowns',
-        'Smart Daily Planner',
-        'Full insights',
-        'Priority support'
-      ]
-    }
-  };
-
-  return limits[planType];
+export function needsUpgrade(planInfo: UserPlanInfo, feature: LimitFeature): boolean {
+  if (feature === 'subjects') return !planInfo.can_create_subjects;
+  if (feature === 'ai') return !planInfo.can_use_ai;
+  return planInfo.flashcards_limit === 0;
 }
 
-/**
- * Format plan type for display
- */
-export function formatPlanName(planType: string): string {
-  switch (planType) {
-    case 'free':
-      return 'Free';
-    case 'master':
-    case 'warrior':
-      return 'Pro';
-    default:
-      return 'Free';
-  }
-}
-
-/**
- * Get upgrade message based on current plan
- */
-export function getUpgradeMessage(planType: string, feature: 'subjects' | 'ai' | 'flashcards'): string {
-  const messages = {
-    subjects: {
-      free: 'Upgrade to Pro for unlimited projects',
-      master: 'You have Pro — unlimited projects!',
-      warrior: 'You have unlimited projects!'
-    },
-    ai: {
-      free: 'Upgrade to Pro for unlimited AI breakdowns',
-      master: 'You have Pro — maximum AI breakdowns!',
-      warrior: 'You have the maximum AI breakdowns!'
-    },
-    flashcards: {
-      free: 'Upgrade to Pro for full features',
-      master: 'You have Pro — full features!',
-      warrior: 'You have full features!'
-    }
-  };
-
-  return messages[feature][planType as keyof typeof messages[typeof feature]] || messages[feature].free;
-}
-
-/**
- * Check if user needs to upgrade for a specific feature
- */
-export function needsUpgrade(planInfo: UserPlanInfo, feature: 'subjects' | 'ai' | 'flashcards'): boolean {
-  switch (feature) {
-    case 'subjects':
-      return !planInfo.can_create_subjects;
-    case 'ai':
-      return !planInfo.can_use_ai;
-    case 'flashcards':
-      return planInfo.flashcards_limit === 0;
-    default:
-      return false;
-  }
-}
-
-/**
- * Check if user's subscription has expired and needs renewal
- */
 export async function checkSubscriptionExpiration(userId: string): Promise<{
   expired: boolean;
   daysUntilExpiry: number | null;
   gracePeriodActive: boolean;
 }> {
-  try {
-    const planInfo = await getUserPlanInfo(userId);
-    if (!planInfo || !planInfo.current_period_end) {
-      return {
-        expired: false,
-        daysUntilExpiry: null,
-        gracePeriodActive: false
-      };
-    }
-
-    const now = new Date();
-    const periodEnd = new Date(planInfo.current_period_end);
-    const timeDiff = periodEnd.getTime() - now.getTime();
-    const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    // Grace period: 3 days after expiration
-    const gracePeriodEnd = new Date(periodEnd.getTime() + (3 * 24 * 60 * 60 * 1000));
-    const gracePeriodActive = now > periodEnd && now <= gracePeriodEnd;
-
-    return {
-      expired: daysUntilExpiry < 0 && !gracePeriodActive,
-      daysUntilExpiry: daysUntilExpiry > 0 ? daysUntilExpiry : null,
-      gracePeriodActive
-    };
-  } catch (error) {
-    console.error('Error checking subscription expiration:', error);
-    return {
-      expired: false,
-      daysUntilExpiry: null,
-      gracePeriodActive: false
-    };
+  const info = await getUserPlanInfo(userId);
+  if (!info?.current_period_end || info.plan_type === 'free') {
+    return { expired: false, daysUntilExpiry: null, gracePeriodActive: false };
   }
+
+  const periodEnd = new Date(info.current_period_end).getTime();
+  const now = Date.now();
+  const days = Math.ceil((periodEnd - now) / 86_400_000);
+  const gracePeriodActive = now > periodEnd && now <= periodEnd + 3 * 86_400_000;
+  return {
+    expired: days < 0 && !gracePeriodActive,
+    daysUntilExpiry: days > 0 ? days : null,
+    gracePeriodActive,
+  };
 }
 
-/**
- * Get subscription status message for UI display
- */
 export function getSubscriptionStatusMessage(planInfo: UserPlanInfo): string {
-  if (!planInfo.subscription_active && planInfo.subscription_expired) {
-    return 'Your subscription has expired. Please renew to continue using premium features.';
-  }
-  
-  if (!planInfo.subscription_active && planInfo.status === 'canceled') {
-    return 'Your subscription has been canceled. You now have access to free plan features only.';
-  }
-  
-  if (planInfo.status === 'past_due') {
-    return 'Your payment is past due. Please update your payment method to avoid service interruption.';
-  }
-  
-  if (planInfo.status === 'trialing') {
-    return 'You are currently on a free trial. Enjoy your premium features!';
-  }
-  
-  return 'Your subscription is active.';
+  if (planInfo.subscription_expired) return 'Your Pro subscription has expired. You now have Free plan access.';
+  if (planInfo.status === 'past_due') return 'Your payment is past due. Please update your payment method.';
+  if (planInfo.status === 'canceled') return 'Your Pro subscription is canceled and will end at the current period end.';
+  if (planInfo.plan_type === 'pro') return 'Your Pro subscription is active.';
+  return 'You are using the Free plan.';
 }

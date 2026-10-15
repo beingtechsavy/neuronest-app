@@ -1,0 +1,25 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="100" y1="100" x2="470" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <circle cx="1060" cy="-20" r="260" fill="#7C3AED" opacity=".14"/>
+  <circle cx="80" cy="650" r="240" fill="#2563EB" opacity=".1"/>
+  <rect x="108" y="105" width="210" height="210" rx="58" fill="url(#accent)"/>
+  <path d="M154 185C165 160 190 145 216 147C245 149 268 168 273 194" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <path d="M143 213C154 187 180 173 208 175C235 177 257 194 268 219" stroke="white" stroke-width="14" stroke-linecap="round" opacity=".88"/>
+  <path d="M153 244C167 221 188 212 212 214C235 216 253 228 265 247" stroke="white" stroke-width="14" stroke-linecap="round" opacity=".72"/>
+  <path d="M192 274H237" stroke="#C4B5FD" stroke-width="14" stroke-linecap="round"/>
+  <path d="M250 260H272V282" stroke="#FDE68A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="279" cy="139" r="8" fill="#FDE68A"/>
+  <text x="390" y="245" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="700">NeuroNest</text>
+  <text x="395" y="325" fill="#C4B5FD" font-family="Arial, Helvetica, sans-serif" font-size="34">One small next action. Then begin.</text>
+  <text x="395" y="390" fill="#94A3B8" font-family="Arial, Helvetica, sans-serif" font-size="25">A task-initiation tool for the moment when starting feels inaccessible.</text>
+</svg>

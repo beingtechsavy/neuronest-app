@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import NeuroNestMark from '@/components/NeuroNestMark'
 
 function ResetPasswordForm() {
   const router = useRouter()
@@ -102,7 +103,7 @@ function ResetPasswordForm() {
     return (
       <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#071020] to-[#0d1125] p-4">
         <div className="relative z-10 text-center space-y-6 max-w-md w-full">
-          <div className="text-8xl select-none">🧠</div>
+          <NeuroNestMark size={96} className="mx-auto" />
           <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-700 rounded mb-4"></div>
@@ -122,7 +123,7 @@ function ResetPasswordForm() {
       <div className="absolute -bottom-20 -right-12 w-72 h-72 bg-indigo-600 opacity-20 rounded-full filter blur-3xl"></div>
 
       <div className="relative z-10 text-center space-y-6 max-w-md w-full">
-        <div className="text-8xl select-none">🧠</div>
+        <NeuroNestMark size={96} className="mx-auto" />
         <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
           {success ? (
             <>
@@ -259,7 +260,7 @@ function ResetPasswordLoading() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#071020] to-[#0d1125] p-4">
       <div className="relative z-10 text-center space-y-6 max-w-md w-full">
-        <div className="text-8xl select-none">🧠</div>
+        <NeuroNestMark size={96} className="mx-auto" />
         <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-700 rounded mb-4"></div>

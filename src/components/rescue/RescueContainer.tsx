@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { RescueState, RescueAction, RescueSessionData, FrictionType } from '@/types/rescue';
+import type { RescueState, RescueSessionData, FrictionType } from '@/types/rescue';
 import { generateSessionId } from '@/types/rescue';
 import { createActionGenerator } from '@/lib/rescue/actionGenerator';
-import { saveSession, daysSinceLastSession } from '@/lib/rescue/anonymousSession';
+import { saveSession, daysSinceLastSession, getPendingRescueSession, clearPendingRescueSession } from '@/lib/rescue/anonymousSession';
 import { trackEvent } from '@/lib/rescue/rescueAnalytics';
+import { transitionRescueState } from '@/lib/rescue/stateMachine';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import TaskEntry from './TaskEntry';
 import FrictionSelector from './FrictionSelector';
@@ -15,6 +16,8 @@ import AdaptationPanel from './AdaptationPanel';
 import CompletionScreen from './CompletionScreen';
 import StopScreen from './StopScreen';
 import OptionalSave from './OptionalSave';
+import ResumePrompt from './ResumePrompt';
+import NeuroNestMark from '@/components/NeuroNestMark';
 
 const generator = createActionGenerator();
 
@@ -33,11 +36,19 @@ export default function RescueContainer() {
     }
   }, []);
 
+  useEffect(() => {
+    const pending = getPendingRescueSession();
+    if (window.location.search.includes('resume=') && pending) {
+      setState({ status: 'resume-prompt', sessionData: pending });
+    }
+  }, []);
+
   // ── State transitions ──
 
   const handleTaskSubmit = useCallback((taskText: string) => {
     setState({ status: 'friction-selection', taskText });
     trackEvent({ event: 'rescue_started' });
+    trackEvent({ event: 'task_submitted' });
   }, []);
 
   const handleFrictionBack = useCallback(() => {
@@ -69,6 +80,7 @@ export default function RescueContainer() {
         taskText: current.taskText,
         friction,
         action,
+        actions: [action],
         adaptationDepth: 0,
       });
       trackEvent({ event: 'action_generated', friction });
@@ -79,68 +91,29 @@ export default function RescueContainer() {
   const handleStart = useCallback(() => {
     const current = state;
     if (current.status !== 'action-ready') return;
-    setState({
-      status: 'activation',
-      taskText: current.taskText,
-      friction: current.friction,
-      action: current.action,
-      adaptationDepth: current.adaptationDepth,
-      timerRunning: false,
-      elapsedSeconds: 0,
-    });
+    const next = transitionRescueState(current, { type: 'start' });
+    setState(next);
     trackEvent({ event: 'action_started', friction: current.friction });
   }, [state]);
 
   const handleMakeSmaller = useCallback(() => {
     const current = state;
     if (current.status !== 'action-ready' && current.status !== 'adaptation') return;
-
-    const friction = current.status === 'action-ready' ? current.friction : current.friction;
-    const taskText = current.status === 'action-ready' ? current.taskText : current.taskText;
-    const currentAction = current.status === 'action-ready' ? current.action : current.currentAction;
-    const depth = current.status === 'action-ready' ? current.adaptationDepth : current.adaptationDepth;
-
-    const newAction = generator.generateSmallerAction(currentAction, friction, depth);
-    const newDepth = depth + 1;
-
-    trackEvent({ event: 'action_reduced', friction, adaptationDepth: newDepth });
-
-    setState({
-      status: 'action-ready',
-      taskText,
-      friction,
-      action: newAction,
-      adaptationDepth: newDepth,
-    });
+    const next = transitionRescueState(current, { type: 'make-smaller' });
+    if (next === current) return;
+    const nextDepth = 'adaptationDepth' in next ? next.adaptationDepth : current.adaptationDepth;
+    trackEvent({ event: 'action_reduced', friction: current.friction, adaptationDepth: nextDepth });
+    setState(next);
   }, [state]);
 
   const handleDifferentStep = useCallback(() => {
     const current = state;
     if (current.status !== 'action-ready' && current.status !== 'adaptation') return;
-
-    const friction = current.status === 'action-ready' ? current.friction : current.friction;
-    const taskText = current.status === 'action-ready' ? current.taskText : current.taskText;
-    const currentAction = current.status === 'action-ready' ? current.action : current.currentAction;
-    const depth = current.status === 'action-ready' ? current.adaptationDepth : current.adaptationDepth;
-
-    // Collect previous actions
-    const previousActions: RescueAction[] = [currentAction];
-    if (current.status === 'adaptation') {
-      // The adaptation panel already has a newAction we're showing
-    }
-
-    const newAction = generator.generateAlternativeAction(taskText, friction, previousActions);
-    const newDepth = depth + 1;
-
-    trackEvent({ event: 'action_changed', friction, adaptationDepth: newDepth });
-
-    setState({
-      status: 'action-ready',
-      taskText,
-      friction,
-      action: newAction,
-      adaptationDepth: newDepth,
-    });
+    const next = transitionRescueState(current, { type: 'different-step' });
+    if (next === current) return;
+    const nextDepth = 'adaptationDepth' in next ? next.adaptationDepth : current.adaptationDepth;
+    trackEvent({ event: 'action_changed', friction: current.friction, adaptationDepth: nextDepth });
+    setState(next);
   }, [state]);
 
   const handleDone = useCallback(() => {
@@ -148,14 +121,7 @@ export default function RescueContainer() {
     if (current.status !== 'activation') return;
 
     trackEvent({ event: 'action_completed', friction: current.friction });
-
-    setState({
-      status: 'completed',
-      taskText: current.taskText,
-      friction: current.friction,
-      finalAction: current.action,
-      completedAction: true,
-    });
+    setState(transitionRescueState(current, { type: 'done' }));
   }, [state]);
 
   const handleStillStuck = useCallback(() => {
@@ -164,130 +130,64 @@ export default function RescueContainer() {
 
     trackEvent({ event: 'still_stuck_selected', friction: current.friction, adaptationDepth: current.adaptationDepth });
 
-    const newAction = generator.generateSmallerAction(current.action, current.friction, current.adaptationDepth);
-    const newDepth = current.adaptationDepth + 1;
-
-    setState({
-      status: 'adaptation',
-      taskText: current.taskText,
-      friction: current.friction,
-      currentAction: current.action,
-      adaptationDepth: newDepth,
-      reason: 'too-hard',
-    });
+    const next = transitionRescueState(current, { type: 'still-stuck' });
+    if (next === current) return;
+    setState(next);
   }, [state]);
 
   const handleAdaptationAccept = useCallback(() => {
     const current = state;
     if (current.status !== 'adaptation') return;
-    setState({
-      status: 'activation',
-      taskText: current.taskText,
-      friction: current.friction,
-      action: current.currentAction,
-      adaptationDepth: current.adaptationDepth,
-      timerRunning: false,
-      elapsedSeconds: 0,
-    });
+    trackEvent({ event: 'adaptation_accepted', friction: current.friction, adaptationDepth: current.adaptationDepth });
+    setState(transitionRescueState(current, { type: 'start' }));
   }, [state]);
 
   const handleAdaptationMakeSmaller = useCallback(() => {
     const current = state;
     if (current.status !== 'adaptation') return;
-
-    const newAction = generator.generateSmallerAction(current.currentAction, current.friction, current.adaptationDepth);
-    const newDepth = current.adaptationDepth + 1;
-
-    trackEvent({ event: 'action_reduced', friction: current.friction, adaptationDepth: newDepth });
-
-    setState({
-      status: 'adaptation',
-      taskText: current.taskText,
-      friction: current.friction,
-      currentAction: newAction,
-      adaptationDepth: newDepth,
-      reason: 'too-hard',
-    });
+    const next = transitionRescueState(current, { type: 'make-smaller' });
+    if (next === current) return;
+    const nextDepth = 'adaptationDepth' in next ? next.adaptationDepth : current.adaptationDepth;
+    trackEvent({ event: 'action_reduced', friction: current.friction, adaptationDepth: nextDepth });
+    setState(next);
   }, [state]);
 
   const handleAdaptationDifferentStep = useCallback(() => {
     const current = state;
     if (current.status !== 'adaptation') return;
-
-    const newAction = generator.generateAlternativeAction(current.taskText, current.friction, [current.currentAction]);
-    const newDepth = current.adaptationDepth + 1;
-
-    trackEvent({ event: 'action_changed', friction: current.friction, adaptationDepth: newDepth });
-
-    setState({
-      status: 'adaptation',
-      taskText: current.taskText,
-      friction: current.friction,
-      currentAction: newAction,
-      adaptationDepth: newDepth,
-      reason: 'not-right',
-    });
+    const next = transitionRescueState(current, { type: 'different-step' });
+    if (next === current) return;
+    const nextDepth = 'adaptationDepth' in next ? next.adaptationDepth : current.adaptationDepth;
+    trackEvent({ event: 'action_changed', friction: current.friction, adaptationDepth: nextDepth });
+    setState(next);
   }, [state]);
 
   const handleStop = useCallback(() => {
     const current = state;
-    const action: RescueAction =
-      current.status === 'activation'
-        ? current.action
-        : current.status === 'adaptation'
-        ? current.currentAction
-        : current.status === 'action-ready'
-        ? current.action
-        : { id: '', text: '', estimatedMinutes: 0 };
+    if (current.status !== 'activation' && current.status !== 'adaptation') return;
 
-    const friction =
-      current.status === 'activation'
-        ? current.friction
-        : current.status === 'adaptation'
-        ? current.friction
-        : current.status === 'action-ready'
-        ? current.friction
-        : 'not-sure';
-
-    const taskText =
-      current.status === 'activation'
-        ? current.taskText
-        : current.status === 'adaptation'
-        ? current.taskText
-        : current.status === 'action-ready'
-        ? current.taskText
-        : '';
-
-    const adaptationsUsed =
-      current.status === 'activation'
-        ? current.adaptationDepth
-        : current.status === 'adaptation'
-        ? current.adaptationDepth
-        : 0;
-
+    const friction = current.friction;
+    const adaptationsUsed = current.adaptationDepth;
     trackEvent({ event: 'session_stopped', friction, adaptationsUsed });
 
-    setState({
-      status: 'stopped',
-      taskText,
-      friction,
-      lastAction: action,
-    });
+    const next = transitionRescueState(current, { type: 'stop' });
+    if (next !== current) {
+      setState(next);
+    }
   }, [state]);
 
   const handleSave = useCallback(() => {
     const current = state;
     if (current.status !== 'completed' && current.status !== 'stopped') return;
 
-    trackEvent({ event: 'save_session_offered' });
+    trackEvent({ event: 'save_offered' });
 
     const sessionData: RescueSessionData = {
       id: sessionIdRef.current || generateSessionId(),
       taskText: current.taskText,
       friction: current.friction,
-      initialAction:
-        current.status === 'completed' ? current.finalAction : current.lastAction,
-      adaptations: [],
+      initialAction: current.actions[0] || (current.status === 'completed' ? current.finalAction : current.lastAction),
+      adaptations: current.actions.slice(1),
       startedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       status: current.status === 'completed' ? 'completed' : 'stopped',
@@ -317,6 +217,37 @@ export default function RescueContainer() {
   const handleReturnToRescue = useCallback(() => {
     setState({ status: 'landing' });
   }, []);
+
+  const handleResumeContinue = useCallback(() => {
+    const current = state;
+    if (current.status !== 'resume-prompt') return;
+    clearPendingRescueSession();
+    setState({ status: 'task-entry', taskText: current.sessionData.taskText });
+  }, [state]);
+
+  const handleResumeSave = useCallback(async (saveTaskText: boolean) => {
+    const current = state;
+    if (current.status !== 'resume-prompt') return;
+    setSaving(true);
+    try {
+      const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
+      const response = await fetch('/api/rescue/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ session: current.sessionData, saveTaskText }),
+      });
+      if (!response.ok) throw new Error('Unable to save Rescue history');
+      clearPendingRescueSession();
+      setState({ status: 'landing' });
+    } catch (error) {
+      console.error('Resume Rescue save error:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [state]);
 
   // ── Render based on state ──
 
@@ -360,7 +291,7 @@ export default function RescueContainer() {
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
             <div className="w-full max-w-md mx-auto text-center">
-              <div className="text-6xl mb-6">🧠</div>
+              <NeuroNestMark size={80} className="mx-auto mb-6" />
               <h1 className="text-[clamp(1.85rem,6vw,3.25rem)] font-bold text-white mb-4 tracking-tight leading-[1.1]">
                 Can&apos;t start? Let&apos;s make the first step small enough.
               </h1>
@@ -377,7 +308,7 @@ export default function RescueContainer() {
           </div>
         );
       case 'task-entry':
-        return <TaskEntry onSubmit={handleTaskSubmit} />;
+        return <TaskEntry initialText={state.taskText} onSubmit={handleTaskSubmit} />;
       case 'friction-selection':
         return (
           <FrictionSelector
@@ -411,6 +342,7 @@ export default function RescueContainer() {
         return (
           <ActivationMode
             action={state.action}
+            canAdapt={state.adaptationDepth < generator.maxAdaptationDepth}
             onDone={handleDone}
             onStillStuck={handleStillStuck}
             onStop={handleStop}
@@ -420,9 +352,10 @@ export default function RescueContainer() {
         return (
           <AdaptationPanel
             reason={state.reason}
-            currentAction={state.currentAction}
-            newAction={state.currentAction}
+            currentAction={state.previousAction}
+            newAction={state.newAction}
             adaptationDepth={state.adaptationDepth}
+            maxAdaptationDepth={generator.maxAdaptationDepth}
             onAccept={handleAdaptationAccept}
             onMakeSmaller={handleAdaptationMakeSmaller}
             onDifferentStep={handleAdaptationDifferentStep}
@@ -461,6 +394,18 @@ export default function RescueContainer() {
             saving={false}
           />
         );
+      case 'resume-prompt':
+        return (
+          <ResumePrompt
+            sessionData={state.sessionData}
+            onContinue={handleResumeContinue}
+            onSave={handleResumeSave}
+           onSkip={() => {
+              clearPendingRescueSession();
+              setState({ status: 'landing' });
+            }}
+          />
+        );
       default:
         return null;
     }
@@ -470,7 +415,7 @@ export default function RescueContainer() {
     state.status === 'action-ready'
       ? `${state.status}-${state.action.id}`
       : state.status === 'adaptation'
-      ? `${state.status}-${state.currentAction.id}`
+      ? `${state.status}-${state.newAction.id}`
       : state.status;
 
   const variants = getVariants(state.status);

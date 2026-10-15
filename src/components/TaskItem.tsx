@@ -42,9 +42,9 @@ export default function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
   const isOverdue = task.deadline ? new Date(task.deadline) < new Date() : false;
 
   return (
-    <div className="group relative flex items-center justify-between p-4 bg-slate-800 rounded-lg border-l-4 transition-colors hover:bg-slate-700/50" style={{ borderLeftColor: subjectColor }}>
-      <div className="flex flex-col gap-2">
-        <p className="font-semibold text-white">{task.title}</p>
+    <div className="group relative flex items-center justify-between gap-3 rounded-lg border-l-4 bg-slate-800 p-4 transition-colors hover:bg-slate-700/50" style={{ borderLeftColor: subjectColor }}>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <p className="break-words font-semibold text-white">{task.title}</p>
         <div className="flex items-center gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-1.5">
             <Tag size={14} style={{ color: subjectColor }} />
@@ -58,11 +58,15 @@ export default function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <StatusBadge taskStatus={task.task_status} />
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-          <button onClick={() => onEdit(task)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-600 rounded-md"><Edit size={16} /></button>
-          <button onClick={() => onDelete(task)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded-md"><Trash2 size={16} /></button>
+        <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+          <button type="button" onClick={() => onEdit(task)} className="flex min-h-11 min-w-11 items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-600 hover:text-white" aria-label={`Edit ${task.title}`}>
+            <Edit size={16} />
+          </button>
+          <button type="button" onClick={() => onDelete(task)} className="flex min-h-11 min-w-11 items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-600 hover:text-red-400" aria-label={`Delete ${task.title}`}>
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
     </div>

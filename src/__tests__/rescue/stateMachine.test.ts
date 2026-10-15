@@ -24,6 +24,47 @@ describe('rescue state machine', () => {
     expect(adapted.status).toBe('adaptation');
   });
 
+  it('keeps the proposed adaptation and starts that exact action when accepted', () => {
+    const friction = transitionRescueState(
+      { status: 'friction-selection', taskText: 'Reply to the email' },
+      { type: 'select-friction', friction: 'feels-too-big' },
+    );
+    const activation = transitionRescueState(friction, { type: 'start' });
+    const adapted = transitionRescueState(activation, { type: 'still-stuck' });
+
+    expect(adapted.status).toBe('adaptation');
+    if (adapted.status !== 'adaptation') return;
+
+    expect(adapted.previousAction).toEqual(activation.status === 'activation' ? activation.action : undefined);
+    expect(adapted.actions).toHaveLength(2);
+
+    const accepted = transitionRescueState(adapted, { type: 'start' });
+    expect(accepted.status).toBe('activation');
+    if (accepted.status !== 'activation') return;
+
+    expect(accepted.action).toEqual(adapted.newAction);
+    expect(accepted.actions).toEqual(adapted.actions);
+  });
+
+  it('does not generate adaptations beyond the configured maximum depth', () => {
+    let state: RescueState = transitionRescueState(
+      { status: 'friction-selection', taskText: 'Write the report' },
+      { type: 'select-friction', friction: 'feels-too-big' },
+    );
+
+    for (let i = 0; i < 5; i += 1) {
+      state = transitionRescueState(state, { type: 'make-smaller' });
+    }
+
+    expect(state.status).toBe('action-ready');
+    if (state.status !== 'action-ready') return;
+    expect(state.adaptationDepth).toBe(5);
+    expect(state.actions).toHaveLength(6);
+
+    const unchanged = transitionRescueState(state, { type: 'different-step' });
+    expect(unchanged).toBe(state);
+  });
+
   it('detects terminal states', () => {
     const stopped = createStoppedState('Task', 'low-energy', {
       id: 'a',

@@ -36,14 +36,14 @@ export default function TaskFilters({
         />
       </div>
 
-      <div className="flex gap-4 col-span-1 md:col-span-2 justify-end">
+      <div className="col-span-1 flex flex-col gap-3 md:col-span-2 md:flex-row md:justify-end md:gap-4">
         {/* Status Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
             <ListFilter size={16} className="text-slate-400" />
             <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                className="min-h-11 min-w-0 flex-1 rounded-md border border-slate-600 bg-slate-700 p-2 text-sm text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 md:flex-none"
             >
                 <option value="all">All Statuses</option>
                 <option value="breakdown">Breakdown</option>
@@ -54,12 +54,12 @@ export default function TaskFilters({
         </div>
 
         {/* Sort Order */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
             <ArrowUpDown size={16} className="text-slate-400" />
             <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="bg-slate-700 border border-slate-600 rounded-md text-white p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                className="min-h-11 min-w-0 flex-1 rounded-md border border-slate-600 bg-slate-700 p-2 text-sm text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 md:flex-none"
             >
                 <option value="deadline">Sort by Deadline</option>
                 <option value="created_at">Sort by Newest</option>

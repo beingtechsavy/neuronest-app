@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getUserPlanInfo, canCreateSubject } from '@/lib/subscriptionLimits';
+import { getServerPlanInfo } from '@/lib/serverPlan';
 import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 // Lazy initialization of Supabase client
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     const userId = authUser.id;
 
-    if (!breakdown || !Array.isArray(breakdown)) {
+    if (!breakdown || !Array.isArray(breakdown) || breakdown.length < 1 || breakdown.length > 10) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -64,38 +64,18 @@ export async function POST(req: NextRequest) {
 
     const client = getSupabaseClient();
 
-    // Validate subscription status before allowing save
-    let planInfo = await getUserPlanInfo(userId);
-    if (!planInfo) {
-      console.warn('Unable to verify subscription status, falling back to free plan');
-      planInfo = {
-        plan_type: 'free',
-        status: 'active',
-        breakdowns_used: 0,
-        breakdowns_limit: 3,
-        subjects_count: 0,
-        subjects_limit: 3,
-        flashcards_used: 0,
-        flashcards_limit: 0,
-        current_period_end: null,
-        can_create_subjects: true,
-        can_use_ai: true,
-        subscription_active: true,
-        subscription_expired: false
-      };
-    }
+    const planInfo = await getServerPlanInfo(userId);
 
     // Check if user can create subjects (if creating new subject)
     if (createNewSubject && newSubjectName) {
-      const canCreate = await canCreateSubject(userId);
-      if (!canCreate) {
+      if (planInfo.subjectsCount >= planInfo.limits.subjects) {
         return NextResponse.json(
           {
-            error: planInfo.subscription_active
+            error: planInfo.plan === 'pro'
               ? 'Subject limit reached for your plan'
               : 'Subscription expired - upgrade to create more subjects',
-            planType: planInfo.plan_type,
-            subscriptionActive: planInfo.subscription_active
+            planType: planInfo.plan,
+            subscriptionActive: planInfo.plan === 'pro'
           },
           { status: 403 }
         );
@@ -142,7 +122,7 @@ export async function POST(req: NextRequest) {
         breakdown_steps: breakdown,
         steps_count: breakdown.length,
         subject_id: subjectId,
-        save_type: createNewSubject ? 'new_subject' : 'existing_subject',
+         save_type: createNewSubject ? 'new_subject' : selectedSubjectId ? 'existing_subject' : 'individual_tasks',
         total_estimated_minutes: breakdown.reduce((sum: number, step: TaskBreakdownStep) => sum + step.estimatedMinutes, 0)
       })
       .select('id')
@@ -200,14 +180,14 @@ export async function POST(req: NextRequest) {
         .eq('id', breakdownId);
     }
 
-    // Step 4: Always create tasks from breakdown steps
-    if (chapterId) {
-      const tasksToInsert = breakdown.map((step: TaskBreakdownStep, index: number) => ({
+    // Step 4: Create tasks either under the chapter or directly in the Inbox.
+    if (chapterId || saveTasksToInbox) {
+      const tasksToInsert = breakdown.map((step: TaskBreakdownStep) => ({
         title: step.step,
-        chapter_id: chapterId,
+        chapter_id: chapterId || null,
         user_id: userId,
         status: 'pending',
-        task_status: 'breakdown', // New workflow status
+        task_status: chapterId ? 'breakdown' : 'inbox',
         ai_generated: true,
         ai_breakdown_id: breakdownId,
         difficulty_level: step.difficulty,
@@ -229,16 +209,12 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Initialize progress tracking
-      await client
-        .from('breakdown_progress')
-        .insert({
-          breakdown_id: breakdownId,
-          user_id: userId,
-          tasks_completed: 0,
-          tasks_total: breakdown.length,
-          completion_percentage: 0
+      if (chapterId) {
+        await client.from('breakdown_progress').insert({
+          breakdown_id: breakdownId, user_id: userId, tasks_completed: 0,
+          tasks_total: breakdown.length, completion_percentage: 0,
         });
+      }
     }
 
     return NextResponse.json({
@@ -247,7 +223,7 @@ export async function POST(req: NextRequest) {
       subjectId,
       chapterId,
       tasksCreated: breakdown.length,
-      savedAsReference: false
+      savedAsReference: !chapterId,
     });
 
   } catch (error) {

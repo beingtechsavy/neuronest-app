@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Crown, Zap, Sparkles } from 'lucide-react';
+import { Crown, Sparkles } from 'lucide-react';
 import { getUserPlanInfo, UserPlanInfo } from '@/lib/subscriptionLimits';
 import { useUser } from '@supabase/auth-helpers-react';
 
@@ -41,9 +41,7 @@ export default function PlanBadge() {
 
   const getPlanIcon = () => {
     switch (planInfo.plan_type) {
-      case 'master':
-        return <Zap size={12} className="text-purple-400" />;
-      case 'warrior':
+      case 'pro':
         return <Crown size={12} className="text-yellow-400" />;
       default:
         return <Sparkles size={12} className="text-blue-400" />;
@@ -52,9 +50,7 @@ export default function PlanBadge() {
 
   const getPlanColor = () => {
     switch (planInfo.plan_type) {
-      case 'master':
-        return 'border-purple-500/30 bg-purple-500/10';
-      case 'warrior':
+      case 'pro':
         return 'border-yellow-500/30 bg-yellow-500/10';
       default:
         return 'border-slate-600 bg-slate-800';
@@ -63,10 +59,8 @@ export default function PlanBadge() {
 
   const getPlanName = () => {
     switch (planInfo.plan_type) {
-      case 'master':
-        return 'Master';
-      case 'warrior':
-        return 'Warrior';
+      case 'pro':
+        return 'Pro';
       default:
         return 'Free';
     }

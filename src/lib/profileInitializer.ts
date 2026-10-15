@@ -159,13 +159,6 @@ export async function initializeUserData(
       console.error('Failed to initialize usage limits:', err);
     });
 
-    // Attach any anonymous rescue sessions to new account (non-blocking)
-    import('@/lib/rescue/anonymousSession').then(({ attachAnonymousSessionsToUser }) => {
-      attachAnonymousSessionsToUser(supabase, userId).catch(err => {
-        console.error('Failed to attach anonymous rescue sessions:', err);
-      });
-    });
-
     return { success: true, profile };
 
   } catch (err) {

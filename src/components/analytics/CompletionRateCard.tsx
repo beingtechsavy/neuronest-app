@@ -21,7 +21,15 @@ export default function CompletionRateCard({ taskStats }: CompletionRateCardProp
         Task Completion Overview
       </h3>
       
+      {totalTasks === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-slate-300 font-medium">No tasks yet</p>
+          <p className="text-slate-500 text-sm mt-2">Complete a task to start building your progress history.</p>
+        </div>
+      ) : null}
+
       {/* Completion Rate Circle */}
+      {totalTasks > 0 && (
       <div className="flex items-center justify-center mb-6">
         <div className="relative w-32 h-32">
           <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
@@ -59,6 +67,7 @@ export default function CompletionRateCard({ taskStats }: CompletionRateCardProp
           </div>
         </div>
       </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4">

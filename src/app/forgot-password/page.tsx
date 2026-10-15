@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { ArrowLeft } from 'lucide-react'
+import NeuroNestMark from '@/components/NeuroNestMark'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -35,21 +36,6 @@ export default function ForgotPasswordPage() {
         setEmailSent(true)
         setMessage('Check your email! We sent you a password reset link.')
         
-        // Also send custom email via our API
-        try {
-          await fetch('/api/email/send-password-reset', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email,
-              username: email.split('@')[0],
-              resetLink: `${window.location.origin}/reset-password`,
-            }),
-          })
-        } catch (emailError) {
-          console.error('Failed to send custom reset email:', emailError)
-          // Don't show error to user - Supabase email was sent
-        }
       }
     } catch (err) {
       console.error('Password reset exception:', err)
@@ -66,7 +52,7 @@ export default function ForgotPasswordPage() {
       <div className="absolute -bottom-20 -right-12 w-72 h-72 bg-indigo-600 opacity-20 rounded-full filter blur-3xl"></div>
 
       <div className="relative z-10 text-center space-y-6 max-w-md w-full">
-        <div className="text-8xl select-none">🧠</div>
+        <NeuroNestMark size={96} className="mx-auto" />
         <div className="bg-[#0A111E] p-8 rounded-3xl shadow-2xl ring-1 ring-purple-700">
           {!emailSent ? (
             <>

@@ -27,7 +27,7 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  const { taskStats, studyStreak, weeklyProgress, peakHours } = analytics || {};
+  const { taskStats, studyStreak, weeklyProgress, peakHours, dataQuality } = analytics || {};
 
   return (
     <div className="space-y-6">
@@ -99,6 +99,12 @@ export default function AnalyticsDashboard() {
           {weeklyProgress && <WeeklyProgressChart weeklyProgress={weeklyProgress} />}
         </div>
       </div>
+      {analytics && !dataQuality?.hasTaskData && (
+        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-5 text-center">
+          <p className="text-slate-200 font-medium">Your real progress will appear here as you use NeuroNest.</p>
+          <p className="text-slate-400 text-sm mt-1">There is no sample or simulated activity in this view.</p>
+        </div>
+      )}
     </div>
   );
 }

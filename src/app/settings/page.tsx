@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@supabase/auth-helpers-react';
-import { Loader2, Moon, Sun, Coffee, Utensils, Clock, Brain, Zap } from 'lucide-react';
+import { Loader2, Moon, Sun, Coffee, Utensils, Clock, Brain, Zap, Trash2 } from 'lucide-react';
 import { useToastContext } from '@/components/ToastProvider';
 import { useTimeouts } from '@/hooks/useTimeout';
 import UsageDashboard from '@/components/UsageDashboard';
@@ -27,6 +27,20 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [deletingSessions, setDeletingSessions] = useState(false);
+
+  const deleteRescueHistory = async () => {
+    if (!user || !window.confirm('Delete your cloud Rescue history? This cannot be undone.')) return;
+    setDeletingSessions(true);
+    const session = (await supabase.auth.getSession()).data.session;
+    const response = await fetch('/api/rescue/sessions', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+    });
+    setDeletingSessions(false);
+    if (response.ok) success('Cloud Rescue history deleted.');
+    else showError('Unable to delete Rescue history.');
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -116,6 +130,12 @@ export default function SettingsPage() {
           {/* Usage Dashboard */}
           <UsageDashboard />
 
+          <section className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+            <h2 className="text-2xl font-light text-white mb-2">Rescue history</h2>
+            <p className="text-slate-400 text-sm mb-5">Delete authenticated Rescue sessions from the cloud. Local anonymous history remains on this device until you clear it.</p>
+            <button type="button" onClick={deleteRescueHistory} disabled={deletingSessions} className="min-h-[44px] px-4 rounded-xl border border-red-500/40 text-red-300 hover:bg-red-500/10 disabled:opacity-60 flex items-center gap-2"><Trash2 size={16} /> {deletingSessions ? 'Deleting…' : 'Delete cloud Rescue history'}</button>
+          </section>
+
           {/* Sleep Schedule - Redesigned */}
           <div className="group">
             <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/10">
@@ -169,7 +189,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {preferences.meal_start_times.map((time, index) => {
                   const mealNames = ['Breakfast', 'Lunch', 'Dinner'];
                   const mealIcons = [Coffee, Sun, Moon];

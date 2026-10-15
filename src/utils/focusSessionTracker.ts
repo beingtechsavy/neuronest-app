@@ -47,45 +47,6 @@ export function getAllFocusSessionData(): FocusSessionData {
   }
 }
 
-// For testing purposes - simulate some focus session data
-export function simulateFocusSessionData() {
-  const today = new Date();
-  const stats: FocusSessionData = {};
-  
-  // Add some sample data for the last 7 days
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
-    
-    // Simulate different amounts of focus time
-    if (i === 0) {
-      // Today - 2 hours 5 minutes (125 minutes)
-      stats[dateStr] = 125;
-    } else if (i === 1) {
-      // Yesterday - 45 minutes
-      stats[dateStr] = 45;
-    } else if (i === 2) {
-      // Day before - 90 minutes (1h 30m)
-      stats[dateStr] = 90;
-    } else if (i === 3) {
-      // 3 days ago - 30 minutes (minimum for streak)
-      stats[dateStr] = 30;
-    } else if (i === 4) {
-      // 4 days ago - 60 minutes (1h)
-      stats[dateStr] = 60;
-    } else if (i === 5) {
-      // 5 days ago - 35 minutes
-      stats[dateStr] = 35;
-    } else if (i === 6) {
-      // 6 days ago - 50 minutes
-      stats[dateStr] = 50;
-    }
-  }
-  
-  localStorage.setItem('focusSessionStats', JSON.stringify(stats));
-}
-
 // Clear all focus session data
 export function clearFocusSessionData() {
   localStorage.removeItem('focusSessionStats');

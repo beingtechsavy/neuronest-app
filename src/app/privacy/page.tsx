@@ -2,7 +2,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - NeuroNest',
-  description: 'Privacy Policy for NeuroNest AI-powered study assistant',
+  description: 'Privacy Policy for NeuroNest task-initiation and productivity service',
+  alternates: { canonical: 'https://www.neuronest.work/privacy' },
 };
 
 export default function PrivacyPolicy() {
@@ -19,7 +20,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
               <p className="text-slate-300 mb-4">
-                NeuroNest (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered study assistant service.
+                NeuroNest (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our task-initiation and productivity service.
               </p>
             </section>
 
@@ -112,7 +113,7 @@ export default function PrivacyPolicy() {
                 <li><strong>Opt-out:</strong> Unsubscribe from marketing communications</li>
               </ul>
               <p className="text-slate-300 mb-4">
-                To exercise these rights, please contact us at privacy@neuronest.com.
+                To exercise these rights, please contact us at privacy@neuronest.work.
               </p>
             </section>
 
@@ -157,8 +158,8 @@ export default function PrivacyPolicy() {
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
               <p className="text-slate-300">
-                Email: privacy@neuronest.com<br />
-                Website: https://neuronest.com/contact
+                Email: privacy@neuronest.work<br />
+                Website: https://www.neuronest.work/contact
               </p>
             </section>
           </div>

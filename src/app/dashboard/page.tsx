@@ -210,7 +210,7 @@ export default function Dashboard() {
           </div>
 
           {/* Subjects Grid */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {subjects.map(subject => (
               <TaskBox
                 key={subject.subject_id}

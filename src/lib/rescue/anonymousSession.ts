@@ -7,6 +7,7 @@
 import type { RescueSessionData } from '@/types/rescue';
 
 const STORAGE_KEY = 'neuronest_rescue_sessions';
+const PENDING_STORAGE_KEY = 'neuronest_pending_rescue_session';
 
 // ────────────────────────────────────────────────────
 // Read / Write
@@ -69,6 +70,34 @@ export function getSessionCount(): number {
   return readSessions().length;
 }
 
+export function setPendingRescueSession(session: RescueSessionData): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // localStorage may be unavailable; signup can still continue.
+  }
+}
+
+export function getPendingRescueSession(): RescueSessionData | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PENDING_STORAGE_KEY);
+    return raw ? JSON.parse(raw) as RescueSessionData : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingRescueSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(PENDING_STORAGE_KEY);
+  } catch {
+    // Ignore unavailable storage.
+  }
+}
+
 export function getLastSessionDate(): string | null {
   const sessions = readSessions();
   if (sessions.length === 0) return null;
@@ -104,12 +133,17 @@ export async function attachAnonymousSessionsToUser(
 
   try {
     for (const session of localSessions) {
-      await supabase.from('tasks').insert({
+      await supabase.from('rescue_sessions').insert({
         user_id: userId,
-        title: session.taskText,
-        status: session.status === 'completed' ? 'completed' : 'inbox',
-        is_stressful: session.friction === 'anxious-about-doing-it-badly' || session.friction === 'feels-too-big',
-        created_at: session.startedAt,
+        client_session_id: session.id,
+        friction_type: session.friction,
+        task_text: session.taskText,
+        initial_action: session.initialAction,
+        final_action: session.adaptations[session.adaptations.length - 1] || session.initialAction,
+        adaptations: session.adaptations,
+        status: session.status,
+        started_at: session.startedAt,
+        completed_at: session.completedAt || null,
       });
     }
 
@@ -119,6 +153,7 @@ export async function attachAnonymousSessionsToUser(
     } catch {}
 
     clearSessions();
+    clearPendingRescueSession();
     return localSessions.length;
   } catch (err) {
     console.error('Error attaching anonymous sessions to user:', err);

@@ -116,11 +116,6 @@ export default function AIBreakdownModal({
       return;
     }
 
-    if (!selectedSubject && !createNewSubject) {
-      setError('Please select or create a subject');
-      return;
-    }
-
     if (createNewSubject && !newSubjectName.trim()) {
       setError('Please enter a subject name');
       return;
@@ -150,7 +145,7 @@ export default function AIBreakdownModal({
             title: inputTaskTitle,
             description: inputTaskDescription,
             deadline: inputDeadline,
-            subject: selectedSubject?.title || newSubjectName
+             subject: selectedSubject?.title || newSubjectName || undefined
           },
           userId
         })
@@ -179,7 +174,7 @@ export default function AIBreakdownModal({
 
       // Trigger celebration animation
       setShowConfetti(true);
-      setCelebrationMessage(getRandomCelebration());
+      setCelebrationMessage(getCelebration());
       setTimeout(() => setShowConfetti(false), 3000);
 
       // Animate steps appearing
@@ -212,7 +207,7 @@ export default function AIBreakdownModal({
     }
   };
 
-  const getRandomCelebration = () => {
+  const getCelebration = () => {
     const celebrations = [
       "Breakdown ready — here's your action plan.",
       "Clear steps generated. You know exactly what to do.",
@@ -220,29 +215,7 @@ export default function AIBreakdownModal({
       "Your execution plan is ready.",
       "Structured breakdown complete — time to execute."
     ];
-    return celebrations[Math.floor(Math.random() * celebrations.length)];
-  };
-
-  const getRandomEncouragement = (difficulty: string) => {
-    const encouragements = {
-      EASY: [
-        "Quick win",
-        "Momentum builder",
-        "Simple start"
-      ],
-      MEDIUM: [
-        "Solid progress",
-        "Core work",
-        "Steady execution"
-      ],
-      HARD: [
-        "Deep work",
-        "High-impact step",
-        "Key deliverable"
-      ]
-    };
-    const options = encouragements[difficulty as keyof typeof encouragements] || encouragements.MEDIUM;
-    return options[Math.floor(Math.random() * options.length)];
+    return celebrations[0];
   };
 
   const handleBreakDownStep = async (step: TaskBreakdownStep) => {
@@ -315,7 +288,7 @@ export default function AIBreakdownModal({
     }
   };
 
-  const handleAddAllSteps = async () => {
+  const handleAddAllSteps = async (destination: 'inbox' | 'workspace' = 'inbox') => {
     setSaving(true);
     setError(null);
     
@@ -371,9 +344,9 @@ export default function AIBreakdownModal({
         setCelebrationMessage('');
         setBreakdownGenerated(false);
         
-        // Close modal and redirect to dashboard
-        onClose();
-        router.push('/dashboard');
+         // Close modal and redirect to the chosen destination
+         onClose();
+         router.push(destination === 'workspace' ? '/dashboard' : '/tasks');
       }, 1500);
       
     } catch (err) {
@@ -388,21 +361,10 @@ export default function AIBreakdownModal({
 
   // Confetti component
   const Confetti = () => (
-    <div className="fixed inset-0 pointer-events-none z-60 overflow-hidden">
-      {[...Array(50)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute animate-bounce"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 2}s`,
-            animationDuration: `${2 + Math.random() * 2}s`
-          }}
-        >
-          {['🎉', '✨', '🌟', '💫', '⭐', '🎊'][Math.floor(Math.random() * 6)]}
-        </div>
-      ))}
+    <div className="fixed inset-0 pointer-events-none z-60 overflow-hidden" aria-hidden="true">
+      <div className="absolute left-1/4 top-1/4 animate-bounce">✨</div>
+      <div className="absolute right-1/4 top-1/3 animate-bounce">🎉</div>
+      <div className="absolute left-1/2 bottom-1/3 animate-bounce">🌟</div>
     </div>
   );
 
@@ -438,10 +400,11 @@ export default function AIBreakdownModal({
                 <p className="text-slate-400 text-sm">Making it manageable</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 bg-slate-700/50 hover:bg-slate-600/50 rounded-full flex items-center justify-center transition-all"
-            >
+             <button
+               onClick={onClose}
+               className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700/50 transition-all hover:bg-slate-600/50"
+               aria-label="Close AI Breakdown"
+             >
               <X className="text-slate-300" size={18} />
             </button>
           </div>
@@ -462,8 +425,7 @@ export default function AIBreakdownModal({
                   <div>
                     <span className="text-slate-300">Daily AI Breakdowns</span>
                     <div className="text-xs text-slate-400 mt-1">
-                      {planInfo.plan_type === 'free' ? 'Free Plan' : 
-                       planInfo.plan_type === 'master' ? 'Master Plan' : 'Warrior Plan'}
+                       {planInfo.plan_type === 'free' ? 'Free Plan' : 'Pro Plan'}
                     </div>
                   </div>
                   <span className="text-white font-semibold">
@@ -527,7 +489,7 @@ export default function AIBreakdownModal({
                 {/* Subject Selection */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Subject
+                    Project (optional)
                   </label>
                   <div className="space-y-3">
                     {/* Existing Subject Dropdown */}
@@ -559,7 +521,7 @@ export default function AIBreakdownModal({
                           <option value="">
                             {loadingSubjects ? 'Loading projects...' : 
                              subjects.length === 0 ? 'No projects found' : 
-                             'Select existing project...'}
+                             'No project — save to Inbox'}
                           </option>
                           {subjects.map(subject => (
                             <option key={subject.subject_id} value={subject.subject_id}>
@@ -569,7 +531,7 @@ export default function AIBreakdownModal({
                         </select>
                         {subjects.length === 0 && !loadingSubjects && (
                           <p className="text-slate-400 text-xs mt-1">
-                            No projects found. Create a new project or add projects from your dashboard first.
+                             You can generate without a project and save the steps to your Inbox.
                           </p>
                         )}
                       </div>
@@ -633,7 +595,7 @@ export default function AIBreakdownModal({
                 <div className="pt-4">
                   <button
                     onClick={generateBreakdown}
-                    disabled={loading || !inputTaskTitle.trim() || (!selectedSubject && !createNewSubject) || (createNewSubject && !newSubjectName.trim())}
+                     disabled={loading || !inputTaskTitle.trim() || (createNewSubject && !newSubjectName.trim())}
                     className="w-full px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl"
                   >
                     {loading ? (
@@ -664,7 +626,7 @@ export default function AIBreakdownModal({
             {/* Breakdown Results */}
             {breakdown.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-6">
+                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-xl font-semibold text-white">
                       Your Breakdown
@@ -673,20 +635,20 @@ export default function AIBreakdownModal({
                       {breakdown.length} steps • Start with green for momentum
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                   <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
                     <button
                       onClick={() => {
                         setBreakdown([]);
                         setCelebrationMessage('');
                       }}
-                      className="px-4 py-2 text-slate-400 hover:text-white transition-all bg-slate-700/50 hover:bg-slate-600/50 rounded-xl text-sm font-medium"
+                       className="min-h-11 w-full rounded-xl bg-slate-700/50 px-4 py-2 text-sm font-medium text-slate-400 transition-all hover:bg-slate-600/50 hover:text-white sm:w-auto"
                     >
                       Try Again
                     </button>
                     <button
-                      onClick={handleAddAllSteps}
+                      onClick={() => handleAddAllSteps('inbox')}
                       disabled={saving || !breakdownGenerated || breakdown.length === 0}
-                      className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 text-sm shadow-lg"
+                       className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:from-green-600 hover:to-emerald-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     >
                       {saving ? (
                         <>
@@ -696,9 +658,16 @@ export default function AIBreakdownModal({
                       ) : (
                         <>
                           <CheckCircle size={16} />
-                          Save Breakdown
+                          Save all to Inbox
                         </>
                       )}
+                    </button>
+                    <button
+                      onClick={() => handleAddAllSteps('workspace')}
+                      disabled={saving || !breakdownGenerated || breakdown.length === 0}
+                       className="min-h-11 w-full rounded-xl bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:opacity-50 sm:w-auto"
+                    >
+                      Assign to project
                     </button>
                   </div>
                 </div>

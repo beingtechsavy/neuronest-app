@@ -1,30 +1,35 @@
-'use client';
-
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Sparkles, Calendar, BarChart3, Timer, ArrowRight } from 'lucide-react';
+import { Sparkles, Calendar, BarChart3, Timer, ArrowRight, RotateCcw } from 'lucide-react';
 
 const features = [
   {
     icon: <Sparkles className="text-purple-400" size={28} />,
-    title: 'AI Task Breakdown',
-    description: 'Describe any overwhelming task and our AI breaks it into clear, manageable steps with time estimates and priorities.',
+    title: 'Rescue a stuck task',
+    description: 'Describe the task you are resisting and get one small, realistic next action before you create a plan or project.',
   },
   {
-    icon: <Calendar className="text-blue-400" size={28} />,
-    title: 'Smart Daily Planner',
-    description: 'AI reads your open tasks and deadlines, then generates an optimized daily plan — so you always know what to do next.',
+    icon: <RotateCcw className="text-blue-400" size={28} />,
+    title: 'Adapt without guilt',
+    description: 'If the first action is too hard or does not feel right, make it smaller or try another approach while keeping the history.',
   },
   {
-    icon: <BarChart3 className="text-green-400" size={28} />,
-    title: 'Weekly Insights',
-    description: 'Track your completed tasks, productive patterns, and progress over time. See how much you actually accomplish.',
+    icon: <Calendar className="text-green-400" size={28} />,
+    title: 'Continue into your workspace',
+    description: 'After you begin, save the next steps to your Inbox or optionally organize them in projects and schedules.',
   },
   {
-    icon: <Timer className="text-amber-400" size={28} />,
-    title: 'Focus Timer',
-    description: 'Simple, distraction-free timer for deep work sessions. 25, 50, or 90 minute blocks — pick what works for you.',
+    icon: <BarChart3 className="text-amber-400" size={28} />,
+    title: 'Use AI when the task is larger',
+    description: 'Generate a fair-use AI breakdown when a task needs more structure, without making project setup a prerequisite.',
   },
 ];
+
+export const metadata: Metadata = {
+  title: 'How NeuroNest Works — Rescue a stuck task and begin',
+  description: 'See how NeuroNest turns a resisted task into one small next action, adapts it when needed, and continues into your workspace.',
+  alternates: { canonical: 'https://www.neuronest.work/features' },
+};
 
 export default function FeaturesPage() {
   return (
@@ -32,7 +37,7 @@ export default function FeaturesPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4 text-center">How NeuroNest Works</h1>
         <p className="text-slate-400 text-lg text-center mb-12 max-w-2xl mx-auto">
-          Your AI-powered productivity co-pilot. Break down tasks, plan your day, and track your progress — all in one place.
+          Start with the moment of resistance. Rescue one task, adapt the next action, then use planning and AI only when they help.
         </p>
 
         <div className="grid md:grid-cols-2 gap-6 mb-12">

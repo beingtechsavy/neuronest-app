@@ -2,7 +2,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - NeuroNest',
-  description: 'Terms of Service for NeuroNest AI productivity platform',
+  description: 'Terms of Service for NeuroNest task-initiation and productivity service',
+  alternates: { canonical: 'https://www.neuronest.work/terms' },
 };
 
 export default function TermsOfService() {
@@ -26,7 +27,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">2. Description of Service</h2>
               <p className="text-slate-300 mb-4">
-                NeuroNest is an AI-powered productivity platform that helps professionals organize their work, break down complex tasks, and track their progress. The service includes:
+                NeuroNest helps people begin tasks they are resisting by providing small next actions, adaptation, optional task breakdowns, and workspace tools. The service includes:
               </p>
               <ul className="text-slate-300 mb-4 list-disc list-inside">
                 <li>AI-powered task breakdown and planning</li>

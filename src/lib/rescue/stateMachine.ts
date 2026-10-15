@@ -7,6 +7,7 @@ import type { FrictionType, RescueAction, RescueState } from '@/types/rescue';
 import { createActionGenerator } from './actionGenerator';
 
 const generator = createActionGenerator();
+const MAX_ADAPTATION_DEPTH = generator.maxAdaptationDepth;
 
 export type RescueEvent =
   | { type: 'begin'; taskText: string }
@@ -46,6 +47,7 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
           taskText: state.taskText,
           friction: event.friction,
           action,
+          actions: [action],
           adaptationDepth: 0,
         };
       }
@@ -54,12 +56,29 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
 
     case 'action-ready':
       if (event.type === 'make-smaller') {
-        const action = generator.generateSmallerAction(state.action, state.friction, state.adaptationDepth);
-        return { ...state, action, adaptationDepth: state.adaptationDepth + 1 };
+        if (state.adaptationDepth >= MAX_ADAPTATION_DEPTH) return state;
+        const action = generator.generateSmallerAction(
+          state.taskText,
+          state.action,
+          state.friction,
+          state.adaptationDepth,
+        );
+        return {
+          ...state,
+          action,
+          actions: [...state.actions, action],
+          adaptationDepth: state.adaptationDepth + 1,
+        };
       }
       if (event.type === 'different-step') {
-        const action = generator.generateAlternativeAction(state.taskText, state.friction, [state.action]);
-        return { ...state, action, adaptationDepth: state.adaptationDepth + 1 };
+        if (state.adaptationDepth >= MAX_ADAPTATION_DEPTH) return state;
+        const action = generator.generateAlternativeAction(state.taskText, state.friction, state.actions);
+        return {
+          ...state,
+          action,
+          actions: [...state.actions, action],
+          adaptationDepth: state.adaptationDepth + 1,
+        };
       }
       if (event.type === 'start') {
         return {
@@ -67,6 +86,7 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
           taskText: state.taskText,
           friction: state.friction,
           action: state.action,
+          actions: state.actions,
           adaptationDepth: state.adaptationDepth,
           timerRunning: false,
           elapsedSeconds: 0,
@@ -82,16 +102,25 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
           taskText: state.taskText,
           friction: state.friction,
           finalAction: state.action,
+          actions: state.actions,
           completedAction: true,
         };
       }
       if (event.type === 'still-stuck') {
-        const action = generator.generateSmallerAction(state.action, state.friction, state.adaptationDepth);
+        if (state.adaptationDepth >= MAX_ADAPTATION_DEPTH) return state;
+        const action = generator.generateSmallerAction(
+          state.taskText,
+          state.action,
+          state.friction,
+          state.adaptationDepth,
+        );
         return {
           status: 'adaptation',
           taskText: state.taskText,
           friction: state.friction,
-          currentAction: action,
+          previousAction: state.action,
+          newAction: action,
+          actions: [...state.actions, action],
           adaptationDepth: state.adaptationDepth + 1,
           reason: 'too-hard',
         };
@@ -102,25 +131,47 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
           taskText: state.taskText,
           friction: state.friction,
           lastAction: state.action,
+          actions: state.actions,
         };
       }
       return state;
 
     case 'adaptation':
       if (event.type === 'make-smaller') {
-        const action = generator.generateSmallerAction(state.currentAction, state.friction, state.adaptationDepth);
-        return { ...state, currentAction: action, adaptationDepth: state.adaptationDepth + 1 };
+        if (state.adaptationDepth >= MAX_ADAPTATION_DEPTH) return state;
+        const action = generator.generateSmallerAction(
+          state.taskText,
+          state.newAction,
+          state.friction,
+          state.adaptationDepth,
+        );
+        return {
+          ...state,
+          previousAction: state.newAction,
+          newAction: action,
+          actions: [...state.actions, action],
+          adaptationDepth: state.adaptationDepth + 1,
+        };
       }
       if (event.type === 'different-step') {
-        const action = generator.generateAlternativeAction(state.taskText, state.friction, [state.currentAction]);
-        return { ...state, currentAction: action, adaptationDepth: state.adaptationDepth + 1, reason: 'not-right' };
+        if (state.adaptationDepth >= MAX_ADAPTATION_DEPTH) return state;
+        const action = generator.generateAlternativeAction(state.taskText, state.friction, state.actions);
+        return {
+          ...state,
+          previousAction: state.newAction,
+          newAction: action,
+          actions: [...state.actions, action],
+          adaptationDepth: state.adaptationDepth + 1,
+          reason: 'not-right',
+        };
       }
       if (event.type === 'start') {
         return {
           status: 'activation',
           taskText: state.taskText,
           friction: state.friction,
-          action: state.currentAction,
+          action: state.newAction,
+          actions: state.actions,
           adaptationDepth: state.adaptationDepth,
           timerRunning: false,
           elapsedSeconds: 0,
@@ -131,7 +182,8 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
           status: 'stopped',
           taskText: state.taskText,
           friction: state.friction,
-          lastAction: state.currentAction,
+          lastAction: state.newAction,
+          actions: state.actions,
         };
       }
       return state;
@@ -142,6 +194,10 @@ export function transitionRescueState(state: RescueState, event: RescueEvent): R
       return state;
 
     case 'optional-save':
+      if (event.type === 'reset') return { status: 'landing' };
+      return state;
+
+    case 'resume-prompt':
       if (event.type === 'reset') return { status: 'landing' };
       return state;
 
@@ -160,5 +216,6 @@ export function createStoppedState(taskText: string, friction: FrictionType, act
     taskText,
     friction,
     lastAction: action,
+    actions: [action],
   };
 }

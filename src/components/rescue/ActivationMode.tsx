@@ -6,6 +6,7 @@ import type { RescueAction } from '@/types/rescue';
 
 interface ActivationModeProps {
   action: RescueAction;
+  canAdapt?: boolean;
   onDone: () => void;
   onStillStuck: () => void;
   onStop: () => void;
@@ -13,6 +14,7 @@ interface ActivationModeProps {
 
 export default function ActivationMode({
   action,
+  canAdapt = true,
   onDone,
   onStillStuck,
   onStop,
@@ -75,7 +77,7 @@ export default function ActivationMode({
   const timerSecs = remaining % 60;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-between min-h-[100dvh] px-4 sm:px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-between min-h-[100dvh] px-4 sm:px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] overflow-y-auto" aria-live="polite">
       <div className="w-full max-w-md mx-auto text-center flex-1 flex flex-col justify-between py-4">
         {/* Content area */}
         <div className="my-auto py-6">
@@ -125,6 +127,7 @@ export default function ActivationMode({
         <div className="space-y-3 w-full mt-4">
           <button
             onClick={onDone}
+            type="button"
             className="w-full min-h-[48px] py-4 px-6 bg-green-600 hover:bg-green-500 text-white font-bold text-lg rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
           >
             <Check size={22} />
@@ -132,10 +135,13 @@ export default function ActivationMode({
           </button>
           <button
             onClick={onStillStuck}
+            type="button"
+            disabled={!canAdapt}
+            aria-disabled={!canAdapt}
             className="w-full min-h-[44px] py-3 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-medium rounded-xl transition-all flex items-center justify-center gap-2"
           >
             <HelpCircle size={18} />
-            Still stuck
+            {canAdapt ? 'Still stuck' : 'Adaptation limit reached'}
           </button>
           <button
             onClick={onStop}
