@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="NeuroNest — Concept 2: The Orbit Cradle">
+  <title>NeuroNest — Concept 2: The Orbit Cradle</title>
+  <!--
+    Concept 2: The Orbit Cradle (Concentric Supportive Arcs + Initiation Spark)
+    Two calibrated, embracing arcs form a safe nesting structure that gathers scattered attention.
+    At the optical center rests a warm, radiant initiation spark representing "one small next action."
+  -->
+  <g fill="none">
+    <!-- Outer Embracing Nest Arc: Gathers attention into a supportive boundary -->
+    <path d="M 44 116
+             C 44 180, 82 220, 128 220
+             C 174 220, 212 180, 212 116"
+          stroke="#4F46E5"
+          stroke-width="26"
+          stroke-linecap="round" />
+
+    <!-- Inner Supportive Arc: Deep containment for focus sessions -->
+    <path d="M 78 132
+             C 78 168, 100 188, 128 188
+             C 156 188, 178 168, 178 132"
+          stroke="#818CF8"
+          stroke-width="20"
+          stroke-linecap="round" />
+
+    <!-- Initiation Spark / Next-Action Seed: Warm, inviting, clear -->
+    <circle cx="128" cy="80" r="22" fill="#F59E0B" />
+
+    <!-- Directional Forward Notch: A subtle upward momentum indicator -->
+    <path d="M 128 42 L 128 52" stroke="#F59E0B" stroke-width="8" stroke-linecap="round" opacity="0.9" />
+  </g>
+</svg>

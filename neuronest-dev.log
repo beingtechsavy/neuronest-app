@@ -1,0 +1,24 @@
+
+> neuronest-pro@2.0.0 dev
+> next dev --port 3002
+
+  ▲ Next.js 14.2.31
+  - Local:        http://localhost:3002
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1721ms
+ ○ Compiling /rescue ...
+Browserslist: browsers data (caniuse-lite) is 15 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled /rescue in 7.5s (1718 modules)
+ GET /rescue 200 in 7862ms
+ ✓ Compiled in 419ms (824 modules)
+ ○ Compiling /api/analytics/events ...
+ ✓ Compiled /api/analytics/events in 3.3s (986 modules)
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 5109ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 5100ms
+[?25h

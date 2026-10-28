@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/bipla/.claude/plugins/cache/logo-design-skill/logo-design/1.4.5/skills/logo-design/**)",
+      "Bash(cd *)"
+    ]
+  }
+}

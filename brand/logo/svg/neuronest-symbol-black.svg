@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-symbol-black">
+  <title id="title-symbol-black">NeuroNest — Standalone Symbol (Monochrome Black)</title>
+  <g fill="#000000">
+    <rect x="44" y="36" width="44" height="184" rx="12" />
+    <rect x="168" y="36" width="44" height="184" rx="12" />
+    <path d="M 88 56
+             C 108 64, 128 92, 142 128
+             C 156 164, 164 190, 168 204
+             L 168 174
+             C 156 142, 142 112, 126 84
+             C 114 62, 102 48, 88 40
+             Z" />
+    <circle cx="128" cy="116" r="18" />
+  </g>
+</svg>

@@ -1,0 +1,188 @@
+
+> neuronest-pro@2.0.0 dev
+> next dev --port 3005
+
+  ▲ Next.js 14.2.31
+  - Local:        http://localhost:3005
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ○ Compiling /rescue ...
+Browserslist: browsers data (caniuse-lite) is 15 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled /rescue in 5.3s (1718 modules)
+ HEAD /rescue 200 in 5560ms
+ ✓ Compiled in 356ms (824 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1033ms (1697 modules)
+ GET / 200 in 1302ms
+ ○ Compiling /api/analytics/events ...
+ ✓ Compiled /api/analytics/events in 1174ms (993 modules)
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 2724ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 2732ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 388ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 641ms
+ ○ Compiling /api/rescue/action ...
+ ✓ Compiled /api/rescue/action in 1100ms (1105 modules)
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 4397ms
+OpenRouter Rescue error details: {
+  message: 'OpenRouter did not return a complete Rescue action',
+  status: undefined,
+  type: undefined,
+  code: undefined
+}
+Rescue action API error: Error: Failed to generate Rescue action: OpenRouter did not return a complete Rescue action
+    at generateRescueAction (webpack-internal:///(rsc)/./src/lib/openRouter.ts:362:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/rescue/action/route.ts:59:24)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:818:17)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\start-server.js:141:13)
+ POST /api/rescue/action 503 in 8737ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 416ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 131ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 158ms
+ ✓ Compiled /api/feedback in 330ms (1108 modules)
+ POST /api/feedback 500 in 576ms
+OpenRouter Rescue error details: {
+  message: 'OpenRouter did not return a complete Rescue action',
+  status: undefined,
+  type: undefined,
+  code: undefined
+}
+Rescue action API error: Error: Failed to generate Rescue action: OpenRouter did not return a complete Rescue action
+    at generateRescueAction (webpack-internal:///(rsc)/./src/lib/openRouter.ts:362:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/rescue/action/route.ts:59:24)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:818:17)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\start-server.js:141:13)
+ POST /api/rescue/action 503 in 1955ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 99ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 352ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 191ms
+OpenRouter Rescue error details: {
+  message: 'OpenRouter did not return a complete Rescue action',
+  status: undefined,
+  type: undefined,
+  code: undefined
+}
+Rescue action API error: Error: Failed to generate Rescue action: OpenRouter did not return a complete Rescue action
+    at generateRescueAction (webpack-internal:///(rsc)/./src/lib/openRouter.ts:362:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/rescue/action/route.ts:59:24)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:818:17)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\start-server.js:141:13)
+ POST /api/rescue/action 503 in 2983ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 707ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 111ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 110ms
+OpenRouter Rescue error details: {
+  message: 'OpenRouter did not return a complete Rescue action',
+  status: undefined,
+  type: undefined,
+  code: undefined
+}
+Rescue action API error: Error: Failed to generate Rescue action: OpenRouter did not return a complete Rescue action
+    at generateRescueAction (webpack-internal:///(rsc)/./src/lib/openRouter.ts:362:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/rescue/action/route.ts:59:24)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\base-server.js:818:17)
+    at async D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (D:\Arpan's setup\Github projects\Neuronest\node_modules\next\dist\server\lib\start-server.js:141:13)
+ POST /api/rescue/action 503 in 2917ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 101ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 144ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 177ms
+ POST /api/rescue/action 200 in 2098ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 419ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 363ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 188ms
+Analytics persistence error: undefined
+ POST /api/analytics/events 200 in 124ms
+ ○ Compiling /signup ...
+ ✓ Compiled /signup in 1401ms (1950 modules)
+ GET /signup 200 in 1627ms

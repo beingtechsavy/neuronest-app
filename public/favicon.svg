@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <style>
+      .pillar { fill: #0F172A; }
+      .bridge { fill: #0D9488; }
+      .seed   { fill: #14B8A6; }
+
+      @media (prefers-color-scheme: dark) {
+        .pillar { fill: #F8FAFC; }
+        .bridge { fill: #14B8A6; }
+        .seed   { fill: #2DD4BF; }
+      }
+    </style>
+  </defs>
+
+  <!-- Small-Cut Optimized Geometry for Micro Browser Tabs -->
+  <g fill="none">
+    <rect x="40" y="32" width="48" height="192" rx="14" class="pillar" />
+    <rect x="168" y="32" width="48" height="192" rx="14" class="pillar" />
+    <path d="M 88 56
+             C 110 64, 130 96, 144 132
+             C 156 166, 164 192, 168 206
+             L 168 172
+             C 154 138, 140 108, 124 80
+             C 112 58, 100 46, 88 38
+             Z" class="bridge" />
+    <circle cx="128" cy="116" r="22" class="seed" />
+  </g>
+</svg>

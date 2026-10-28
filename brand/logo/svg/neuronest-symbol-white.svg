@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-symbol-white">
+  <title id="title-symbol-white">NeuroNest — Standalone Symbol (Reversed White)</title>
+  <!-- Optically adjusted for dark backgrounds: slightly increased counter breathing space to counter visual bloom -->
+  <g fill="#FFFFFF">
+    <rect x="45" y="36" width="42" height="184" rx="11" />
+    <rect x="169" y="36" width="42" height="184" rx="11" />
+    <path d="M 87 56
+             C 107 64, 127 92, 141 128
+             C 155 164, 163 190, 169 204
+             L 169 174
+             C 155 142, 141 112, 125 84
+             C 113 62, 101 48, 87 40
+             Z" />
+    <circle cx="128" cy="116" r="17" />
+  </g>
+</svg>

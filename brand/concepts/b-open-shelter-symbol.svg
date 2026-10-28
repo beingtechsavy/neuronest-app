@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-labelledby="title-b">
+  <title id="title-b">NeuroNest — Concept B: Open Shelter</title>
+  <!--
+    Concept B — "Open Shelter" (abstract mark)
+
+    A thick rounded ring (the nest/shelter) with a deliberate gap
+    at the lower-right. Inside the ring, a small solid circle
+    sits slightly off-center, representing the organized thought
+    being protected.
+
+    The gap is the "door" — the small step from stuck to started,
+    the opening that invites action. The ring shelters without
+    enclosing completely.
+
+    Construction:
+    - Ring: center (128,128), outer radius 96, inner radius 64
+      (stroke equivalent: 32px)
+    - Gap: 45° arc removed from lower-right (from ~315° to ~360°/0°...
+      actually from about 330° to 30° = 60° gap at bottom-right)
+    - The gap is at roughly the 4-5 o'clock position
+    - Interior dot: center (128, 128), radius 16
+    - All as filled paths, no strokes
+
+    The ring with gap is drawn as an arc path:
+    - Start at gap end (clockwise), sweep most of the way around,
+      end at gap start.
+    - Use evenodd fill-rule with inner arc for the donut.
+
+    Gap spans from 340° to 40° (60° opening at bottom-right).
+    At 340° (CW from 3-o'clock): x = 128 + 96*cos(-20°) ≈ 128+90.2 = 218.2, y = 128 + 96*sin(-20°) ≈ 128-32.8 = 95.2
+    Wait, let me use standard SVG angle convention.
+
+    In SVG, angles go clockwise from 3-o'clock.
+    I want the gap at approximately the 5 o'clock position (150° in clock terms, or about 120° in math terms).
+
+    Actually, let me place the gap at the bottom-right for the "step forward" feeling.
+    Gap center at about 315° (7:30 on clock = lower-right).
+    Gap from 285° to 345° (60° span).
+
+    In SVG coords (y-axis flipped, CW):
+    - 285° from 3-o'clock: cos(285°)=0.259, sin(285°)=-0.966
+      Point: (128 + 96*0.259, 128 + 96*(-0.966)) = (152.9, 35.3)... that's upper right, not lower right.
+
+    SVG y increases downward. Let me just think in SVG coordinates:
+    - 3 o'clock = 0°: (224, 128)
+    - 6 o'clock = 90°: (128, 224) [bottom]
+    - 9 o'clock = 180°: (32, 128)
+    - 12 o'clock = 270°: (128, 32) [top]
+
+    I want gap at lower-right, roughly between 4 and 5 o'clock.
+    That's about 30° to 60° in SVG convention.
+
+    Gap start (30°): (128 + 96*cos30, 128 + 96*sin30) = (128+83.1, 128+48) = (211.1, 176)
+    Gap end (60°):   (128 + 96*cos60, 128 + 96*sin60) = (128+48, 128+83.1) = (176, 211.1)
+
+    Inner ring at same angles:
+    Gap start inner (30°): (128 + 64*cos30, 128 + 64*sin30) = (128+55.4, 128+32) = (183.4, 160)
+    Gap end inner (60°):   (128 + 64*cos60, 128 + 64*sin60) = (128+32, 128+55.4) = (160, 183.4)
+
+    The arc path:
+    Outer: start at gap-end (176, 211.1), go CW (sweep=1, large-arc=1 since >180°) to gap-start (211.1, 176)
+    Inner: from inner gap-start (183.4, 160), go CCW (sweep=0, large-arc=1) to inner gap-end (160, 183.4)
+  -->
+  <path fill="#111111" fill-rule="evenodd" d="
+    M 176 211
+    A 96 96 0 1 0 211 176
+    L 183 160
+    A 64 64 0 1 1 160 183
+    Z
+  "/>
+  <!-- Interior dot — the protected thought -->
+  <circle cx="128" cy="128" r="16" fill="#111111"/>
+</svg>

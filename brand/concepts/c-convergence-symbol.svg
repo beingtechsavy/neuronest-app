@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-labelledby="title-c">
+  <title id="title-c">NeuroNest — Concept C: Convergence Mark</title>
+  <!--
+    Concept C — "Convergence" (abstract mark)
+
+    Four rounded lines/bars radiating outward from a common center,
+    like scattered elements converging into one focal point. The bars
+    are different lengths and angles, suggesting varied thoughts
+    being drawn together. They converge but don't touch — a small
+    circular gap at the center represents the calm, organized core.
+
+    The form suggests:
+    - Scattered → focused (the product promise)
+    - Neural signals converging
+    - A compass/waypoint for attention
+    - An asterisk-like form with purpose
+
+    Construction:
+    - Center point: (128, 128)
+    - 4 rounded bars at 45°, 135°, 225°, 315° (diagonal cross)
+    - Each bar starts 20px from center and extends outward
+    - Bar widths: 16px, rounded caps
+    - Lengths vary: 72, 64, 56, 68 — asymmetric for dynamism
+    - Small open circle at center: r=14, stroke=6
+  -->
+  <g fill="#111111">
+    <!-- Bar 1: upper-right, 45° — length 72 -->
+    <rect x="120" y="-8" width="16" height="72" rx="8"
+          transform="rotate(-45, 128, 128) translate(0, -20)"/>
+
+    <!-- Bar 2: upper-left, 135° — length 64 -->
+    <rect x="120" y="-8" width="16" height="64" rx="8"
+          transform="rotate(-135, 128, 128) translate(0, -20)"/>
+
+    <!-- Bar 3: lower-left, 225° — length 56 -->
+    <rect x="120" y="-8" width="16" height="56" rx="8"
+          transform="rotate(-225, 128, 128) translate(0, -20)"/>
+
+    <!-- Bar 4: lower-right, 315° — length 68 -->
+    <rect x="120" y="-8" width="16" height="68" rx="8"
+          transform="rotate(-315, 128, 128) translate(0, -20)"/>
+  </g>
+  <!-- Center focus point — open circle -->
+  <circle cx="128" cy="128" r="16" fill="none" stroke="#111111" stroke-width="8"/>
+</svg>

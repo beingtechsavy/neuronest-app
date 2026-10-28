@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-labelledby="title-a">
+  <title id="title-a">NeuroNest — Concept A: Nested N</title>
+  <!--
+    Concept A — "Nested N" (letterform)
+
+    A bold geometric N whose diagonal is a smooth concave curve
+    instead of a straight line. This creates two organically shaped
+    counter spaces (upper-left and lower-right) that resemble
+    sheltered, nest-like interiors.
+
+    Reads as "N" at every size. The curved diagonal is the ownable
+    detail — it's what makes this not just any N.
+
+    Outer boundary path, traced clockwise:
+    1. Start: bottom-left (48, 224)
+    2. Up left stem outer: (48, 32)
+    3. Right across top of left stem: (88, 32)
+    4. CURVED diagonal down-right to bottom of right stem inner: (168, 192)
+       Control points bow the curve INWARD (leftward/upward)
+       creating the concave upper-left counter
+    5. Up right stem inner to: (168, 32)
+    6. Right across top of right stem: (208, 32)
+    7. Down right stem outer: (208, 224)
+    8. Left across bottom of right stem: (168, 224)
+    9. CURVED diagonal up-left to top of left stem inner: (88, 64)
+       Control points bow the curve INWARD (rightward/downward)
+       creating the concave lower-right counter
+    10. Down left stem inner: (88, 224)
+    11. Left back to start: (48, 224)
+  -->
+  <path fill="#111111" d="
+    M 48 224
+    L 48 32
+    L 88 32
+    C 88 112, 168 112, 168 192
+    L 168 32
+    L 208 32
+    L 208 224
+    L 168 224
+    C 168 144, 88 144, 88 64
+    L 88 224
+    Z
+  "/>
+</svg>

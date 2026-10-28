@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-labelledby="title-b">
+  <title id="title-b">NeuroNest — Concept B: Sheltering Arch</title>
+  <!--
+    Concept B — "Sheltering Arch" (abstract mark)
+
+    Two overlapping arch forms — an outer arch and an inner arch —
+    creating a protected interior space. The arches are concentric
+    but the inner one is offset slightly upward, creating an
+    asymmetric, dynamic shelter. A small circle sits inside the
+    protected space, representing the organized thought or the
+    person being supported.
+
+    The form suggests:
+    - A nest (without depicting one literally)
+    - A protective structure for the mind
+    - Neural pathways forming a shelter
+    - The letter N in its two arching strokes (subtle)
+
+    Construction:
+    - Outer arch: semicircle from (40,192) to (216,192), radius 88
+      with a stroke width of 24
+    - Inner arch: semicircle from (72,192) to (184,192), radius 56
+      offset slightly up, stroke width 20
+    - Small circle: r=12, centered at (128, 172) — the protected element
+    - Base line: a subtle horizontal at y=192, width 200
+
+    All built as filled shapes for production.
+  -->
+  <g fill="#111111">
+    <!-- Outer arch — thick filled semicircle -->
+    <path fill-rule="evenodd" d="
+      M 28 192
+      A 100 100 0 0 1 228 192
+      L 228 192
+      A 76 76 0 0 0 52 192
+      Z
+    "/>
+    <!-- Inner arch — thinner, nested inside -->
+    <path fill-rule="evenodd" d="
+      M 68 192
+      A 60 60 0 0 1 188 192
+      L 188 192
+      A 40 40 0 0 0 88 192
+      Z
+    "/>
+    <!-- Protected element — small solid circle -->
+    <circle cx="128" cy="168" r="14"/>
+    <!-- Ground line -->
+    <rect x="28" y="192" width="200" height="12" rx="6"/>
+  </g>
+</svg>

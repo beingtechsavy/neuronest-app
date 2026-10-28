@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-app-icon-ios">
+  <title id="title-app-icon-ios">NeuroNest — iOS App Icon</title>
+  <defs>
+    <linearGradient id="ios-bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+
+  <!-- iOS Squircle Container (22.5% radius = 57.6px on 256px) -->
+  <rect width="256" height="256" rx="58" fill="url(#ios-bg)" />
+
+  <!-- Centered Haven N Symbol (Scale: 62%, tx=48.6, ty=48.6) -->
+  <g transform="translate(48.6, 48.6) scale(0.62)">
+    <!-- Left Pillar (White for high contrast) -->
+    <rect x="44" y="36" width="44" height="184" rx="12" fill="#F8FAFC" />
+
+    <!-- Right Pillar -->
+    <rect x="168" y="36" width="44" height="184" rx="12" fill="#F8FAFC" />
+
+    <!-- Sheltering Diagonal Bridge (Vibrant Teal) -->
+    <path d="M 88 56
+             C 108 64, 128 92, 142 128
+             C 156 164, 164 190, 168 204
+             L 168 174
+             C 156 142, 142 112, 126 84
+             C 114 62, 102 48, 88 40
+             Z" fill="#14B8A6" />
+
+    <!-- The Haven Seed (Luminous Mint Glow) -->
+    <circle cx="128" cy="116" r="18" fill="#2DD4BF" />
+  </g>
+</svg>

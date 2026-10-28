@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-symbol-small">
+  <title id="title-symbol-small">NeuroNest — Standalone Symbol (Small-Size Cut: 16px–32px)</title>
+  <!--
+    Optically tuned for micro-sizes (16px, 24px, 32px):
+    - Reinforced pillar weight (+4px) for pixel grid alignment
+    - Enlarged focal seed (+4px radius) for instant micro-contrast
+    - Optimized internal negative space to prevent pixel clogging
+  -->
+  <g fill="none">
+    <!-- Left Pillar (Reinforced) -->
+    <rect x="40" y="32" width="48" height="192" rx="14" fill="#0F172A" />
+
+    <!-- Right Pillar (Reinforced) -->
+    <rect x="168" y="32" width="48" height="192" rx="14" fill="#0F172A" />
+
+    <!-- Sheltering Diagonal Bridge (Bolder sweep) -->
+    <path d="M 88 56
+             C 110 64, 130 96, 144 132
+             C 156 166, 164 192, 168 206
+             L 168 172
+             C 154 138, 140 108, 124 80
+             C 112 58, 100 46, 88 38
+             Z" fill="#0D9488" />
+
+    <!-- The Haven Seed (Enlarged for 16px legibility) -->
+    <circle cx="128" cy="116" r="22" fill="#14B8A6" />
+  </g>
+</svg>

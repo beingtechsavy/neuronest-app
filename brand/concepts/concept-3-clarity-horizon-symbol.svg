@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="NeuroNest — Concept 3: The Clarity Horizon">
+  <title>NeuroNest — Concept 3: The Clarity Horizon</title>
+  <!--
+    Concept 3: The Clarity Horizon (Supportive Vessel & Focus Gateway)
+    An architectural vessel (the nest) grounded below, supporting a tranquil horizontal focus beam
+    with an open aperture. Uses real compound geometry (evenodd) for true transparency.
+  -->
+  <g fill="none">
+    <!-- Grounded Supportive Nest Vessel: Sculpted crescent bowl -->
+    <path d="M 44 120
+             C 44 184, 82 216, 128 216
+             C 174 216, 212 184, 212 120
+             C 188 156, 160 172, 128 172
+             C 96 172, 68 156, 44 120 Z"
+          fill="#0F766E" />
+
+    <!-- Center Focus Zenith Ring & Gateway: True compound path (no white paint) -->
+    <path fill-rule="evenodd"
+          d="M 128 56
+             A 24 24 0 1 1 127.9 56 Z
+             M 128 68
+             A 12 12 0 1 0 128.1 68 Z"
+          fill="#0F172A" />
+
+    <!-- Horizontal Focus Horizon Bar with Gateway Cutout -->
+    <path fill-rule="evenodd"
+          d="M 47 70
+             C 41 70, 36 75, 36 81
+             C 36 87, 41 92, 47 92
+             L 108 92
+             C 108 81, 117 72, 128 72
+             C 139 72, 148 81, 148 92
+             L 209 92
+             C 215 92, 220 87, 220 81
+             C 220 75, 215 70, 209 70
+             Z"
+          fill="#0F172A" />
+
+    <!-- Solid Grounding Seed in the Nest Vessel -->
+    <circle cx="128" cy="144" r="10" fill="#0D9488" />
+  </g>
+</svg>

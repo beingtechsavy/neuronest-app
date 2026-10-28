@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "integrations": {
+    "google_calendar": {
+      "enabled": false,
+      "sync_interval_minutes": 15,
+      "auto_block_focus_sessions": true,
+      "focus_color_id": "7",
+      "calendar_name": "Primary"
+    },
+    "notion": {
+      "enabled": false,
+      "database_id": "",
+      "import_filter": "status != Done",
+      "export_completed_sessions": true
+    },
+    "todoist": {
+      "enabled": false,
+      "filter_query": "today | overdue",
+      "append_focus_label": true
+    },
+    "slack": {
+      "enabled": false,
+      "auto_dnd_focus": true,
+      "focus_status_text": "In Focus Session — NeuroNest",
+      "focus_status_emoji": ":seedling:"
+    }
+  }
+}

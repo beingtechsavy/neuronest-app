@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" width="760" height="180" role="img" aria-label="NeuroNest — Concept 1 Horizontal Lockup (Dark)">
+  <title>NeuroNest — Concept 1 (Dark)</title>
+  <!-- Concept 1: The Haven N (Horizontal Lockup - Dark Background) -->
+  <defs>
+    <style>
+      .brand-title-dark {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 64px;
+        font-weight: 700;
+        letter-spacing: -1.5px;
+        fill: #F8FAFC;
+      }
+      .brand-accent-dark {
+        fill: #2DD4BF;
+      }
+      .brand-tagline-dark {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        fill: #94A3B8;
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="760" height="180" rx="16" fill="#0B0F19" />
+
+  <!-- Symbol -->
+  <g transform="translate(25, 25) scale(0.5078)">
+    <!-- Left Pillar (Clean Light Tone) -->
+    <rect x="44" y="36" width="44" height="184" rx="12" fill="#F8FAFC" />
+    <!-- Right Pillar -->
+    <rect x="168" y="36" width="44" height="184" rx="12" fill="#F8FAFC" />
+    <!-- Sheltering Diagonal Bridge -->
+    <path d="M 88 56
+             C 108 64, 128 92, 142 128
+             C 156 164, 164 190, 168 204
+             L 168 174
+             C 156 142, 142 112, 126 84
+             C 114 62, 102 48, 88 40
+             Z" fill="#14B8A6" />
+    <!-- The Haven Seed -->
+    <circle cx="128" cy="116" r="18" fill="#2DD4BF" />
+  </g>
+
+  <!-- Wordmark -->
+  <text x="190" y="104" class="brand-title-dark">Neuro<tspan class="brand-accent-dark">Nest</tspan></text>
+  <text x="192" y="136" class="brand-tagline-dark">ADHD-FRIENDLY ATTENTION &amp; PLANNING</text>
+</svg>

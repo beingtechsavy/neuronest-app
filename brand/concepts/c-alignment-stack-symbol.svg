@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-labelledby="title-c">
+  <title id="title-c">NeuroNest — Concept C: Alignment Stack</title>
+  <!--
+    Concept C — "Alignment Stack" (abstract mark)
+
+    Three horizontal rounded bars stacked vertically. The top bar
+    is offset to the left (scattered), the middle bar is slightly
+    offset, and the bottom bar is centered (aligned). Together they
+    tell the story: scattered thoughts → organized action.
+
+    The bars progressively center and slightly lengthen, creating
+    a visual rhythm of convergence and stability.
+
+    The form is:
+    - Bold, geometric, simple
+    - Reads at any size (three bars are clear even at 16px)
+    - Distinctive in the productivity space
+    - Suggests structure, layers, organization
+
+    Construction:
+    - Canvas: 256x256
+    - Three bars, each 24px tall, rounded caps (rx=12)
+    - Vertical spacing: 24px gaps between bars
+    - Top bar: 96px wide, left-aligned at x=48, y=72
+    - Middle bar: 112px wide, slightly right at x=80, y=120
+    - Bottom bar: 128px wide, centered at x=64, y=168
+
+    Wait — this needs to feel more centered and balanced as a mark.
+    Let me recenter:
+
+    - Total mark height: 3 bars (24 each) + 2 gaps (28 each) = 128
+    - Mark vertical center: y range 64–192, centered at 128 ✓
+    - Top bar: width 100, x=52, y=64
+    - Middle bar: width 120, x=76, y=116
+    - Bottom bar: width 140, x=58, y=168
+
+    The key: each bar shifts rightward then snaps back — they
+    "gather" from scattered positions into alignment.
+
+    Revised — three bars converging to a center vertical axis:
+    - Top bar: 100px wide, centered at x=108 (offset 20 left of center)
+      → rect at (58, 64), width 100
+    - Middle bar: 116px wide, centered at x=138 (offset 10 right)
+      → rect at (80, 116), width 116
+    - Bottom bar: 132px wide, centered at x=128 (perfectly centered)
+      → rect at (62, 168), width 132
+
+    This creates a sense of scattered things finding their center.
+  -->
+  <g fill="#111111">
+    <!-- Top bar — offset left (scattered) -->
+    <rect x="50" y="64" width="100" height="24" rx="12"/>
+    <!-- Middle bar — offset slightly right (converging) -->
+    <rect x="82" y="116" width="116" height="24" rx="12"/>
+    <!-- Bottom bar — centered (organized) -->
+    <rect x="62" y="168" width="132" height="24" rx="12"/>
+  </g>
+</svg>

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroNest — Brand Identity &amp; Logo Concept Comparison</title>
+  <style>
+    :root {
+      --bg: #090D16;
+      --card-bg: #111827;
+      --card-border: #1F2937;
+      --text-main: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent: #14B8A6;
+      --accent-indigo: #6366F1;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 40px 24px 80px;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 48px;
+      text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(20, 184, 166, 0.15);
+      color: var(--accent);
+      margin-bottom: 16px;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+    }
+
+    h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Comparison Grid */
+    .concepts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: 56px;
+    }
+
+    @media (max-width: 1080px) {
+      .concepts-grid { grid-template-columns: 1fr; }
+    }
+
+    .concept-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .concept-card:hover {
+      border-color: #374151;
+      transform: translateY(-4px);
+    }
+
+    .concept-card.recommended {
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 30px rgba(20, 184, 166, 0.15);
+    }
+
+    .rec-ribbon {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--accent);
+      color: #042F2E;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+
+    .card-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .concept-tag {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+
+    .concept-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #FFF;
+      margin-bottom: 6px;
+    }
+
+    .concept-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Visual Showcase Areas */
+    .showcase-section {
+      padding: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .symbol-stage {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
+    .symbol-stage img {
+      width: 140px;
+      height: 140px;
+    }
+
+    .lockup-preview {
+      margin-bottom: 12px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .lockup-preview img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Size Ladder */
+    .ladder-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 20px;
+      background: #0B0F19;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+    }
+
+    .ladder-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ladder-step span {
+      font-size: 10px;
+      color: #6B7280;
+      font-weight: 600;
+    }
+
+    .ladder-step img {
+      display: block;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* Mockup Previews */
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .app-icon-preview {
+      background: #0B0F19;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .squircle-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    .squircle-icon img {
+      width: 70%;
+      height: 70%;
+    }
+
+    .app-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+
+    .browser-tab {
+      background: #1E293B;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #E2E8F0;
+      font-weight: 500;
+      border: 1px solid #334155;
+      border-bottom: none;
+      height: 34px;
+    }
+
+    .browser-tab img {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Rationale Details */
+    .rationale-section {
+      padding: 24px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .rationale-block h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #E2E8F0;
+      margin-bottom: 4px;
+    }
+
+    .rationale-block p {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Evaluation Table */
+    .eval-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-bottom: 48px;
+    }
+
+    .eval-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: #FFF;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      padding: 14px 18px;
+      border-bottom: 1px solid #374151;
+      color: #9CA3AF;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 16px 18px;
+      border-bottom: 1px solid #1F2937;
+      color: #E5E7EB;
+    }
+
+    .rating-high { color: #34D399; font-weight: 700; }
+    .rating-mid { color: #FBBF24; font-weight: 600; }
+
+    /* Recommendation Box */
+    .recommendation-box {
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
+      border: 1px solid rgba(20, 184, 166, 0.3);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: left;
+    }
+
+    .recommendation-box h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #2DD4BF;
+      margin-bottom: 12px;
+    }
+
+    .recommendation-box p {
+      color: #D1D5DB;
+      font-size: 15px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">Brand Identity Design Exploration</div>
+    <h1>NeuroNest Identity Concepts</h1>
+    <p class="subtitle">A rigorous comparison of three distinct vector concepts developed for an ADHD-friendly productivity SaaS. Presented side-by-side for your review and selection.</p>
+  </header>
+
+  <div class="concepts-grid">
+
+    <!-- CONCEPT 1 -->
+    <div class="concept-card recommended">
+      <div class="rec-ribbon">Recommended</div>
+      <div class="card-header">
+        <div class="concept-tag">Concept 1 · Monogram Letterform</div>
+        <h2 class="concept-title">The Haven N</h2>
+        <p class="concept-desc">An architectural 'N' whose diagonal forms a protective, cradled sanctum that shelters a calm intention seed.</p>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Standalone Symbol (Large)</div>
+        <div class="symbol-stage">
+          <img src="concept-1-haven-n-symbol.svg" alt="Concept 1 Haven N Symbol">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Primary Horizontal Lockups</div>
+        <div class="lockup-preview">
+          <img src="concept-1-lockup-light.svg" alt="Concept 1 Light Lockup">
+        </div>
+        <div class="lockup-preview">
+          <img src="concept-1-lockup-dark.svg" alt="Concept 1 Dark Lockup">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Micro-Scale Legibility (16px – 64px)</div>
+        <div class="ladder-row">
+          <div class="ladder-step">
+            <img src="concept-1-haven-n-symbol.svg" width="64" height="64" alt="64px">
+            <span>64px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-1-haven-n-symbol.svg" width="32" height="32" alt="32px">
+            <span>32px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-1-haven-n-symbol.svg" width="24" height="24" alt="24px">
+            <span>24px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-1-haven-n-symbol.svg" width="16" height="16" alt="16px">
+            <span>16px</span>
+          </div>
+        </div>
+
+        <div class="mockup-grid">
+          <div class="app-icon-preview">
+            <div class="squircle-icon" style="background: #0F172A;">
+              <img src="concept-1-haven-n-symbol.svg" alt="Icon">
+            </div>
+            <div class="app-name">NeuroNest</div>
+          </div>
+          <div class="app-icon-preview" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="browser-tab">
+              <img src="concept-1-haven-n-symbol.svg" alt="Favicon">
+              <span>NeuroNest — Magic...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale-section">
+        <div class="rationale-block">
+          <h4>Central Idea</h4>
+          <p>Combines immediate letterform recognition ('N') with the core emotional metaphor of a nest: a stable architectural structure that shelters an intention until you are ready to begin.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Visual Rationale</h4>
+          <p>The vertical pillars establish stability and executive grounding. The sweeping diagonal bridge softens the letterform into a nest-like cradle, holding the calm teal focal seed.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Distinctiveness</h4>
+          <p>Avoids brain clichés, generic checklist icons, and overused purple gradients. Deep Obsidian and Luminous Teal communicate clinical intelligence without being cold.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Limitations</h4>
+          <p>Because it is a letterform mark, it requires thoughtful clear space in tight layouts so it doesn't collide with nearby heading typography.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- CONCEPT 2 -->
+    <div class="concept-card">
+      <div class="card-header">
+        <div class="concept-tag">Concept 2 · Dynamic Abstract</div>
+        <h2 class="concept-title">The Orbit Cradle</h2>
+        <p class="concept-desc">Concentric embracing arcs that gather scattered attention, holding a radiant warm initiation spark.</p>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Standalone Symbol (Large)</div>
+        <div class="symbol-stage">
+          <img src="concept-2-orbit-cradle-symbol.svg" alt="Concept 2 Orbit Cradle Symbol">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Primary Horizontal Lockups</div>
+        <div class="lockup-preview">
+          <img src="concept-2-lockup-light.svg" alt="Concept 2 Light Lockup">
+        </div>
+        <div class="lockup-preview">
+          <img src="concept-2-lockup-dark.svg" alt="Concept 2 Dark Lockup">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Micro-Scale Legibility (16px – 64px)</div>
+        <div class="ladder-row">
+          <div class="ladder-step">
+            <img src="concept-2-orbit-cradle-symbol.svg" width="64" height="64" alt="64px">
+            <span>64px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-2-orbit-cradle-symbol.svg" width="32" height="32" alt="32px">
+            <span>32px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-2-orbit-cradle-symbol.svg" width="24" height="24" alt="24px">
+            <span>24px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-2-orbit-cradle-symbol.svg" width="16" height="16" alt="16px">
+            <span>16px</span>
+          </div>
+        </div>
+
+        <div class="mockup-grid">
+          <div class="app-icon-preview">
+            <div class="squircle-icon" style="background: #0B0F19;">
+              <img src="concept-2-orbit-cradle-symbol.svg" alt="Icon">
+            </div>
+            <div class="app-name">NeuroNest</div>
+          </div>
+          <div class="app-icon-preview" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="browser-tab">
+              <img src="concept-2-orbit-cradle-symbol.svg" alt="Favicon">
+              <span>NeuroNest — Magic...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale-section">
+        <div class="rationale-block">
+          <h4>Central Idea</h4>
+          <p>Evolves the project's original arc motif into a mathematically pure, embracing nest that cradles a single, warm forward action ("one small next action").</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Visual Rationale</h4>
+          <p>The dual arcs represent the scaffolding that surrounds hyperactive or scattered focus, bringing thoughts down to rest. The warm amber spark provides an emotional hearth of motivation.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Distinctiveness</h4>
+          <p>The periwinkle/iris palette paired with warm amber creates high visual tension and warmth. Strong circular silhouette that fits naturally into app stores and social avatars.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Limitations</h4>
+          <p>At 16px, the subtle vertical momentum notch dissolves, relying primarily on the circular arc silhouette and inner spark.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- CONCEPT 3 -->
+    <div class="concept-card">
+      <div class="card-header">
+        <div class="concept-tag">Concept 3 · Minimalist Architectural</div>
+        <h2 class="concept-title">The Clarity Horizon</h2>
+        <p class="concept-desc">A grounded supportive vessel supporting a tranquil horizon bar with an open focal gateway.</p>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Standalone Symbol (Large)</div>
+        <div class="symbol-stage">
+          <img src="concept-3-clarity-horizon-symbol.svg" alt="Concept 3 Clarity Horizon Symbol">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Primary Horizontal Lockups</div>
+        <div class="lockup-preview">
+          <img src="concept-3-lockup-light.svg" alt="Concept 3 Light Lockup">
+        </div>
+        <div class="lockup-preview">
+          <img src="concept-3-lockup-dark.svg" alt="Concept 3 Dark Lockup">
+        </div>
+      </div>
+
+      <div class="showcase-section">
+        <div class="section-label">Micro-Scale Legibility (16px – 64px)</div>
+        <div class="ladder-row">
+          <div class="ladder-step">
+            <img src="concept-3-clarity-horizon-symbol.svg" width="64" height="64" alt="64px">
+            <span>64px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-3-clarity-horizon-symbol.svg" width="32" height="32" alt="32px">
+            <span>32px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-3-clarity-horizon-symbol.svg" width="24" height="24" alt="24px">
+            <span>24px</span>
+          </div>
+          <div class="ladder-step">
+            <img src="concept-3-clarity-horizon-symbol.svg" width="16" height="16" alt="16px">
+            <span>16px</span>
+          </div>
+        </div>
+
+        <div class="mockup-grid">
+          <div class="app-icon-preview">
+            <div class="squircle-icon" style="background: #064E3B;">
+              <img src="concept-3-clarity-horizon-symbol.svg" alt="Icon">
+            </div>
+            <div class="app-name">NeuroNest</div>
+          </div>
+          <div class="app-icon-preview" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="browser-tab">
+              <img src="concept-3-clarity-horizon-symbol.svg" alt="Favicon">
+              <span>NeuroNest — Magic...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale-section">
+        <div class="rationale-block">
+          <h4>Central Idea</h4>
+          <p>Inspired by Japanese joinery and mid-century architecture: a grounded nesting basin supporting a calm horizontal focus horizon. Focus as a state of equilibrium.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Visual Rationale</h4>
+          <p>The crescent basin catches mental overwhelm; the horizontal horizon provides visual calm; the central circular gateway acts as an entrance into deep focus sessions.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Distinctiveness</h4>
+          <p>Completely eschews SaaS tropes. Reads as serene, editorial, and mature. Excellent for executive and high-performing knowledge workers with ADHD.</p>
+        </div>
+        <div class="rationale-block">
+          <h4>Limitations</h4>
+          <p>Less immediately recognizable as an app icon; appeals more to an architectural/editorial sensibility than a mass consumer utility.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="eval-section">
+    <h3 class="eval-title">Objective Evaluation Matrix</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Evaluation Criteria</th>
+          <th>Concept 1: The Haven N</th>
+          <th>Concept 2: The Orbit Cradle</th>
+          <th>Concept 3: The Clarity Horizon</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Brand Name Legibility &amp; Recall</strong></td>
+          <td class="rating-high">Superior (Instant 'N' recognition)</td>
+          <td class="rating-mid">Good (Abstract symbol)</td>
+          <td class="rating-mid">Moderate (Architectural emblem)</td>
+        </tr>
+        <tr>
+          <td><strong>16px Favicon Performance</strong></td>
+          <td class="rating-high">Flawless (Bold pillars preserve silhouette)</td>
+          <td class="rating-high">Very Strong (Concentric circle geometry)</td>
+          <td class="rating-mid">Good (Horizontal line thins slightly)</td>
+        </tr>
+        <tr>
+          <td><strong>Metaphorical Depth</strong></td>
+          <td class="rating-high">Deep (Pillar structure + sheltering cradle)</td>
+          <td class="rating-high">Direct (Gathered focus + ignition spark)</td>
+          <td class="rating-high">Philosophical (Grounding basin + horizon)</td>
+        </tr>
+        <tr>
+          <td><strong>SaaS Ecosystem Fit</strong></td>
+          <td class="rating-high">Optimal (App stores, browser tabs, UI header)</td>
+          <td class="rating-high">Very High (Consumer app icon strength)</td>
+          <td class="rating-mid">Editorial / Niche (Substack, Notion vibe)</td>
+        </tr>
+        <tr>
+          <td><strong>Freedom from Category Clichés</strong></td>
+          <td class="rating-high">Complete (No brains, sparkles, or cheap gradients)</td>
+          <td class="rating-high">High (Elevated treatment of arc motif)</td>
+          <td class="rating-high">Exceptional (Radically distinctive)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RECOMMENDATION -->
+  <div class="recommendation-box">
+    <h3>Design Lead Recommendation: Concept 1 — The Haven N</h3>
+    <p>
+      While Concept 2 provides a spirited, warm evolution of the original arc motif and Concept 3 delivers extraordinary editorial calm, <strong>Concept 1 ("The Haven N") is the most commercially robust, scalable, and distinctive identity for NeuroNest as an ambitious SaaS brand.</strong>
+    </p>
+    <p>
+      <strong>Why Concept 1 wins:</strong>
+      <br>1. <strong>Immediate Identification:</strong> A monogram mark anchors the brand name in a single glance. In crowded browser tab strips, mobile home screens, and notification badges, the letter 'N' anchors the product instantly.
+      <br>2. <strong>Emotional Authenticity:</strong> The inward-cradled diagonal authentically delivers on the name "Nest" without resorting to literal twigs, bird imagery, or medical brain tropes.
+      <br>3. <strong>Color Sophistication:</strong> The Deep Obsidian (`#0F172A`) paired with Luminous Teal (`#0D9488` / `#14B8A6`) communicates clinical precision, calm authority, and restorative mental clarity.
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

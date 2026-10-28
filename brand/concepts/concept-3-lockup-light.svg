@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" width="760" height="180" role="img" aria-label="NeuroNest — Concept 3 Horizontal Lockup (Light)">
+  <title>NeuroNest — Concept 3 (Light)</title>
+  <!-- Concept 3: The Clarity Horizon (Horizontal Lockup - Light Background) -->
+  <defs>
+    <style>
+      .brand-title {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 64px;
+        font-weight: 700;
+        letter-spacing: -1.5px;
+        fill: #0F172A;
+      }
+      .brand-accent {
+        fill: #0F766E;
+      }
+      .brand-tagline {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        fill: #64748B;
+      }
+    </style>
+  </defs>
+
+  <!-- Symbol -->
+  <g transform="translate(25, 25) scale(0.5078)" fill="none">
+    <!-- Grounded Supportive Nest Vessel -->
+    <path d="M 44 120
+             C 44 184, 82 216, 128 216
+             C 174 216, 212 184, 212 120
+             C 188 156, 160 172, 128 172
+             C 96 172, 68 156, 44 120 Z"
+          fill="#0F766E" />
+    <!-- Horizontal Focus Horizon Bar -->
+    <rect x="36" y="80" width="184" height="22" rx="11" fill="#0F172A" />
+    <!-- Center Focus Zenith / Gateway Seed -->
+    <circle cx="128" cy="80" r="24" fill="#0F172A" />
+    <circle cx="128" cy="80" r="12" fill="#F8FAFC" />
+    <!-- Subtle Grounding Base -->
+    <circle cx="128" cy="144" r="10" fill="#0F766E" opacity="0.8" />
+  </g>
+
+  <!-- Wordmark -->
+  <text x="190" y="104" class="brand-title">Neuro<tspan class="brand-accent">Nest</tspan></text>
+  <text x="192" y="136" class="brand-tagline">AN ARCHITECTURE FOR ATTENTION &amp; FOCUS</text>
+</svg>

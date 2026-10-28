@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Haven theme variables.
+ *
+ * NeuroNest is a dark-only product. These were previously gated behind
+ * `@media (prefers-color-scheme: dark)`, which meant an OS in light mode got
+ * `--background: #ffffff` with the rest of the app's hardcoded #1E1F22
+ * surfaces on top of it — unreadable. The dark values are now unconditional,
+ * and `color-scheme: dark` tells the browser to render native scrollbars,
+ * form controls, and date pickers to match. */
+:root {
+  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Discord-calibrated dark canvas: soft charcoal rather than harsh 100% black */
+  --background: #1e1f22;
+  --foreground: #f2f3f5;
+  --card-bg: #2b2d31;
+  --card-border: #383a40;
+  --border: #3f4147;
+  --text-secondary: #dbdee1;
+  --text-muted: #949ba4;
+  --accent-teal: #14b8a6;
+  --accent-mint: #2dd4bf;
+
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* ADHD Accessibility: High-visibility focus indicators that do not rely on color alone */
+:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
+
+/* Gentle motion respect for sensory hypersensitivity */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

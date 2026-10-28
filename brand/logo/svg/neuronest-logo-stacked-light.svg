@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="400" height="420" role="img" aria-labelledby="title-stacked-light">
+  <title id="title-stacked-light">NeuroNest — Stacked Vertical Logo (Light Backgrounds)</title>
+  <defs>
+    <style>
+      .stacked-neuro {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 50px;
+        font-weight: 700;
+        letter-spacing: -1.2px;
+        fill: #0F172A;
+        text-anchor: middle;
+      }
+      .stacked-nest {
+        fill: #0D9488;
+      }
+      .stacked-tagline {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        fill: #64748B;
+        text-anchor: middle;
+      }
+    </style>
+  </defs>
+
+  <!-- Centered Symbol (size 200x200, positioned at x=100, y=40) -->
+  <g id="symbol" transform="translate(100, 36) scale(0.78125)">
+    <!-- Left Pillar -->
+    <rect x="44" y="36" width="44" height="184" rx="12" fill="#0F172A" />
+
+    <!-- Right Pillar -->
+    <rect x="168" y="36" width="44" height="184" rx="12" fill="#0F172A" />
+
+    <!-- Sheltering Diagonal Bridge -->
+    <path d="M 88 56
+             C 108 64, 128 92, 142 128
+             C 156 164, 164 190, 168 204
+             L 168 174
+             C 156 142, 142 112, 126 84
+             C 114 62, 102 48, 88 40
+             Z" fill="#0D9488" />
+
+    <!-- The Haven Seed -->
+    <circle cx="128" cy="116" r="18" fill="#14B8A6" />
+  </g>
+
+  <!-- Centered Wordmark & Tagline -->
+  <g id="wordmark">
+    <text x="200" y="292" class="stacked-neuro">Neuro<tspan class="stacked-nest">Nest</tspan></text>
+    <text x="200" y="324" class="stacked-tagline">ATTENTION &amp; FOCUS SCAFFOLDING</text>
+  </g>
+</svg>

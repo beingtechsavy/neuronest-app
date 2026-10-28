@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroNest — Brand Identity &amp; Logo System Preview</title>
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --card-bg: #111827;
+      --card-border: #1F2937;
+      --text-main: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent: #14B8A6;
+      --accent-dark: #0D9488;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 40px 24px 80px;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(20, 184, 166, 0.15);
+      color: var(--accent);
+      margin-bottom: 16px;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+      color: #FFF;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    /* Sections */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFF;
+      margin: 40px 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title::after {
+      content: "";
+      flex-grow: 1;
+      height: 1px;
+      background: var(--card-border);
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 840px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 24px;
+    }
+
+    .card-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .display-stage {
+      border-radius: 12px;
+      padding: 36px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 160px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stage-light { background: #FFFFFF; }
+    .stage-dark  { background: #0B0F19; }
+
+    .display-stage img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Size Ladder */
+    .ladder-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 32px;
+    }
+
+    .ladder-flex {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 32px;
+      background: #0B0F19;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .ladder-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ladder-item span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .ladder-item img {
+      display: block;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* Mockups */
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .mockup-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .mockup-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .icon-preview-ios {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      margin: 0 auto 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+
+    .icon-preview-android {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+
+    .icon-preview-ios img, .icon-preview-android img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .browser-tab-preview {
+      background: #1E293B;
+      border-radius: 8px 8px 0 0;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #F8FAFC;
+      font-weight: 500;
+      border: 1px solid #334155;
+      border-bottom: none;
+      margin-top: 16px;
+    }
+
+    .browser-tab-preview img {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Palette Swatches */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .palette-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .swatch {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+    }
+
+    .swatch-color {
+      height: 90px;
+      width: 100%;
+    }
+
+    .swatch-info {
+      padding: 12px 14px;
+      font-size: 12px;
+    }
+
+    .swatch-name {
+      font-weight: 700;
+      color: #FFF;
+      margin-bottom: 2px;
+    }
+
+    .swatch-hex {
+      font-family: monospace;
+      color: var(--accent);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">Production Brand Identity Kit</div>
+    <h1>NeuroNest Design System</h1>
+    <p class="subtitle">Official production assets for "The Haven N" · Architecture for Attention &amp; Focus</p>
+  </header>
+
+  <!-- 1. PRIMARY HORIZONTAL LOCKUPS -->
+  <div class="section-title">Primary Horizontal Lockups</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Light Background Version</div>
+      <div class="display-stage stage-light">
+        <img src="../logo/svg/neuronest-logo-horizontal-light.svg" alt="NeuroNest Horizontal Light">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Dark Background Version</div>
+      <div class="display-stage stage-dark">
+        <img src="../logo/svg/neuronest-logo-horizontal-dark.svg" alt="NeuroNest Horizontal Dark">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. STACKED VERTICAL LOCKUPS -->
+  <div class="section-title">Stacked Vertical Lockups</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Stacked Light Mode</div>
+      <div class="display-stage stage-light" style="min-height: 260px;">
+        <img src="../logo/svg/neuronest-logo-stacked-light.svg" style="max-height: 220px;" alt="NeuroNest Stacked Light">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Stacked Dark Mode</div>
+      <div class="display-stage stage-dark" style="min-height: 260px;">
+        <img src="../logo/svg/neuronest-logo-stacked-dark.svg" style="max-height: 220px;" alt="NeuroNest Stacked Dark">
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. MONOCHROME & REVERSED -->
+  <div class="section-title">Single-Color Monochrome &amp; Reversed</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">100% Monochrome Black (Print &amp; Invoices)</div>
+      <div class="display-stage stage-light">
+        <img src="../logo/svg/neuronest-logo-horizontal-mono-black.svg" alt="NeuroNest Monochrome Black">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">100% Reversed White (High-Contrast Dark Surfaces)</div>
+      <div class="display-stage stage-dark">
+        <img src="../logo/svg/neuronest-logo-horizontal-mono-white.svg" alt="NeuroNest Monochrome White">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. MICRO-SCALE LADDER -->
+  <div class="section-title">Micro-Scale Size Ladder (16px to 256px)</div>
+  <div class="ladder-card">
+    <div class="card-label">Verified Legibility Ladder (Using Optically Tuned Small Cut)</div>
+    <div class="ladder-flex">
+      <div class="ladder-item">
+        <img src="../logo/svg/neuronest-symbol-color.svg" width="128" height="128" alt="128px">
+        <span>128px</span>
+      </div>
+      <div class="ladder-item">
+        <img src="../logo/svg/neuronest-symbol-color.svg" width="64" height="64" alt="64px">
+        <span>64px</span>
+      </div>
+      <div class="ladder-item">
+        <img src="../logo/svg/neuronest-symbol-small-16px.svg" width="32" height="32" alt="32px">
+        <span>32px</span>
+      </div>
+      <div class="ladder-item">
+        <img src="../logo/svg/neuronest-symbol-small-16px.svg" width="24" height="24" alt="24px">
+        <span>24px</span>
+      </div>
+      <div class="ladder-item">
+        <img src="../logo/svg/neuronest-symbol-small-16px.svg" width="16" height="16" alt="16px">
+        <span>16px</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. IN-CONTEXT APPLICATIONS -->
+  <div class="section-title">In-Context Application Mockups</div>
+  <div class="mockup-grid">
+    <div class="mockup-box">
+      <div class="card-label">iOS App Icon</div>
+      <div class="icon-preview-ios">
+        <img src="../app-icons/app-icon-ios.svg" alt="iOS Icon">
+      </div>
+      <div style="font-size: 12px; font-weight: 600; color: #FFF;">NeuroNest</div>
+      <div style="font-size: 11px; color: var(--text-muted);">iOS Home Screen</div>
+    </div>
+
+    <div class="mockup-box">
+      <div class="card-label">Android Adaptive Icon</div>
+      <div class="icon-preview-android">
+        <img src="../app-icons/app-icon-android.svg" alt="Android Icon">
+      </div>
+      <div style="font-size: 12px; font-weight: 600; color: #FFF;">NeuroNest</div>
+      <div style="font-size: 11px; color: var(--text-muted);">Android Launcher</div>
+    </div>
+
+    <div class="mockup-box" style="grid-column: span 2;">
+      <div class="card-label">Browser Tab Favicon (Adaptive SVG)</div>
+      <div class="browser-tab-preview">
+        <img src="../favicons/favicon.svg" alt="Favicon">
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">NeuroNest — Magic Scheduler &amp; Focus Sessions</span>
+      </div>
+      <div style="text-align: left; font-size: 11px; color: var(--text-muted); margin-top: 14px;">
+        ✔ Automatically switches fill based on user's system dark/light mode preference.
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. PALETTE SPECIFICATION -->
+  <div class="section-title">Official Color Palette</div>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background: #0F172A;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Deep Obsidian</div>
+        <div class="swatch-hex">#0F172A</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #0D9488;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Luminous Teal</div>
+        <div class="swatch-hex">#0D9488</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #14B8A6;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Mint Glow</div>
+        <div class="swatch-hex">#14B8A6</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #2DD4BF;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Electric Seafoam</div>
+        <div class="swatch-hex">#2DD4BF</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name" style="color: #FFF;">Crisp Slate</div>
+        <div class="swatch-hex">#F8FAFC</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
