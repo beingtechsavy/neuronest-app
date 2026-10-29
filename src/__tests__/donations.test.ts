@@ -49,4 +49,10 @@ describe('donation amount validation', () => {
     expect(isValidDonationAmount(500.5)).toBe(false);
     expect(isValidDonationAmount(50)).toBe(false);
   });
+
+  it('external donation link fallback is valid', () => {
+    const defaultUrl = 'https://buymeacoffee.com/neuronest';
+    const fallback = process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL || defaultUrl;
+    expect(fallback).toMatch(/^https:\/\/buymeacoffee\.com\//);
+  });
 });

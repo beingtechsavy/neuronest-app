@@ -84,7 +84,7 @@ export default function SupportersWall() {
         </ul>
       )}
       <p className="mt-3 text-xs text-[#6E747B]">
-        Want your entry removed or renamed? Email{' '}
+        Supported via Buy Me a Coffee or want your entry updated or removed? Email{' '}
         <a href="mailto:support@neuronest.work" className="text-[#5EEAD4] underline underline-offset-4">
           support@neuronest.work
         </a>

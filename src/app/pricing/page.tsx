@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Check, Clock, Heart, Loader2, Sparkles } from 'lucide-react';
+import { Check, Clock, Coffee, ExternalLink, Heart, Loader2, Sparkles, Zap } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { trackEvent } from '@/lib/rescue/rescueAnalytics';
 import { MarketingShell } from '@/components/MarketingShell';
 import SupportersWall from '@/components/SupportersWall';
 import { Button, Card, CardInset, buttonClass, Input, fieldClass } from '@/components/ui';
+
+const BUY_ME_A_COFFEE_URL =
+  process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL || 'https://buymeacoffee.com/neuronest';
 
 declare global {
   interface Window { Razorpay?: new (options: Record<string, unknown>) => { open: () => void }; }
@@ -275,96 +278,170 @@ export default function PricingPage() {
       {/* ── Support box ───────────────────────────────────────────────────── */}
       <section id="support" aria-label="Support NeuroNest" className="mt-10">
         <Card className="p-6 sm:p-7">
-          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <Heart size={18} className="text-[#2DD4BF]" aria-hidden="true" />
-            Support NeuroNest
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#949BA4]">
-            If a first action got you unstuck, you can pay that forward — any
-            amount, no subscription. Your support keeps the Rescue line free for
-            people who can&rsquo;t pay right now, and 100% of it goes toward hosting
-            and AI costs.
-          </p>
+          <header>
+            <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+              <Heart size={18} className="text-[#2DD4BF]" aria-hidden="true" />
+              Support NeuroNest
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#949BA4]">
+              If a first action got you unstuck, you can pay that forward — any
+              amount, no subscription. Your support keeps the Rescue line free for
+              people who can&rsquo;t pay right now, and 100% of it goes toward hosting
+              and AI costs.
+            </p>
+          </header>
 
-          <div
-            role="group"
-            aria-label="Donation amount"
-            className="mt-5 flex flex-wrap gap-2"
-          >
-            {donationChips.map((chip) => (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => { setDonationChip(chip.value); setCustomAmount(''); }}
-                aria-pressed={!customAmount && donationChip === chip.value}
-                className={`min-h-11 rounded-xl border px-5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2DD4BF] ${
-                  !customAmount && donationChip === chip.value
-                    ? 'border-[#2DD4BF] bg-[#0D9488]/20 text-[#F2F3F5]'
-                    : 'border-[#3F4147] bg-[#1E1F22] text-[#949BA4] hover:text-[#F2F3F5]'
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={1000}
-              step={1}
-              placeholder="Custom ($)"
-              aria-label="Custom donation amount in dollars"
-              value={customAmount}
-              onChange={(event) => setCustomAmount(event.target.value)}
-              className="w-36"
-            />
-          </div>
+          {/* ── Option 1: 1-Click Fast Support (Frictionless for ADHD brains) ── */}
+          <div className="mt-6 rounded-xl border border-[#F59E0B]/30 bg-gradient-to-br from-[#F59E0B]/10 via-[#1E1F22] to-[#1E1F22] p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#F59E0B]/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#FBBF24]">
+                  <Zap size={12} aria-hidden="true" />
+                  1-Click Fast Support · Zero Friction
+                </div>
+                <h3 className="mt-2 text-base font-bold text-[#F2F3F5] sm:text-lg">
+                  Buy Us a Coffee
+                </h3>
+                <p className="mt-1 max-w-md text-xs sm:text-sm leading-relaxed text-[#949BA4]">
+                  No typing 16-digit cards, CVVs, or signing in. 1-tap support via your phone or browser wallet.
+                </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Input
-              type="text"
-              maxLength={40}
-              placeholder="Name on the wall (optional)"
-              aria-label="Display name for the Supporters Wall"
-              value={donationAnon ? '' : donationName}
-              onChange={(event) => setDonationName(event.target.value)}
-              disabled={donationAnon}
-            />
-            <Input
-              type="text"
-              maxLength={200}
-              placeholder="One-line message (optional)"
-              aria-label="Optional message for the Supporters Wall"
-              value={donationMessage}
-              onChange={(event) => setDonationMessage(event.target.value)}
-            />
-          </div>
+                {/* Badges for 1-tap payment rails */}
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-[#DBDEE1]">
+                  <span className="rounded-md border border-[#3F4147] bg-[#2B2D31] px-2 py-0.5">
+                     Apple Pay
+                  </span>
+                  <span className="rounded-md border border-[#3F4147] bg-[#2B2D31] px-2 py-0.5">
+                    G Pay
+                  </span>
+                  <span className="rounded-md border border-[#3F4147] bg-[#2B2D31] px-2 py-0.5">
+                    PayPal
+                  </span>
+                  <span className="rounded-md border border-[#3F4147] bg-[#2B2D31] px-2 py-0.5">
+                    Cards worldwide
+                  </span>
+                </div>
+              </div>
 
-          <label className="mt-3 inline-flex cursor-pointer items-start gap-2.5 text-sm text-[#949BA4]">
-            <input
-              type="checkbox"
-              checked={donationAnon}
-              onChange={(event) => setDonationAnon(event.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#3F4147] bg-[#1E1F22] accent-[#0D9488]"
-            />
-            <span>Show me as Anonymous on the Supporters Wall</span>
-          </label>
+              <div className="shrink-0">
+                <a
+                  href={BUY_ME_A_COFFEE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent({ event: 'donation_external_clicked' })}
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-[#F59E0B] px-5 py-3 font-semibold text-[#18191C] transition-colors hover:bg-[#FBBF24] active:bg-[#D97706] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1E1F22] shadow-lg shadow-amber-950/20"
+                >
+                  <Coffee size={18} aria-hidden="true" />
+                  <span>Support on Buy Me a Coffee</span>
+                  <ExternalLink size={15} aria-hidden="true" className="opacity-75" />
+                </a>
+              </div>
+            </div>
 
-          <div className="mt-5">
-            <Button size="lg" onClick={startDonation} disabled={donating}>
-              {donating && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
-              {donating ? 'Opening checkout…' : 'Support NeuroNest'}
-            </Button>
-            <p className="mt-3 text-xs text-[#6E747B]">
-              One-time payment in USD via Razorpay (cards work worldwide). Donations
-              are voluntary support, not a subscription — no account changes, no
-              tax-deductible receipt.
+            <p className="mt-3 text-xs text-[#949BA4]">
+              Leave a note or your name on Buy Me a Coffee — we feature BMC supporters on our Supporters Wall below too! 💛
             </p>
           </div>
 
-          {message && (
-            <p role="status" className="mt-4 text-sm text-[#DBDEE1]">{message}</p>
-          )}
+          {/* ── Divider ── */}
+          <div className="relative my-7 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#3F4147]" />
+            </div>
+            <div className="relative bg-[#2B2D31] px-3 text-xs uppercase tracking-wider text-[#949BA4]">
+              Or donate directly in-app
+            </div>
+          </div>
+
+          {/* ── Option 2: Direct In-App Donation (Razorpay) ── */}
+          <div>
+            <h3 className="text-sm font-semibold text-[#F2F3F5]">
+              Direct In-App Donation (Credit / Debit Cards Worldwide)
+            </h3>
+            <p className="mt-1 text-xs text-[#949BA4]">
+              Pick an amount and enter your display name to appear immediately on the Supporters Wall.
+            </p>
+
+            <div
+              role="group"
+              aria-label="Donation amount"
+              className="mt-4 flex flex-wrap gap-2"
+            >
+              {donationChips.map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => { setDonationChip(chip.value); setCustomAmount(''); }}
+                  aria-pressed={!customAmount && donationChip === chip.value}
+                  className={`min-h-11 rounded-xl border px-5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2DD4BF] ${
+                    !customAmount && donationChip === chip.value
+                      ? 'border-[#2DD4BF] bg-[#0D9488]/20 text-[#F2F3F5]'
+                      : 'border-[#3F4147] bg-[#1E1F22] text-[#949BA4] hover:text-[#F2F3F5]'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={1000}
+                step={1}
+                placeholder="Custom ($)"
+                aria-label="Custom donation amount in dollars"
+                value={customAmount}
+                onChange={(event) => setCustomAmount(event.target.value)}
+                className="w-36"
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Input
+                type="text"
+                maxLength={40}
+                placeholder="Name on the wall (optional)"
+                aria-label="Display name for the Supporters Wall"
+                value={donationAnon ? '' : donationName}
+                onChange={(event) => setDonationName(event.target.value)}
+                disabled={donationAnon}
+              />
+              <Input
+                type="text"
+                maxLength={200}
+                placeholder="One-line message (optional)"
+                aria-label="Optional message for the Supporters Wall"
+                value={donationMessage}
+                onChange={(event) => setDonationMessage(event.target.value)}
+              />
+            </div>
+
+            <label className="mt-3 inline-flex cursor-pointer items-start gap-2.5 text-sm text-[#949BA4]">
+              <input
+                type="checkbox"
+                checked={donationAnon}
+                onChange={(event) => setDonationAnon(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#3F4147] bg-[#1E1F22] accent-[#0D9488]"
+              />
+              <span>Show me as Anonymous on the Supporters Wall</span>
+            </label>
+
+            <div className="mt-5">
+              <Button size="lg" onClick={startDonation} disabled={donating}>
+                {donating && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
+                {donating ? 'Opening checkout…' : 'Donate in-app with Card'}
+              </Button>
+              <p className="mt-3 text-xs text-[#6E747B]">
+                One-time payment in USD via Razorpay (cards work worldwide). Donations
+                are voluntary support, not a subscription — no account changes, no
+                tax-deductible receipt.
+              </p>
+            </div>
+
+            {message && (
+              <p role="status" className="mt-4 text-sm text-[#DBDEE1]">{message}</p>
+            )}
+          </div>
         </Card>
       </section>
 
