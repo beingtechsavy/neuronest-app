@@ -4,7 +4,11 @@ import React, { useState } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { RescueAction } from '@/types/rescue';
+import { trackEvent } from '@/lib/rescue/rescueAnalytics';
 import { Button, Card, CardInset, IconBadge, Textarea } from '@/components/ui';
+
+const BUY_ME_A_COFFEE_URL =
+  process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL || 'https://buymeacoffee.com/neuronest';
 
 interface CompletionScreenProps {
   action: RescueAction;
@@ -120,6 +124,20 @@ export default function CompletionScreen({
             I&apos;m done for now
           </Button>
         </div>
+
+        <p className="mt-6 text-xs text-[#6E747B]">
+          Did this get you unstuck?{' '}
+          <a
+            href={BUY_ME_A_COFFEE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent({ event: 'donation_external_clicked' })}
+            className="text-[#949BA4] underline underline-offset-4 transition-colors hover:text-[#2DD4BF]"
+          >
+            Buy us a coffee
+          </a>{' '}
+          to keep the Rescue line free.
+        </p>
       </Card>
     </div>
   );
