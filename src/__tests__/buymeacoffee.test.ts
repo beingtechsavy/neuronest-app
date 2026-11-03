@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import crypto from 'crypto';
-import { parseBmcDonation, verifyBmcWebhookSignature } from '@/lib/payments/buymeacoffee';
+import { parseBmcDonation, redactBmcPayload, verifyBmcWebhookSignature } from '@/lib/payments/buymeacoffee';
 
 describe('Buy Me a Coffee Webhook verification', () => {
   const secret = 'test_bmc_secret_xyz123';
@@ -144,5 +144,25 @@ describe('Buy Me a Coffee payload parser', () => {
 
     const parsed = parseBmcDonation(payload);
     expect(parsed.liveMode).toBe(false);
+  });
+});
+
+describe('Buy Me a Coffee payload redaction', () => {
+  it('removes donor email and supporter id before storage', () => {
+    const redacted = redactBmcPayload({
+      event_id: 7,
+      type: 'donation.created',
+      data: {
+        supporter_name: 'Alex',
+        supporter_email: 'alex@example.com',
+        supporter_id: 42,
+        amount: 5,
+      },
+    });
+
+    expect(redacted.data.supporter_email).toBeUndefined();
+    expect(redacted.data.supporter_id).toBeUndefined();
+    expect(redacted.data.supporter_name).toBe('Alex');
+    expect(redacted.data.amount).toBe(5);
   });
 });

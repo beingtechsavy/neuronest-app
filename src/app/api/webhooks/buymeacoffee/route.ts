@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/payments/entitlements';
-import { parseBmcDonation, verifyBmcWebhookSignature } from '@/lib/payments/buymeacoffee';
+import { parseBmcDonation, redactBmcPayload, verifyBmcWebhookSignature } from '@/lib/payments/buymeacoffee';
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       provider: 'buymeacoffee',
       provider_event_id: providerEventId,
       event_type: eventType,
-      payload: body,
+      payload: redactBmcPayload(body),
     },
     { onConflict: 'provider_event_id' },
   );

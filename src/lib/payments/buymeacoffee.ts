@@ -93,3 +93,16 @@ export function parseBmcDonation(body: Record<string, any>): ParsedBmcDonation {
     currency,
   };
 }
+
+/**
+ * Strip donor PII before the raw payload is persisted in `payment_events`.
+ * Only the fields needed to reconstruct the wall entry are kept; the wall itself
+ * stores no email or supporter identifier by design.
+ */
+export function redactBmcPayload(body: Record<string, any>): Record<string, any> {
+  const source = body.data && typeof body.data === 'object' ? body.data : {};
+  const data: Record<string, any> = { ...source };
+  delete data.supporter_email;
+  delete data.supporter_id;
+  return { ...body, data };
+}

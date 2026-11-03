@@ -11,6 +11,12 @@ alter table public.supporters alter column currency set default 'INR';
 -- 2) Wall ordering index (declared in 20261029 but absent from prod).
 create index if not exists supporters_wall_order on public.supporters(created_at desc);
 
+-- 2b) 20261029 created policy supporters_public_read but never enabled RLS on the
+-- table, so the policy was inert and the wall was readable through the table grant.
+-- Enabling RLS makes the policy the actual gate; select stays public, writes stay
+-- service-role only. Idempotent.
+alter table public.supporters enable row level security;
+
 -- 3) Deduplication fix.
 -- Before this, a Razorpay webhook retry that arrived before processed_at was set
 -- inserted a second wall row: `supporters` has no payment_id column (privacy by
