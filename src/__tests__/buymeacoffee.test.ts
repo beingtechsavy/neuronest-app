@@ -80,16 +80,44 @@ describe('Buy Me a Coffee payload parser', () => {
       event: 'donation.created',
       data: {
         payer_name: 'Jordan',
-        support_coffee_price: '3.00',
-        support_coffees: 3,
-        support_currency: 'eur',
+        coffee_price: '3.00',
+        coffee_count: 3,
+        currency: 'eur',
       },
     };
 
     const parsed = parseBmcDonation(payload);
     expect(parsed.displayName).toBe('Jordan');
-    expect(parsed.amountCents).toBe(900); // 3 * 3 = $9 = 900 cents
+    expect(parsed.amountCents).toBe(900); // 3 coffees * 3.00 = 9.00 = 900 cents
     expect(parsed.currency).toBe('EUR');
+  });
+
+  it('treats large amounts as major units, not cents', () => {
+    // Spec: amount is a decimal in major units. 500 must mean 500.00, not 500 cents.
+    const parsed = parseBmcDonation({
+      event_id: 103,
+      type: 'donation.created',
+      data: { supporter_name: 'Big Donor', amount: 500.0 },
+    });
+    expect(parsed.amountCents).toBe(50000);
+  });
+
+  it('never publishes the system summary in place of the donor note', () => {
+    const parsed = parseBmcDonation({
+      event_id: 104,
+      type: 'donation.created',
+      data: { supporter_name: 'Alex', amount: 5, message: 'Alex bought 1 coffee' },
+    });
+    expect(parsed.message).toBeNull();
+  });
+
+  it('drops the note when the donor hid it', () => {
+    const parsed = parseBmcDonation({
+      event_id: 105,
+      type: 'donation.created',
+      data: { supporter_name: 'Alex', amount: 5, support_note: 'private', note_hidden: 'true' },
+    });
+    expect(parsed.message).toBeNull();
   });
 
   it('clamps display name to 40 characters and message to 200 characters', () => {

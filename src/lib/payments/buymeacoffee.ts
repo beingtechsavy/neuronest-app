@@ -33,15 +33,17 @@ export interface ParsedBmcDonation {
 
 /**
  * Normalize and sanitize Buy Me a Coffee webhook payload for the Supporters Wall.
+ * Field names and units follow the published OpenAPI spec
+ * (bmc-webhooks-openapi.json, DonationData + SupporterFields).
  * Enforces database schema limits: display_name <= 40, message <= 200, amount 100..100000.
  */
 export function parseBmcDonation(body: Record<string, any>): ParsedBmcDonation {
   const data = (body.data && typeof body.data === 'object') ? body.data : body;
   const eventType = String(body.type || body.event || 'donation.created');
-  const eventId = String(body.event_id || body.id || data.support_id || data.transaction_id || '');
+  const eventId = String(body.event_id || body.id || data.id || data.transaction_id || '');
   const liveMode = body.live_mode !== false;
 
-  // Extract supporter name (support both webhook v1 and v2 shapes)
+  // Supporter identity (Spec: SupporterFields.supporter_name). Blank name = anonymous.
   const rawName = typeof data.supporter_name === 'string'
     ? data.supporter_name.trim()
     : typeof data.payer_name === 'string'
@@ -53,38 +55,31 @@ export function parseBmcDonation(body: Record<string, any>): ParsedBmcDonation {
   const isAnonymous = !rawName || rawName.toLowerCase() === 'anonymous' || data.is_anonymous === true;
   const displayName = isAnonymous ? 'Anonymous' : rawName.slice(0, 40);
 
-  // Extract amount in cents
-  let cents = 500;
-  const rawAmount = data.amount ?? data.total_amount ?? data.support_amount;
-  if (rawAmount !== undefined && rawAmount !== null) {
-    const num = Number(rawAmount);
-    if (!Number.isNaN(num) && num > 0) {
-      cents = num < 500 ? Math.round(num * 100) : Math.round(num);
-    }
-  } else if (data.support_coffee_price) {
-    const price = Number(data.support_coffee_price) || 5;
-    const count = Number(data.support_coffees) || 1;
-    cents = Math.round(price * count * 100);
+  // `amount` is a decimal in MAJOR units (spec example: 15.0 = $15.00), never cents.
+  // Scaling it conditionally by magnitude would turn a $500 donation into 500 cents.
+  let major = Number(data.amount ?? data.total_amount_charged ?? data.total_amount);
+  if (!Number.isFinite(major) || major <= 0) {
+    const price = Number(data.coffee_price);
+    const count = Number(data.coffee_count) || 1;
+    major = Number.isFinite(price) && price > 0 ? price * count : 5;
   }
 
-  // Clamped to database constraint range [100, 100000] (i.e. $1 to $1,000)
-  cents = Math.max(100, Math.min(100000, cents));
+  // Clamped to database constraint range [100, 100000] (i.e. 1 to 1,000 in major units).
+  const cents = Math.max(100, Math.min(100000, Math.round(major * 100)));
 
-  // Extract message note
-  const rawMessage = typeof data.support_note === 'string'
+  // `support_note` is the donor's own message. `message` is a system summary
+  // ("Alex bought 3 coffees") and must never be published to the wall.
+  const noteHidden = data.note_hidden === true || data.note_hidden === 'true';
+  const rawMessage = !noteHidden && typeof data.support_note === 'string'
     ? data.support_note.trim()
-    : typeof data.message === 'string'
-      ? data.message.trim()
-      : typeof data.note === 'string'
-        ? data.note.trim()
-        : '';
+    : '';
   const message = rawMessage ? rawMessage.slice(0, 200) : null;
 
   // Extract currency
-  const currency = typeof data.support_currency === 'string'
-    ? data.support_currency.toUpperCase().slice(0, 5)
-    : typeof data.currency === 'string'
-      ? data.currency.toUpperCase().slice(0, 5)
+  const currency = typeof data.currency === 'string'
+    ? data.currency.toUpperCase().slice(0, 5)
+    : typeof data.support_currency === 'string'
+      ? data.support_currency.toUpperCase().slice(0, 5)
       : 'USD';
 
   return {

@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true, test: true });
   }
 
-  // Only sync supported donation creation events to the Supporters Wall
-  const isDonation = eventType === 'donation.created' || eventType === 'one_time_support';
+  // Only sync donation creation events to the Supporters Wall.
+  // Supported BMC event types are documented at
+  // help.buymeacoffee.com/en/articles/15743173; `donation.refunded` is intentionally
+  // not handled here because `supporters` stores no payment identifier to match on.
+  const isDonation = eventType === 'donation.created';
   if (!isDonation) {
     return NextResponse.json({ received: true, ignored: true, eventType });
   }
