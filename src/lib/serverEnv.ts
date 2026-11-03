@@ -48,6 +48,8 @@ export const serverEnv = {
   RAZORPAY_PRO_PLAN_ID_YEARLY: process.env.RAZORPAY_PRO_PLAN_ID_YEARLY,
   RAZORPAY_PRO_MONTHLY_PAYMENT_LINK: process.env.RAZORPAY_PRO_MONTHLY_PAYMENT_LINK,
   RAZORPAY_PRO_YEARLY_PAYMENT_LINK: process.env.RAZORPAY_PRO_YEARLY_PAYMENT_LINK,
+  // Optional; required only if Buy Me a Coffee webhook auto-sync is enabled in production.
+  BUYMEACOFFEE_WEBHOOK_SECRET: process.env.BUYMEACOFFEE_WEBHOOK_SECRET,
 } as const;
 
 export type ServerEnv = typeof serverEnv;

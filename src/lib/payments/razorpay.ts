@@ -52,8 +52,7 @@ export async function createRazorpayOrder(userId: string, billingCycle: BillingC
 
 /**
  * One-time order for the Support NeuroNest donation flow. Amounts are validated
- * upstream (donations.ts) before reaching Razorpay; currency is USD because the
- * international donor base is US/EU (requires Razorpay international activation).
+ * upstream (donations.ts) before reaching Razorpay; currency defaults to INR.
  */
 export async function createDonationOrder(
   userId: string,

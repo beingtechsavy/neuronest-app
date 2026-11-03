@@ -17,7 +17,7 @@ declare global {
 }
 
 type BillingCycle = 'monthly' | 'yearly';
-type DonationChips = 300 | 500 | 1000;
+type DonationChips = 10000 | 25000 | 50000;
 
 async function loadRazorpay(): Promise<boolean> {
   if (window.Razorpay) return true;
@@ -49,10 +49,11 @@ const proFeatures = [
 ];
 
 const donationChips: { value: DonationChips; label: string }[] = [
-  { value: 300, label: '$3' },
-  { value: 500, label: '$5' },
-  { value: 1000, label: '$10' },
+  { value: 10000, label: '₹100' },
+  { value: 25000, label: '₹250' },
+  { value: 50000, label: '₹500' },
 ];
+const DONATION_SYMBOL = '₹';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
@@ -60,7 +61,7 @@ export default function PricingPage() {
   const [waitlistState, setWaitlistState] = useState<'idle' | 'loading' | 'joined'>('idle');
   const [waitlistMessage, setWaitlistMessage] = useState<string | null>(null);
   const [donating, setDonating] = useState(false);
-  const [donationChip, setDonationChip] = useState<DonationChips>(500);
+  const [donationChip, setDonationChip] = useState<DonationChips>(25000);
   const [customAmount, setCustomAmount] = useState('');
   const [donationName, setDonationName] = useState('');
   const [donationAnon, setDonationAnon] = useState(false);
@@ -120,7 +121,7 @@ export default function PricingPage() {
       const custom = Number.parseInt(customAmount, 10);
       const selected = customAmount.trim() !== '' && Number.isFinite(custom) ? custom * 100 : donationChip;
       if (!chips.includes(selected as DonationChips) && (selected < 100 || selected > 100000)) {
-        throw new Error('Donations must be between $1 and $1,000');
+        throw new Error(`Donations must be between ${DONATION_SYMBOL}1 and ${DONATION_SYMBOL}1,000`);
       }
       trackEvent({ event: 'donation_started', amountCents: selected });
       const response = await fetch('/api/payments/donate/order', {
@@ -178,8 +179,8 @@ export default function PricingPage() {
         className="mb-6 inline-flex rounded-xl border border-[#3F4147] bg-[#1E1F22] p-1"
       >
         {([
-          { value: 'monthly' as const, label: 'Monthly · $19 (planned)' },
-          { value: 'yearly' as const, label: 'Yearly · $190 (planned)' },
+          { value: 'monthly' as const, label: 'Monthly · ₹1,599 (planned)' },
+          { value: 'yearly' as const, label: 'Yearly · ₹15,999 (planned)' },
         ]).map((option) => (
           <button
             key={option.value}
@@ -202,7 +203,7 @@ export default function PricingPage() {
           <h2 className="text-lg font-bold tracking-tight">Free</h2>
           <p className="mt-1 text-sm text-[#949BA4]">Start without an account.</p>
           <p className="mt-5 text-3xl font-bold tracking-tight tabular-nums">
-            $0
+            ₹0
             <span className="text-base font-normal text-[#949BA4]"> / month</span>
           </p>
           <ul className="mb-6 mt-6 flex-1 space-y-3">
@@ -226,7 +227,7 @@ export default function PricingPage() {
           <h2 className="text-lg font-bold tracking-tight">Pro</h2>
           <p className="mt-1 text-sm text-[#949BA4]">Founding members get first access when international checkout opens.</p>
           <p className="mt-5 text-3xl font-bold tracking-tight tabular-nums">
-            {billingCycle === 'monthly' ? '$19' : '$190'}
+            {billingCycle === 'monthly' ? '₹1,599' : '₹15,999'}
             <span className="text-base font-normal text-[#949BA4]">
               {' '}/ {billingCycle === 'monthly' ? 'month' : 'year'}
             </span>
@@ -339,7 +340,7 @@ export default function PricingPage() {
             </div>
 
             <p className="mt-3 text-xs text-[#949BA4]">
-              Leave a note or your name on Buy Me a Coffee — we feature BMC supporters on our Supporters Wall below too! 💛
+              1-tap support via Apple Pay / G Pay / PayPal. We pull BMC supporters onto the Wall in batches, so it may take a few hours to appear. 💛
             </p>
           </div>
 
@@ -388,8 +389,8 @@ export default function PricingPage() {
                 min={1}
                 max={1000}
                 step={1}
-                placeholder="Custom ($)"
-                aria-label="Custom donation amount in dollars"
+                placeholder="Custom"
+                aria-label="Custom donation amount"
                 value={customAmount}
                 onChange={(event) => setCustomAmount(event.target.value)}
                 className="w-36"
@@ -432,9 +433,9 @@ export default function PricingPage() {
                 {donating ? 'Opening checkout…' : 'Donate in-app with Card'}
               </Button>
               <p className="mt-3 text-xs text-[#6E747B]">
-                One-time payment in USD via Razorpay (cards work worldwide). Donations
-                are voluntary support, not a subscription — no account changes, no
-                tax-deductible receipt.
+                One-time payment via Razorpay (cards work worldwide). Currency is set to
+                INR by default. Donations are voluntary support, not a subscription — no
+                account changes, no tax-deductible receipt.
               </p>
             </div>
 
