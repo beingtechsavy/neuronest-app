@@ -51,7 +51,10 @@ const getLocalDateString = (date: Date): string => {
  * project colour inline.
  */
 const BLOCK_CLASS: Record<string, string> = {
-  sleep: 'z-[1] pointer-events-none overflow-hidden bg-[#2B2D31]',
+  // Sleep used to be filled with #2B2D31 — the exact colour of the panel behind
+  // it — so it rendered as nothing. Indigo reads as protected time and stays
+  // visible on both halves of a block that crosses midnight.
+  sleep: 'z-[1] pointer-events-none overflow-hidden border-l-2 border-[#6366F1]/60 bg-[#6366F1]/[0.14] px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#A5B4FC]',
   meal: 'z-[1] pointer-events-none overflow-hidden border-l-2 border-[#E8A33D] bg-[#E8A33D]/20 px-1 py-0.5 text-xs text-[#F0B232]',
   appointment: 'z-[2] cursor-pointer overflow-hidden rounded-lg border-l-2 border-[#23A55A] bg-[#23A55A]/20 px-1 py-0.5 text-xs text-[#6EE7A8]',
   task: 'px-1 py-0.5 text-xs',

@@ -10,7 +10,6 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragMoveEvent,
-  DragOverEvent,
 } from '@dnd-kit/core';
 import { supabase } from '@/lib/supabaseClient';
 import { useUser } from '@supabase/auth-helpers-react';
@@ -118,18 +117,10 @@ export default function CalendarPage() {
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleMessage, setScheduleMessage] = useState('');
   const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null);
-  const [draggedTaskBackup, setDraggedTaskBackup] = useState<CalendarTask | null>(null);
-  const [pendingTaskMove, setPendingTaskMove] = useState<{
-    task: CalendarTask;
-    targetDate: string;
-    targetTime: number;
-  } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'up' | 'down' | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const navigatedInDragRef = useRef(false);
-  const isOverNavEdge = useRef<'left' | 'right' | null>(null);
 
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState<(CalendarTask & { startTime: Date; endTime: Date }) | null>(null);
@@ -253,78 +244,6 @@ export default function CalendarPage() {
       fetchData();
     }
   }, [currentDate, view, fetchData, user?.id]);
-
-  useEffect(() => {
-    if (pendingTaskMove && !loading && !isNavigating) {
-      const executePendingMove = async () => {
-        const { task, targetDate, targetTime } = pendingTaskMove;
-        const duration = task.effort_units || preferences?.session_length || 60;
-
-        try {
-          const { error } = await supabase.from('tasks').update({
-            scheduled_date: targetDate,
-            start_time: minutesToTimeString(targetTime),
-            end_time: minutesToTimeString(targetTime + duration),
-            task_status: 'scheduled',
-          }).eq('task_id', task.task_id);
-
-          if (error) {
-            console.error('❌ PENDING MOVE - Database update failed:', error);
-          } else {
-            // Refresh data to show the moved task
-            await fetchData();
-          }
-        } catch (error) {
-          console.error('❌ PENDING MOVE - Exception:', error);
-        }
-
-        // Clear pending move
-        setPendingTaskMove(null);
-        setDraggedTask(null);
-        setDraggedTaskBackup(null);
-      };
-
-      executePendingMove();
-    }
-  }, [pendingTaskMove, loading, isNavigating, preferences, fetchData]);
-
-  useEffect(() => {
-    const handleRightClick = (event: MouseEvent) => {
-      if (draggedTask && isOverNavEdge.current && !navigatedInDragRef.current) {
-        event.preventDefault();
-        const direction = isOverNavEdge.current === 'right' ? 'next' : 'prev';
-        navigatedInDragRef.current = true;
-
-        // Calculate target date for the pending move
-        if (!currentDate) return;
-        const targetDate = new Date(currentDate);
-        targetDate.setDate(targetDate.getDate() + (direction === 'next' ? 7 : -7));
-        const targetDateString = getLocalDateString(targetDate);
-
-        // Store pending move information
-        setPendingTaskMove({
-          task: draggedTaskBackup || draggedTask,
-          targetDate: targetDateString,
-          targetTime: timeStringToMinutes(draggedTask.start_time || '09:00:00')
-        });
-
-        // Navigate to new week
-        setCurrentDate(prevDate => {
-          if (!prevDate) return null;
-          const newDate = new Date(prevDate);
-          newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-          return newDate;
-        });
-
-        // Force immediate data refresh for the new week
-        setTimeout(() => {
-          fetchData(true); // true = isNavigation
-        }, 100);
-      }
-    };
-    window.addEventListener('contextmenu', handleRightClick);
-    return () => { window.removeEventListener('contextmenu', handleRightClick); };
-  }, [draggedTask, draggedTaskBackup, currentDate, fetchData]);
 
   // --- CORE LOGIC & HANDLERS ---
   const scheduleTasks = async () => {
@@ -467,34 +386,21 @@ export default function CalendarPage() {
   }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
-    navigatedInDragRef.current = false;
     const task = Object.values(tasks).flat().find(t => t.task_id == event.active.id);
-    if (task) {
-      setDraggedTask(task);
-      setDraggedTaskBackup(task); // Backup task data in case it gets lost during navigation
-    }
+    if (task) setDraggedTask(task);
     animationFrameRef.current = requestAnimationFrame(scrollLoop);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (over?.id === 'navigate-next') {
-      isOverNavEdge.current = 'right';
-    } else if (over?.id === 'navigate-prev') {
-      isOverNavEdge.current = 'left';
-    } else {
-      isOverNavEdge.current = null;
-      navigatedInDragRef.current = false;
-    }
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
     if (!scrollContainerRef.current) return;
-    const { clientY } = event.activatorEvent as MouseEvent;
+    // activatorEvent is where the drag began. The live pointer is that plus the
+    // accumulated delta; without it the auto-scroll keys off a fixed position.
+    const { clientY } = event.activatorEvent as PointerEvent;
+    const pointerY = clientY + event.delta.y;
     const { top, bottom } = scrollContainerRef.current.getBoundingClientRect();
 
-    if (clientY < top + SCROLL_THRESHOLD) { scrollDirectionRef.current = 'up'; }
-    else if (clientY > bottom - SCROLL_THRESHOLD) { scrollDirectionRef.current = 'down'; }
+    if (pointerY < top + SCROLL_THRESHOLD) { scrollDirectionRef.current = 'up'; }
+    else if (pointerY > bottom - SCROLL_THRESHOLD) { scrollDirectionRef.current = 'down'; }
     else { scrollDirectionRef.current = null; }
   };
 
@@ -502,41 +408,33 @@ export default function CalendarPage() {
     setDraggedTask(null);
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); }
     scrollDirectionRef.current = null;
-    isOverNavEdge.current = null;
-
-    // Store navigation state before resetting
-    const wasCrossWeekDrop = navigatedInDragRef.current;
-
-    // If this was a cross-week drop, the pending move system will handle it
-    if (wasCrossWeekDrop) {
-      // Reset navigation flag after drag completes
-      setTimeout(() => {
-        navigatedInDragRef.current = false;
-      }, 100);
-      return;
-    }
-
-    // Clear any pending moves since this is a normal drop
-    setPendingTaskMove(null);
-    setDraggedTaskBackup(null);
-
-    // Reset navigation flag after drag completes
-    setTimeout(() => {
-      navigatedInDragRef.current = false;
-    }, 100);
 
     const { active, over, delta } = event;
+    const task = active.data.current?.task as CalendarTask | undefined;
+    if (!over || !task) return;
 
-    if (!over || !active.data.current?.task || !preferences) {
+    const overId = String(over.id);
+
+    // Edge drop: same weekday, one week over, same time of day. The view then
+    // follows the task. Dropping on a day column is handled below.
+    if (overId === 'navigate-next' || overId === 'navigate-prev') {
+      const target = new Date(`${task.scheduled_date}T00:00:00`);
+      target.setDate(target.getDate() + (overId === 'navigate-next' ? 7 : -7));
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ scheduled_date: getLocalDateString(target) })
+        .eq('task_id', task.task_id);
+
+      if (error) {
+        console.error('❌ MOVE WEEK - Database update failed:', error);
+        return;
+      }
+      setCurrentDate(target);
       return;
     }
 
-    if (String(over.id).startsWith('navigate-')) {
-      return;
-    }
-
-    const task = active.data.current.task as CalendarTask;
-    if (!task.start_time) {
+    if (!preferences || !task.start_time) {
       return;
     }
 
@@ -776,11 +674,9 @@ export default function CalendarPage() {
         currentIsCritical={editTask?.is_critical}
       />
 
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove} onDragOver={handleDragOver}>
-        {/* --- CHANGE IS HERE --- */}
-        {/* The outer div and Sidebar component have been removed */}
-        <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:flex-row">
-          <div className="flex flex-grow flex-col">
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragMove={handleDragMove}>
+        <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 xl:flex-row">
+          <div className="flex min-w-0 flex-grow flex-col">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-tight text-[#F2F3F5]">
@@ -836,7 +732,7 @@ export default function CalendarPage() {
                 </div>
               </div>
             </div>
-            <div ref={scrollContainerRef} className="relative flex-grow overflow-auto rounded-2xl border border-[#383A40] bg-[#2B2D31] p-4 shadow-xl shadow-black/20">
+            <div ref={scrollContainerRef} className="relative min-w-0 flex-grow overflow-y-auto overflow-x-hidden rounded-2xl border border-[#383A40] bg-[#2B2D31] p-4 shadow-xl shadow-black/20">
               {isNavigating && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#1E1F22]/50" role="status">
                   <Loader2
@@ -892,7 +788,7 @@ export default function CalendarPage() {
               ))}
             </div>
           </div>
-          <div className="w-full lg:max-w-sm lg:flex-shrink-0 flex flex-col">
+          <div className="flex w-full min-w-0 flex-col xl:max-w-sm xl:flex-shrink-0">
             <UnscheduledTasks tasks={unscheduledTasks} onSchedule={scheduleTasks} onTaskAdded={() => fetchData()} isScheduling={isScheduling} scheduleMessage={scheduleMessage} />
           </div>
         </main>

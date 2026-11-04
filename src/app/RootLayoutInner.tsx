@@ -60,7 +60,11 @@ export default function RootLayoutInner({ children }: { children: ReactNode }) {
                 onToggleCollapsed={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
                 onCloseMobile={() => setIsMobileSidebarOpen(false)}
               />
-              <div className={`min-w-0 w-full transition-[margin-left] duration-200 ease-in-out ${isSidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-60'}`}>
+              {/* `w-full` here plus a left margin made the document 240px wider
+                  than the viewport, which is where the app-wide horizontal
+                  scrollbar came from. An auto width already fills whatever the
+                  fixed sidebar leaves. */}
+              <div className={`min-w-0 transition-[margin-left] duration-200 ease-in-out ${isSidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-60'}`}>
                 <Topbar onOpenMenu={() => setIsMobileSidebarOpen(true)} />
                 <main className="min-w-0">
                   {children}
