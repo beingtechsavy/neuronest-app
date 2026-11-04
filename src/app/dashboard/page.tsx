@@ -10,6 +10,7 @@ import SetUsernameModal from '@/components/SetUsernameModal';
 import FloatingHint from '@/components/FloatingHint';
 import RecentAIChatSection from '@/components/dashboard/RecentAIChatSection';
 import TodayTasksSection from '@/components/dashboard/TodayTasksSection';
+import GettingStartedCard from '@/components/dashboard/GettingStartedCard';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { useConfirm } from '@/hooks/useConfirm';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -209,6 +210,8 @@ export default function Dashboard() {
             </Button>
           }
         />
+
+        <GettingStartedCard />
 
         {/* Today / recent AI — two concerns, so two cards rather than one
             card split by a hairline divider. */}

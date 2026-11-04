@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks, TrendingUp, Brain, Sparkles, CreditCard, Clock, LifeBuoy, ChevronDown, X } from 'lucide-react';
+import { Home, CalendarDays, ChevronLeft, ChevronRight, Settings, ListChecks, TrendingUp, Brain, Sparkles, CreditCard, Clock, LifeBuoy, ChevronDown, X, BookOpen } from 'lucide-react';
 import NeuroNestMark from '@/components/NeuroNestMark';
 
 // --- PRIMARY NAV ITEMS (Rescue-focused) ---
@@ -21,6 +21,7 @@ const moreToolsItems = [
   { label: 'Tasks', href: '/tasks', icon: <ListChecks size={18} /> },
   { label: 'Focus', href: '/focus', icon: <Brain size={18} /> },
   { label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} /> },
+  { label: 'Walkthrough', href: '/guide', icon: <BookOpen size={18} /> },
   { label: 'Pricing', href: '/pricing', icon: <CreditCard size={18} /> },
 ];
 
