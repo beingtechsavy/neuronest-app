@@ -109,8 +109,22 @@ export async function GET(request: NextRequest) {
       // Don't block login - dashboard will handle it
     }
     
-    // Give browser-local Rescue context a chance to be imported or skipped.
-    return NextResponse.redirect(`${requestUrl.origin}/rescue?resume=pending`)
+    // Land on the dashboard unless the browser flagged a rescue intent before
+    // OAuth. Only same-origin paths are honoured.
+    const rawNext = request.cookies.get('auth_next')?.value
+    let next = '/dashboard'
+    if (rawNext) {
+      try {
+        const decoded = decodeURIComponent(rawNext)
+        if (decoded.startsWith('/') && !decoded.startsWith('//')) next = decoded
+      } catch {
+        // Malformed cookie: fall back to the dashboard.
+      }
+    }
+
+    const response = NextResponse.redirect(`${requestUrl.origin}${next}`)
+    response.cookies.delete('auth_next')
+    return response
     
   } catch (error) {
     console.error('💥 Callback exception:', error)

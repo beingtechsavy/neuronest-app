@@ -18,7 +18,14 @@ export default function GoogleSignInButton({ mode, className = '' }: GoogleSignI
 
     try {
       const redirectUrl = `${window.location.origin}/auth/callback`
-      
+
+      // Post-OAuth landing target, carried in a short-lived cookie so the
+      // Supabase redirect allowlist stays exactly `/auth/callback`.
+      const fromRescue = new URLSearchParams(window.location.search).get('from') === 'rescue'
+      document.cookie = `auth_next=${encodeURIComponent(
+        fromRescue ? '/rescue?resume=pending' : '/dashboard'
+      )}; path=/; max-age=600; samesite=lax`
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

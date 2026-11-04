@@ -70,8 +70,10 @@ export default function SignupPage() {
           // Continue anyway - dashboard will handle it
         }
 
-        setMessage('Account created. Taking you to your first rescue…')
-        addTimeout(() => router.push('/rescue?resume=pending'), 1000)
+        // Only the rescue flow returns to /rescue; a normal signup lands on the dashboard.
+        const fromRescue = new URLSearchParams(window.location.search).get('from') === 'rescue'
+        setMessage(fromRescue ? 'Account created. Taking you to your first rescue…' : 'Account created. Taking you to your dashboard…')
+        addTimeout(() => router.push(fromRescue ? '/rescue?resume=pending' : '/dashboard'), 1000)
       } else if (data.user && !data.session) {
         // This shouldn't happen with email confirmation disabled, but handle it
         setMessage('Account created. Check your email to confirm, then log in.')

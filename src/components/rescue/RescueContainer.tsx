@@ -542,7 +542,7 @@ export default function RescueContainer() {
           <OptionalSave
             sessionData={state.sessionData}
             onSave={() => {
-              window.location.href = '/signup';
+              window.location.href = '/signup?from=rescue';
             }}
             onSkip={handleSkipSave}
             saving={false}
