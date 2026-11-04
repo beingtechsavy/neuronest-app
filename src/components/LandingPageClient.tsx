@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { ArrowRight, Sparkles, ShieldCheck, Timer, PlayCircle } from 'lucide-react';
@@ -19,30 +16,6 @@ import { buttonClass, Card } from '@/components/ui';
  * at a measured line length (the reading rhythm dyslexic users rely on).
  */
 export default function LandingPageClient() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) router.replace('/rescue');
-      else setLoading(false);
-    };
-    void checkAuthStatus();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div
-        className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#1E1F22] text-[#F2F3F5]"
-        aria-live="polite"
-      >
-        <NeuroNestMark size={64} className="mb-4" />
-        <span className="text-sm text-[#949BA4]">Loading NeuroNest…</span>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[100dvh] bg-[#1E1F22] text-[#F2F3F5]">
       <div className="mx-auto w-full max-w-5xl px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))] sm:px-6">
