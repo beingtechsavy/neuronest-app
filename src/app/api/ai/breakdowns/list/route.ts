@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
       .from('ai_breakdowns')
       .select('id, original_task_title, created_at, completion_rate, steps_count, subject')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(200);
 
     if (error) {
       console.error('Error fetching breakdowns:', error);

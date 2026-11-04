@@ -4,6 +4,14 @@ Every open item from the 2026-11-04 ship gate, in the order to do it.
 Phases 0–2 are the marketing blockers. Phase 3 is optional. Phase 4 must not
 block marketing. Phase 5 is written down so it stops being an open question.
 
+## Status — 2026-11-04
+
+Done: Phase 0 in full (`20261103`, `20261104_revoke_table_privileges`,
+`20261104_enable_rls_user_tables` — all applied and verified), plus Phase 1
+items 1.1–1.4 and 1.6.
+
+Remaining: 1.5 (security headers), all of Phase 2, Phase 3, Phase 4.
+
 ---
 
 ## Phase 0 — Database (do first, 5 minutes)

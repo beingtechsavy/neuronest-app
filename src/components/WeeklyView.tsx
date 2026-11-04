@@ -100,7 +100,9 @@ const StaticBlock = ({ block, className, onClick }: { block: BlockData; classNam
     const endMinutes = robustTimeToMinutes(new Date(block.end_time));
     gridStart = Math.max(1, Math.floor(startMinutes / 15) + 1);
     gridEnd = Math.max(gridStart + 1, Math.ceil(endMinutes / 15) + 1);
-  } catch { }
+  } catch {
+    // Malformed timestamps fall back to the default 1-row span. Intentional.
+  }
   return <div className={className} style={{ gridRowStart: gridStart, gridRowEnd: gridEnd }} onClick={onClick}>{block.title}</div>;
 };
 

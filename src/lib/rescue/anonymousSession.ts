@@ -150,7 +150,9 @@ export async function attachAnonymousSessionsToUser(
     try {
       const { trackEvent } = await import('./rescueAnalytics');
       trackEvent({ event: 'account_created_after_rescue' });
-    } catch {}
+    } catch {
+      // Analytics is best-effort; account creation must not fail on it.
+    }
 
     clearSessions();
     clearPendingRescueSession();
