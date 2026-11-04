@@ -1,11 +1,9 @@
 import crypto from 'node:crypto';
+import { PRO_PRICES } from './prices';
+import type { BillingCycle } from './prices';
 
-export type BillingCycle = 'monthly' | 'yearly';
-
-export const PRO_PRICES = {
-  monthly: { amount: 29900, currency: 'INR', label: '₹299/month' },
-  yearly: { amount: 249900, currency: 'INR', label: '₹2,499/year' },
-} as const;
+export { PRO_PRICES };
+export type { BillingCycle };
 
 export function verifyRazorpayWebhookSignature(rawBody: string, signature: string | null): boolean {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -52,7 +50,7 @@ export async function createRazorpayOrder(userId: string, billingCycle: BillingC
 
 /**
  * One-time order for the Support NeuroNest donation flow. Amounts are validated
- * upstream (donations.ts) before reaching Razorpay; currency defaults to INR.
+ * upstream (donations.ts) before reaching Razorpay; currency defaults to USD.
  */
 export async function createDonationOrder(
   userId: string,

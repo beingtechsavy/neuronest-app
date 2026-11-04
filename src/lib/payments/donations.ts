@@ -6,11 +6,13 @@
  * amount. Presets are cents; custom amounts must be whole units.
  */
 
-// ponytail: presets are INR-friendly defaults (₹100, ₹250, ₹500). Swap if you ever switch currency.
-export const DONATION_PRESET_AMOUNTS = [10000, 25000, 50000] as const; // ₹100, ₹250, ₹500 in cents/paise
-export const DONATION_MIN_CENTS = 100; // ₹1 / $1 minimum
-export const DONATION_MAX_CENTS = 100_000; // ₹1,000 / $1,000 cap
-export const DONATION_CURRENCY = (process.env.DONATION_CURRENCY || 'INR').toUpperCase();
+// Presets are in minor units (USD cents). The page renders its chips from this
+// list, so a preset can never disagree with what checkout would charge.
+export const DONATION_PRESET_AMOUNTS = [300, 500, 1000] as const; // $3, $5, $10
+export const DONATION_MIN_CENTS = 100; // $1 minimum
+export const DONATION_MAX_CENTS = 100_000; // $1,000 cap
+export const DONATION_SYMBOL = '$';
+export const DONATION_CURRENCY = (process.env.DONATION_CURRENCY || 'USD').toUpperCase();
 
 export type DonationAmount = { readonly cents: number } | { readonly error: string };
 

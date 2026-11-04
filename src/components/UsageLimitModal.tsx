@@ -85,7 +85,7 @@ export default function UsageLimitModal({
     
     options.push({
       name: 'Pro',
-      price: '₹299/month',
+      price: '$19/month',
       benefits: limitType === 'subjects' ? 'Unlimited projects' :
                limitType === 'ai' ? '20 AI breakdowns/day' :
                'Cloud Rescue history',

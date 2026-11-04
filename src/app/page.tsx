@@ -31,7 +31,7 @@ const structuredData = {
       applicationCategory: 'ProductivityApplication',
       operatingSystem: 'Web',
       description: 'A task-initiation tool that helps people move from stuck to started.',
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', url: 'https://www.neuronest.work/rescue' },
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', url: 'https://www.neuronest.work/rescue' },
     },
   ],
 };

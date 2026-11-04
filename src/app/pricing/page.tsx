@@ -8,6 +8,13 @@ import { trackEvent } from '@/lib/rescue/rescueAnalytics';
 import { MarketingShell } from '@/components/MarketingShell';
 import SupportersWall from '@/components/SupportersWall';
 import { Button, Card, CardInset, buttonClass, Input, fieldClass } from '@/components/ui';
+import { PRO_PRICES, type BillingCycle } from '@/lib/payments/prices';
+import {
+  DONATION_PRESET_AMOUNTS,
+  DONATION_MIN_CENTS,
+  DONATION_MAX_CENTS,
+  DONATION_SYMBOL,
+} from '@/lib/payments/donations';
 
 const BUY_ME_A_COFFEE_URL =
   process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL || 'https://buymeacoffee.com/neuronest';
@@ -15,9 +22,6 @@ const BUY_ME_A_COFFEE_URL =
 declare global {
   interface Window { Razorpay?: new (options: Record<string, unknown>) => { open: () => void }; }
 }
-
-type BillingCycle = 'monthly' | 'yearly';
-type DonationChips = 10000 | 25000 | 50000;
 
 async function loadRazorpay(): Promise<boolean> {
   if (window.Razorpay) return true;
@@ -48,12 +52,10 @@ const proFeatures = [
   'Priority support',
 ];
 
-const donationChips: { value: DonationChips; label: string }[] = [
-  { value: 10000, label: '₹100' },
-  { value: 25000, label: '₹250' },
-  { value: 50000, label: '₹500' },
-];
-const DONATION_SYMBOL = '₹';
+const donationChips = DONATION_PRESET_AMOUNTS.map((cents) => ({
+  value: cents as number,
+  label: `${DONATION_SYMBOL}${cents / 100}`,
+}));
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
@@ -61,7 +63,7 @@ export default function PricingPage() {
   const [waitlistState, setWaitlistState] = useState<'idle' | 'loading' | 'joined'>('idle');
   const [waitlistMessage, setWaitlistMessage] = useState<string | null>(null);
   const [donating, setDonating] = useState(false);
-  const [donationChip, setDonationChip] = useState<DonationChips>(25000);
+  const [donationChip, setDonationChip] = useState<number>(DONATION_PRESET_AMOUNTS[1]);
   const [customAmount, setCustomAmount] = useState('');
   const [donationName, setDonationName] = useState('');
   const [donationAnon, setDonationAnon] = useState(false);
@@ -117,11 +119,12 @@ export default function PricingPage() {
         window.location.href = `/signup?redirect=/pricing#support`;
         return;
       }
-      const chips = donationChips.map((chip) => chip.value);
       const custom = Number.parseInt(customAmount, 10);
       const selected = customAmount.trim() !== '' && Number.isFinite(custom) ? custom * 100 : donationChip;
-      if (!chips.includes(selected as DonationChips) && (selected < 100 || selected > 100000)) {
-        throw new Error(`Donations must be between ${DONATION_SYMBOL}1 and ${DONATION_SYMBOL}1,000`);
+      if (selected < DONATION_MIN_CENTS || selected > DONATION_MAX_CENTS) {
+        throw new Error(
+          `Donations must be between ${DONATION_SYMBOL}${DONATION_MIN_CENTS / 100} and ${DONATION_SYMBOL}${(DONATION_MAX_CENTS / 100).toLocaleString()}`,
+        );
       }
       trackEvent({ event: 'donation_started', amountCents: selected });
       const response = await fetch('/api/payments/donate/order', {
@@ -162,7 +165,14 @@ export default function PricingPage() {
   }
 
   return (
-    <MarketingShell width="wide" back={{ href: '/rescue', label: 'Back to Rescue' }}>
+    <MarketingShell
+      width="wide"
+      back={
+        signedIn
+          ? { href: '/dashboard', label: 'Back to dashboard' }
+          : { href: '/', label: 'Back to home' }
+      }
+    >
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Simple, honest pricing</h1>
         <p className="mt-2 max-w-xl text-base leading-relaxed text-[#949BA4]">
@@ -179,8 +189,8 @@ export default function PricingPage() {
         className="mb-6 inline-flex rounded-xl border border-[#3F4147] bg-[#1E1F22] p-1"
       >
         {([
-          { value: 'monthly' as const, label: 'Monthly · ₹1,599 (planned)' },
-          { value: 'yearly' as const, label: 'Yearly · ₹15,999 (planned)' },
+          { value: 'monthly' as const, label: `Monthly · ${PRO_PRICES.monthly.display} (planned)` },
+          { value: 'yearly' as const, label: `Yearly · ${PRO_PRICES.yearly.display} (planned)` },
         ]).map((option) => (
           <button
             key={option.value}
@@ -203,7 +213,7 @@ export default function PricingPage() {
           <h2 className="text-lg font-bold tracking-tight">Free</h2>
           <p className="mt-1 text-sm text-[#949BA4]">Start without an account.</p>
           <p className="mt-5 text-3xl font-bold tracking-tight tabular-nums">
-            ₹0
+            $0
             <span className="text-base font-normal text-[#949BA4]"> / month</span>
           </p>
           <ul className="mb-6 mt-6 flex-1 space-y-3">
@@ -227,7 +237,7 @@ export default function PricingPage() {
           <h2 className="text-lg font-bold tracking-tight">Pro</h2>
           <p className="mt-1 text-sm text-[#949BA4]">Founding members get first access when international checkout opens.</p>
           <p className="mt-5 text-3xl font-bold tracking-tight tabular-nums">
-            {billingCycle === 'monthly' ? '₹1,599' : '₹15,999'}
+            {PRO_PRICES[billingCycle].display}
             <span className="text-base font-normal text-[#949BA4]">
               {' '}/ {billingCycle === 'monthly' ? 'month' : 'year'}
             </span>
@@ -433,9 +443,9 @@ export default function PricingPage() {
                 {donating ? 'Opening checkout…' : 'Donate in-app with Card'}
               </Button>
               <p className="mt-3 text-xs text-[#6E747B]">
-                One-time payment via Razorpay (cards work worldwide). Currency is set to
-                INR by default. Donations are voluntary support, not a subscription — no
-                account changes, no tax-deductible receipt.
+                One-time payment via Razorpay (cards work worldwide). Charged in USD.
+                Donations are voluntary support, not a subscription — no account
+                changes, no tax-deductible receipt.
               </p>
             </div>
 
