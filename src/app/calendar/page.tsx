@@ -21,6 +21,7 @@ import {
   mergeTimeSlots,
   createPreferenceSlots,
   findNextAvailableSlot,
+  shiftWeekDate,
   type TimeSlot
 } from '@/lib/safeTimeUtils';
 // import Sidebar from '@/components/SideBar'; // No longer needed here
@@ -418,19 +419,21 @@ export default function CalendarPage() {
     // Edge drop: same weekday, one week over, same time of day. The view then
     // follows the task. Dropping on a day column is handled below.
     if (overId === 'navigate-next' || overId === 'navigate-prev') {
-      const target = new Date(`${task.scheduled_date}T00:00:00`);
-      target.setDate(target.getDate() + (overId === 'navigate-next' ? 7 : -7));
+      const shifted = shiftWeekDate(
+        task.scheduled_date,
+        overId === 'navigate-next' ? 'next' : 'prev'
+      );
 
       const { error } = await supabase
         .from('tasks')
-        .update({ scheduled_date: getLocalDateString(target) })
+        .update({ scheduled_date: shifted })
         .eq('task_id', task.task_id);
 
       if (error) {
         console.error('❌ MOVE WEEK - Database update failed:', error);
         return;
       }
-      setCurrentDate(target);
+      setCurrentDate(new Date(`${shifted}T00:00:00`));
       return;
     }
 

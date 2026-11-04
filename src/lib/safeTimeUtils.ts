@@ -50,6 +50,19 @@ export const minutesToTimeString = (minutes: number): string => {
 };
 
 /**
+ * Move a YYYY-MM-DD date key forward or back exactly one week, staying in the
+ * local calendar. Used by the calendar's week-edge drop target so both
+ * directions share one implementation.
+ */
+export const shiftWeekDate = (dateKey: string, direction: 'next' | 'prev'): string => {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!parts) return dateKey;
+  const date = new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
+  date.setDate(date.getDate() + (direction === 'next' ? 7 : -7));
+  return getLocalDateString(date);
+};
+
+/**
  * Get date string in YYYY-MM-DD format using local timezone
  * SAFE: No UTC conversion - uses user's local date perception
  */
