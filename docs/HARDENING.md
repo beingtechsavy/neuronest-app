@@ -12,9 +12,14 @@ The only shipping blocker that touches production data.
 
 ### 0.1 Apply the pending migration
 
-`docs/migrations/20261103_donations_dedupe.sql` is committed but **not applied**.
-It contains three changes: `supporters.currency` default `INR`, the wall ordering
-index, the retry-duplicate gate in `apply_razorpay_event`, and RLS on `supporters`.
+`docs/migrations/20261103_donations_dedupe.sql` — **applied 2026-11-04, verified**.
+It contains four changes: `supporters.currency` default `INR`, the wall ordering
+index, RLS on `supporters`, and the retry-duplicate gate in `apply_razorpay_event`.
+
+Then apply `docs/migrations/20261104_revoke_table_privileges.sql`. Supabase grants
+`ALL` on new public tables to `anon`, so `20261029`'s narrower revoke left
+`TRUNCATE` on `supporters` — which RLS does not filter. Anyone with the public
+anon key could empty the wall.
 
 Supabase dashboard → SQL Editor → paste the whole file → Run.
 The file is wrapped in `begin; … commit;`, so it is all-or-nothing.
